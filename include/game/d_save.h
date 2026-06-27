@@ -3,7 +3,8 @@
 // There is ONE player-status block, not two. The struct gameplay reads/writes
 // each frame for hearts/rupees (what the HUD displays) IS the head of the
 // persistent save block g_dComIfG_gameInfo.info @ 0x10145348 -- the same bytes
-// the game serializes on
+// the game serializes on normal saves.
+#pragma once
 
 #include "game/types.h"
 #include "game/d_com_inf_game.h"   // GAME_ADDR_gameInfo_info, GAME_DSVINFO_SIZE
