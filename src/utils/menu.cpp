@@ -147,11 +147,11 @@ static void DrawSettingsMenu()
     // Changing the option also applies it to the live controller right away (not
     // just for the next title-screen load) -- but only on an actual change.
     int prevControllerPref = g_settings.controllerPref;
-    ImGui::RadioButton("Auto", &g_settings.controllerPref, CTRL_AUTO);
+    ImGui::RadioButton("Auto##ctrl", &g_settings.controllerPref, CTRL_AUTO);
     ImGui::SameLine();
-    ImGui::RadioButton("GamePad", &g_settings.controllerPref, CTRL_GAMEPAD);
+    ImGui::RadioButton("GamePad##ctrl", &g_settings.controllerPref, CTRL_GAMEPAD);
     ImGui::SameLine();
-    ImGui::RadioButton("Pro", &g_settings.controllerPref, CTRL_PRO);
+    ImGui::RadioButton("Pro##ctrl", &g_settings.controllerPref, CTRL_PRO);
     if (g_settings.controllerPref != prevControllerPref)
         dPad_setController(g_settings.controllerPref);
     {
@@ -166,11 +166,11 @@ static void DrawSettingsMenu()
 
     ImGui::TextUnformatted("Draw overlay on");
     ImGui::Indent();
-    ImGui::RadioButton("TV", &g_settings.renderTarget, RENDER_TV);
+    ImGui::RadioButton("TV##target", &g_settings.renderTarget, RENDER_TV);
     ImGui::SameLine();
-    ImGui::RadioButton("GamePad", &g_settings.renderTarget, RENDER_GAMEPAD);
+    ImGui::RadioButton("GamePad##target", &g_settings.renderTarget, RENDER_GAMEPAD);
     ImGui::SameLine();
-    ImGui::RadioButton("Both", &g_settings.renderTarget, RENDER_BOTH);
+    ImGui::RadioButton("Both##target", &g_settings.renderTarget, RENDER_BOTH);
     ImGui::Unindent();
 
     ImGui::Separator();
