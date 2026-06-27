@@ -1,0 +1,9 @@
+
+build**/
+*.elf
+*.map
+*.rpl
+*.wps
+**/*.zip
+research/
+tools/

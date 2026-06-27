@@ -1,0 +1,4 @@
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/GaryOderNichts/imgui
+	branch = wiiu
