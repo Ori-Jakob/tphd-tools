@@ -1,0 +1,160 @@
+#-------------------------------------------------------------------------------
+# TPHD Tools -- Aroma (WUPS) build.  Output: tphd_tools.wps
+#
+# Same shared overlay code as the Cemu RPL build (the default Makefile), wrapped
+# in a WUPS plugin front end (src/aroma/plugin.cpp) that installs its own
+# function-replacement hooks at runtime instead of relying on a Cemu codecave.
+#
+# Requires the WiiUPluginSystem SDK installed into $DEVKITPRO/wups
+# (https://github.com/wiiu-env/WiiUPluginSystem -- see README "Aroma").
+#
+#   make -f Makefile.aroma           # -> tphd_tools.wps
+#   make -f Makefile.aroma debug     # -> tphd_tools_debug.wps
+#   make -f Makefile.aroma clean
+#-------------------------------------------------------------------------------
+.SUFFIXES:
+#-------------------------------------------------------------------------------
+
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
+endif
+
+TOPDIR ?= $(CURDIR)
+
+# wups_rules pulls in wut_rules and defines WUPS_ROOT / WUPSSPECS and the
+# %.wps : %.elf packaging rule.
+include $(DEVKITPRO)/wups/share/wups_rules
+
+#-------------------------------------------------------------------------------
+# Project layout -- shared with the RPL build, minus src/cemu (the RPL's
+# export/crt0/RPL-malloc are replaced by the WUPS plugin runtime) and plus
+# src/aroma (the plugin front end). src/ itself holds only the shared
+# gx2_backend.cpp shim.
+#-------------------------------------------------------------------------------
+DEBUG		?=	0
+VERSION		?=
+BASE_TARGET	:=	tphd_tools
+ifeq ($(DEBUG),1)
+FINAL_TARGET	:=	$(BASE_TARGET)_debug
+BUILD		:=	build_aroma_debug
+OPTFLAGS	:=	-O0
+DEBUG_DEFINES	:=	-DTPHD_TOOLS_DEBUG=1
+else
+FINAL_TARGET	:=	$(BASE_TARGET)
+BUILD		:=	build_aroma
+OPTFLAGS	:=	-O2
+DEBUG_DEFINES	:=
+endif
+# Keep Aroma's linker/package intermediates distinct from the Cemu RPL build,
+# which intentionally uses tphd_tools[ _debug].elf in the same root directory.
+# The top-level rule below copies the finished WPS to the expected install name.
+TARGET		:=	$(FINAL_TARGET)_aroma
+ifneq ($(strip $(VERSION)),)
+VERSION_DEFINE	:=	'-DTPHD_TOOLS_VERSION_BASE="$(VERSION)"'
+else
+VERSION_DEFINE	:=
+endif
+SOURCES		:=	src src/aroma src/utils src/debug src/tools src/cheats external/imgui external/cjson
+DATA		:=	data
+INCLUDES	:=	include include/utils include/debug include/tools include/cheats external/imgui external/imgui/backends/wiiu external/cjson
+
+#-------------------------------------------------------------------------------
+# options for code generation
+#-------------------------------------------------------------------------------
+CFLAGS	:=	-g -Wall $(OPTFLAGS) -ffunction-sections \
+			$(MACHDEP)
+
+CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ -D__WUPS__ $(DEBUG_DEFINES) $(VERSION_DEFINE)
+
+CXXFLAGS	:= $(CFLAGS) -fno-exceptions -fno-rtti
+
+ASFLAGS	:=	-g $(ARCH)
+# RPXSPECS + WUPSSPECS make this a relocatable WUPS plugin module (.wps).
+LDFLAGS	=	-g $(ARCH) $(RPXSPECS) $(WUPSSPECS) -Wl,-Map,$(notdir $*.map)
+
+LIBS	:= -lwups -lwut
+
+#-------------------------------------------------------------------------------
+LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUT_ROOT)
+
+#-------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#-------------------------------------------------------------------------------
+
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export TOPDIR	:=	$(CURDIR)
+
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+
+#-------------------------------------------------------------------------------
+ifeq ($(strip $(CPPFILES)),)
+	export LD	:=	$(CC)
+else
+	export LD	:=	$(CXX)
+endif
+#-------------------------------------------------------------------------------
+
+export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
+export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES 	:=	$(OFILES_BIN) $(OFILES_SRC)
+export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+			-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
+.PHONY: $(BUILD) clean all debug
+
+#-------------------------------------------------------------------------------
+all: $(BUILD)
+	@cp $(TARGET).wps $(FINAL_TARGET).wps
+	@echo ready ... $(FINAL_TARGET).wps
+
+debug:
+	@$(MAKE) --no-print-directory -f $(CURDIR)/Makefile.aroma DEBUG=1 all
+
+$(BUILD):
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.aroma
+
+#-------------------------------------------------------------------------------
+clean:
+	@echo clean ...
+	@rm -fr build_aroma build_aroma_debug \
+		$(BASE_TARGET).wps $(BASE_TARGET)_debug.wps \
+		$(BASE_TARGET)_aroma.wps $(BASE_TARGET)_aroma.elf \
+		$(BASE_TARGET)_debug_aroma.wps $(BASE_TARGET)_debug_aroma.elf
+
+#-------------------------------------------------------------------------------
+else
+.PHONY:	all
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+#-------------------------------------------------------------------------------
+all	:	$(OUTPUT).wps
+
+$(OUTPUT).wps	:	$(OUTPUT).elf
+$(OUTPUT).elf	:	$(OFILES)
+
+$(OFILES_SRC)	: $(HFILES_BIN)
+
+%.bin.o	%_bin.h :	%.bin
+	@echo $(notdir $<)
+	@$(bin2o)
+
+-include $(DEPENDS)
+
+#-------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------------------

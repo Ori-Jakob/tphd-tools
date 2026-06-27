@@ -1,0 +1,6 @@
+[Definition]
+titleIds = 000500001019C800,000500001019E600,000500001019E500
+name = "TPHD Tools"
+path = "The Legend of Zelda: Twilight Princess HD/Mods/TPHD Tools"
+description = Loads tphd_tools.rpl (a custom RPL) via OSDynLoad from a codecave hooked into the frame-present routine, then renders a Dear ImGui tools overlay into the game and filters controller input while the menu is open. Requires tphd_tools.rpl placed in the game's code/ folder.
+version = 7

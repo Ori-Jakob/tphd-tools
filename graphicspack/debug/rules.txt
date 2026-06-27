@@ -1,0 +1,6 @@
+[Definition]
+titleIds = 000500001019C800,000500001019E600,000500001019E500
+name = "TPHD Tools (Debug)"
+path = "The Legend of Zelda: Twilight Princess HD/Mods/TPHD Tools"
+description = Loads tphd_tools_debug.rpl with debug breadcrumbs enabled. Requires tphd_tools_debug.rpl placed in the game's code/ folder.
+version = 7

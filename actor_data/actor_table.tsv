@@ -1,0 +1,763 @@
+# actor_table.tsv -- source of truth for data/procs.bin (regenerate with tools/gen_procs_bin.ps1)
+#
+# Columns (TAB-separated): id_hex <TAB> proc_name <TAB> friendly_name
+#   id_hex      = TPHD runtime fpcNm proc id (from the rpx profile table @ 0x100034a0)
+#   proc_name   = engine module name (d_a_*), authoritative
+#   friendly_name = human name, auto-seeded from dusklight @brief; EDIT FREELY
+# Lines starting with # are ignored. friendly_name may be blank.
+0x0015	d_a_alldie	
+0x0017	d_a_obj_swpush	Push Switch
+0x0018	d_a_obj_swpush2	Push Switch 2
+0x0019	d_a_obj_swpush5	Push Switch 5
+0x001A	d_a_tag_gstart	
+0x001B	d_a_no_chg_room	
+0x001C	d_a_obj_lv6elevta	Temple of Time Elevator
+0x001D	d_a_obj_so	Monkey Cage (Saru Ori)
+0x001E	d_a_obj_movebox	Multi-Purpose Moving Box
+0x001F	d_a_obj_swturn	Arbiter's Ground Turn Switch
+0x0020	d_a_obj_lv6swturn	Temple of Time Turn Switch
+0x0021	d_a_obj_sekizoa	Stone Guardian Statue(s)
+0x0022	d_a_obj_gra2	Goron A
+0x0023	d_a_tag_gra	
+0x0024	d_a_tag_yami	
+0x0025	d_a_obj_ladder	Ladder
+0x0026	d_a_obj_brakeeff	???
+0x0027	d_a_obj_fmobj	Fyrus Object?
+0x0028	d_a_obj_lbox	L - Box (Large Box?)
+0x0029	d_a_obj_web0	Wall Web
+0x002A	d_a_obj_web1	Floor Web
+0x002B	d_a_obj_cb	Castle Block?
+0x002C	d_a_obj_maki	Stick Bundle?
+0x002D	d_a_obj_brg	Bridge
+0x002E	d_a_obj_gb	Ganondorf Barrier
+0x002F	d_a_obj_gm	Gohma Egg Container
+0x0030	d_a_obj_toby	Fyer (Object)
+0x0031	d_a_obj_tp	Shadow Beast Barrier Pole (Twilight Pole)
+0x0032	d_a_obj_treesh	Conifer Tree
+0x0033	d_a_obj_zdoor	Zelda Door
+0x0034	d_a_obj_pillar	Forest Temple Totem Pole
+0x0035	d_a_obj_cdoor	Chain Door
+0x0036	d_a_obj_groundwater	Ground Water
+0x0037	d_a_obj_rotBridge	Rotating Bridge
+0x0038	d_a_obj_magLift	Magnetic Lift
+0x0039	d_a_obj_magLiftRot	Rotating Magnetic Lift
+0x003A	d_a_obj_lv1Candle00	Forest Temple Torch 00
+0x003B	d_a_obj_lv1Candle01	Forest Temple Torch 01
+0x003C	d_a_obj_TvCdlst	Ordon Torch Stand
+0x003D	d_a_obj_hsTarget	Clawshot Target
+0x003E	d_a_obj_heavySw	Heavy Switch
+0x003F	d_a_obj_goGate	Goron Gate
+0x0040	d_a_obj_taFence	Fench/Mesh?
+0x0041	d_a_obj_saidan	Altar
+0x0042	d_a_obj_spinLift	Spinner Lift
+0x0043	d_a_obj_bmWindow	Boomerang Window?
+0x0044	d_a_obj_rfHole	(Kakariko?) Roof Hole
+0x0045	d_a_obj_waterPillar	Water Column/Pillar
+0x0046	d_a_obj_syRock	Stalactite Rock
+0x0047	d_a_obj_bsGate	Boss Gate
+0x0048	d_a_obj_amiShutter	Drain Gate
+0x0049	d_a_obj_waterGate	Water Gate
+0x004A	d_a_obj_lv2Candle	Goron Mines Torch
+0x004B	d_a_obj_togeTrap	Blade Trap
+0x004C	d_a_obj_rotTrap	Rotating Skull Trap
+0x004D	d_a_obj_sWallShutter	Shutter Wall (Switch)
+0x004E	d_a_obj_lv5IceWall	Snowpeak Ruins Ice Wall
+0x004F	d_a_obj_lv5SwIce	Snowpeak Ruins Ice Switch
+0x0050	d_a_obj_lv5FloorBoard	Snowpeak Ruins Destructable Floor
+0x0051	d_a_obj_Turara	Icicle
+0x0052	d_a_obj_twGate	Twilight Gate (Wall?)
+0x0053	d_a_obj_digholl	Wolf Dig Place (Passage)
+0x0054	d_a_obj_digplace	Wolf Dig Place (Treasure)
+0x0055	d_a_obj_testcube	
+0x0056	d_a_obj_kshutter	Lakebed Temple Boss Door
+0x0057	d_a_npc_coach	Coach
+0x0058	d_a_npc_theB	Telma B
+0x0059	d_a_coach_fire	Coach Fire
+0x005A	d_a_coach_2D	Coach 2D
+0x005B	d_a_balloon_2D	???
+0x005C	d_a_skip_2D	???
+0x005D	d_a_obj_mvstair	Moving Stairs
+0x005E	d_a_obj_cowdoor	Ordon Ranch Stable Door
+0x005F	d_a_obj_swpropeller	Boomerang Switch
+0x0060	d_a_obj_bmshutter	Boomerang Shutter
+0x0061	d_a_npc_ks	Monkey NPC (Kozaru)
+0x0062	d_a_obj_hfuta	Crawling?
+0x0063	d_a_obj_bkdoor	Ranch Door
+0x0064	d_a_obj_cboard	Clear Board
+0x0065	d_a_obj_mgate	Ordon Spring Gate
+0x0066	d_a_obj_ikada	Raft
+0x0067	d_a_obj_ice_l	Ice (Large)
+0x0068	d_a_obj_ice_s	Ice (Small)
+0x0069	d_a_obj_enemy_create	Enemy Spawner
+0x006A	d_a_obj_bhbridge	BH Bridge?
+0x006B	d_a_obj_kaisou	Seaweed
+0x006C	d_a_obj_hhashi	Pillar
+0x006D	d_a_obj_bhashi	Pillar
+0x006E	d_a_obj_octhashi	Morpheel Pillar
+0x006F	d_a_obj_thashi	T Pillar
+0x0070	d_a_obj_crvgate	Caravan Gate
+0x0071	d_a_obj_crvfence	Caravan Fence
+0x0072	d_a_obj_crvhahen	Bulblin Camp Caraven Wooden Fence Fragments
+0x0073	d_a_obj_crvsteel	Caravan Steel
+0x0074	d_a_obj_crvlh_up	Bulblin Tower (Upper Half)
+0x0075	d_a_obj_crvlh_down	Bulblin Tower (Lower Half)
+0x0076	d_a_obj_riverrock	(Zora?) River Rock
+0x0077	d_a_obj_dust	Dust
+0x0078	d_a_obj_ita	Plank
+0x0079	d_a_obj_window	Destructable Kakariko Village Window
+0x007A	d_a_obj_metalbox	Metal Box
+0x007B	d_a_obj_bbox	B Box
+0x007C	d_a_obj_msima	Dangoro Boss Stage (Magnetic Island)
+0x007D	d_a_obj_myogan	???
+0x007E	d_a_b_zant_sima	Zant (Goron Mines Phase)
+0x007F	d_a_obj_cblock	Castle Block?
+0x0080	d_a_obj_cwall	Chain Wall
+0x0081	d_a_obj_kgate	Coro Gate
+0x0082	d_a_obj_rgate	Rider Gate
+0x0083	d_a_obj_onsen	Hot Spring
+0x0084	d_a_obj_chest	Cabinet
+0x0085	d_a_obj_bemos	Beamos (Movable Object)
+0x0086	d_a_obj_rope_bridge	Small / Big Rope Bridge
+0x0087	d_a_obj_well_cover	Graveyard Well Cover
+0x0088	d_a_obj_grave_stone	Zora Gravestone
+0x0089	d_a_obj_zra_rock	Zora Rock
+0x008A	d_a_obj_gra_rock	Goron Entombing Rock
+0x008B	d_a_obj_grz_rock	Hidden Village Rockslide
+0x008C	d_a_obj_graWall	Goron Wall?
+0x008D	d_a_obj_onsenFire	Hot Spring Fire
+0x008E	d_a_obj_lv6bemos	Temple of Time Beamos (Unused)
+0x008F	d_a_obj_lv6bemos2	Temple of Time Beamos
+0x0090	d_a_obj_barDesk	Kakariko House Desk
+0x0091	d_a_obj_digsnow	Wolf Dig Place (Snow)
+0x0092	d_a_obj_Y_taihou	Snowpeak Ruins Cannon
+0x0093	d_a_obj_dmelevator	Death Mountain Elevator
+0x0094	d_a_obj_lv6TogeRoll	Temple of Time Spike Roller
+0x0095	d_a_obj_lv6TogeTrap	Temple of Time Spiked Trap
+0x0096	d_a_obj_lv6Tenbin	Temple of Time Scale
+0x0097	d_a_obj_lv6SwGate	Temple of Time Switch Gate
+0x0098	d_a_obj_lv6Lblock	Temple of Time L Block
+0x0099	d_a_obj_lv6ChangeGate	Temple of Time Change Block?
+0x009A	d_a_obj_lv6FurikoTrap	Temple of Time Pendulum Trap
+0x009B	d_a_obj_lv6SzGate	Temple of Time Stone Statue Gate
+0x009C	d_a_obj_lv4EdShutter	Arbiter's Grounds Death Sword Gate
+0x009D	d_a_obj_lv4Gate	Arbiter's Grounds Gate
+0x009E	d_a_obj_lv4PoGate	Arbiter's Grounds Poe Gate
+0x009F	d_a_obj_lv4SlideWall	Arbiter's Grounds Sliding Wall
+0x00A0	d_a_obj_lv4HsTarget	Arbiter's Grounds Clawshot Target
+0x00A1	d_a_obj_lv7PropellerY	City in the Sky Propeller
+0x00A2	d_a_obj_lv7BsGate	City in the Sky Boss Door
+0x00A3	d_a_obj_lv8OptiLift	Palace of Twilight Optilift
+0x00A4	d_a_obj_lv8KekkaiTrap	Palace of Twilight Barrier Trap
+0x00A5	d_a_obj_lv8Lift	Palace of Twilight Platform Lift
+0x00A6	d_a_obj_lv8UdFloor	Palace of Twilight Switch Step
+0x00A7	d_a_obj_lv9SwShutter	Hyrule Castle Switch Shutter
+0x00A8	d_a_obj_tobyhouse	Fyer's House
+0x00A9	d_a_obj_poCandle	Poe Torch
+0x00AA	d_a_obj_lv4digsand	Arbiter's Grounds Digging Sand
+0x00AB	d_a_obj_fallobj	Fall Object?
+0x00AC	d_a_obj_smgdoor	Sacred Meadow Grove Door
+0x00AD	d_a_obj_swLight	Light Switch
+0x00AE	d_a_obj_avalanche	Avalanche
+0x00AF	d_a_obj_mirror_screw	Twilight Mirror Screw
+0x00B0	d_a_obj_mirror_sand	Twilight Mirror Sand
+0x00B1	d_a_obj_mirror_table	Twilight Mirror Table
+0x00B2	d_a_obj_mirror_chain	Twilight Mirror Chain
+0x00B3	d_a_obj_mirror_6pole	Twilight Mirror Pole
+0x00B4	d_a_obj_swspinner	Spinner Switch
+0x00B5	d_a_obj_thdoor	Telma's Bar Door
+0x00B6	d_a_obj_lv7bridge	City in the Sky Bridge
+0x00B7	d_a_obj_zrTurara	Zora Drop
+0x00B8	d_a_obj_takaraDai	Flight-by-Fowl Platform
+0x00B9	d_a_obj_table	Table
+0x00BA	d_a_obj_catdoor	Cat Door
+0x00BB	d_a_obj_tgake	Howling Cliff
+0x00BC	d_a_cstaF	Dominion Rod Statue
+0x00BD	d_a_obj_lv4RailWall	Arbiters Grounds Spinner Rail Wall (Stallord Arena)
+0x00BE	d_a_obj_lv4sand	Arbiter's Grounds Sand (Stallord Arena)
+0x00BF	d_a_obj_pdoor	Push Door
+0x00C0	d_a_door_push	Push Door
+0x00C1	d_a_obj_ganonwall2	Ganon Wall 2
+0x00C2	d_a_obj_lv4bridge	Arbiter's Grounds Bridge
+0x00C3	d_a_obj_lv4floor	Arbiter's Grounds Floor
+0x00C4	d_a_tag_spinner	
+0x00C5	d_a_obj_swhang	Dangle A
+0x00C6	d_a_obj_rstair	Rail Staircase
+0x00C7	d_a_obj_magne_arm	Magnetic Arm
+0x00C8	d_a_obj_kwheel00	Water Wheel/Gear
+0x00C9	d_a_obj_kwheel01	Water Wheel/Gear
+0x00CA	d_a_obj_lv5ychndlr	Snowpeak Ruins Chandelier (Swinging Platform)
+0x00CB	d_a_obj_lv4prelvtr	Arbiter's Grounds Elevator?
+0x00CC	d_a_obj_hasu2	Lily Pad?
+0x00CD	d_a_obj_lv5yiblltray	Snowpeak Ruins Cannonball Transporter
+0x00CE	d_a_obj_lv6egate	Temple of Time Electric Gate
+0x00CF	d_a_obj_pdtile	P - Drop Tile
+0x00D0	d_a_obj_pdwall	P - D Wall?
+0x00D1	d_a_obj_lv4prwall	Arbiter's Grounds Rail Wall (Not Stallord?)
+0x00D2	d_a_obj_klift00	Water Wheel/Gear Lift
+0x00D3	d_a_b_oh	Morpheel (head)
+0x00D4	d_a_obj_lv4chandelier	Arbiter's Grounds Chandelier
+0x00D5	d_a_obj_lv3saka00	Lakebed Temple Spiral 00
+0x00D6	d_a_obj_lv3Water	Lakebed Temple Water
+0x00D7	d_a_obj_lv3Water2	Lakebed Temple Central Room Water
+0x00D8	d_a_obj_lv3WaterB	Lakebed Temple Water (Boss)
+0x00D9	d_a_obj_hbombkoya	Destructable Bomb House
+0x00DA	d_a_obj_szbridge	Stone Statue Bridge
+0x00DB	d_a_obj_warp_kbrg	Kakariko Gorge Warp Bridge
+0x00DC	d_a_obj_warp_obrg	Eldin Warp Bridge
+0x00DD	d_a_obj_burnbox	Burn Box
+0x00DE	d_a_obj_kjgjs	???
+0x00DF	d_a_obj_ihasi	Ice Bridge?
+0x00E0	d_a_obj_iceblock	Sliding Ice Block
+0x00E1	d_a_obj_volcball	Volcano Ball
+0x00E2	d_a_obj_volcbom	Volcano Bomb?
+0x00E3	d_a_obj_vground	Volcano Ground
+0x00E4	d_a_obj_kkanban	Kakariko Sign
+0x00E5	d_a_e_ph	Peahat
+0x00E6	d_a_npc_zra	Zora (Adult)
+0x00E7	d_a_obj_chandelier	Hyrule Castle Chandelier
+0x00E8	d_a_obj_stopper2	Door Stop
+0x00E9	d_a_door_shutter	Sliding Door
+0x00EA	d_a_tag_hinit	
+0x00EB	d_a_tag_hjump	
+0x00EC	d_a_tag_ajnot	
+0x00ED	d_a_tag_hstop	
+0x00EE	d_a_canoe	Canoe
+0x00EF	d_a_horse	Epona
+0x00F0	d_a_e_wb	Bullbo (Wild Boar)
+0x00F1	d_a_obj_ito	???
+0x00F2	d_a_obj_sw	Switch
+0x00F3	d_a_spinner	Spinner
+0x00F4	d_a_b_ob	Morpheel (body)
+0x00F5	d_a_kago	Player-controlled Kargarok
+0x00F6	d_a_e_yc	Twilight Kargorok
+0x00F7	d_a_b_ds	Stallord
+0x00F8	d_a_b_dr	Argorok
+0x00F9	d_a_b_zant_mobile	Zant (Mobile)
+0x00FA	d_a_b_zant	Zant
+0x00FB	d_a_b_zant_magic	Zant - Magic Attack
+0x00FC	d_a_tbox	Treasure Box
+0x00FD	d_a_tbox2	Treasure Box 2
+0x00FF	d_a_boomerang	Gale Boomerang
+0x0100	d_a_midna	Midna
+0x0101	d_a_npc_tk	Hawk (Taka)
+0x0102	d_a_npc_worm	Worm
+0x0103	d_a_ppolamp	P Poe Lamp
+0x0104	d_a_obj_bky_rock	Bomb Shack Rock
+0x0105	d_a_hitobj	Hit Object?
+0x0106	d_a_ep	
+0x0107	d_a_cow	Ordon Goat
+0x0108	d_a_peru	Louise
+0x0109	d_a_ni	Cucco
+0x010A	d_a_npc_tkj2	Oocca 2
+0x010B	d_a_sq	Squirrel
+0x010C	d_a_npc_sq	Squirrel (Talking, Ordon Village)
+0x010D	d_a_do	Dog
+0x010E	d_a_npc_ne	Cat (Neko)
+0x010F	d_a_npc_tr	Trout
+0x0110	d_a_npc_lf	Little Fish
+0x0111	d_a_obj_food	Dog Bone
+0x0112	d_a_obj_ki	Tree
+0x0113	d_a_obj_kita	Wind Plank
+0x0114	d_a_obj_key	Key
+0x0115	d_a_obj_keyhole	Small Key Door Chains?
+0x0116	d_a_obj_Lv5Key	Snowpeak Ruins Key Lock
+0x0117	d_a_obj_lp	Lily Pad
+0x0118	d_a_obj_tatigi	???
+0x0119	d_a_obj_rock	Rock
+0x011A	d_a_obj_wflag	???
+0x011B	d_a_obj_kage	House - Cage
+0x011C	d_a_obj_kanban2	Sign 2 (Shredded Sign)
+0x011D	d_a_obj_balloon	Balloon
+0x011E	d_a_obj_suisya	Water Wheel
+0x011F	d_a_obj_oiltubo	Oil Jar
+0x0120	d_a_obj_roten	Goron Child Stall
+0x0121	d_a_obj_ss_drink	???
+0x0122	d_a_obj_ss_item	???
+0x0123	d_a_tag_ss_drink	
+0x0124	d_a_tag_bottle_item	
+0x0125	d_a_tag_lv5soup	
+0x0126	d_a_tag_myna_light	
+0x0127	d_a_tag_shop_camera	
+0x0128	d_a_tag_shop_item	
+0x0129	d_a_obj_ndoor	Cat Door?
+0x012A	d_a_obj_udoor	Stable Door
+0x012B	d_a_obj_usaku	Horse Fence
+0x012C	d_a_obj_sm_door	Sacred Meadow Door
+0x012D	d_a_obj_bed	Bed
+0x012E	d_a_obj_boumato	Stick Target
+0x012F	d_a_obj_itamato	Plank Target
+0x0130	d_a_obj_nougu	Farm Tools
+0x0131	d_a_obj_stick	Stick
+0x0132	d_a_obj_mie	Gengle (Cat)
+0x0133	d_a_obj_sekidoor	Stone Door
+0x0134	d_a_obj_sekizo	Stone Statue
+0x0135	d_a_obj_smtile	Sacred Meadow Tile
+0x0136	d_a_npc_fish	Fish
+0x0137	d_a_mg_fish	Fishing line ("keburu")
+0x0138	d_a_mg_fshop	Hena's Shop
+0x0139	d_a_npc_du	Duck
+0x013A	d_a_disappear	Enemy Death Effect
+0x013B	d_a_obj_mato	Flight by Fowl Rupee Target
+0x013C	d_a_obj_flag	Flag 1
+0x013D	d_a_obj_flag2	Flag 2
+0x013E	d_a_obj_flag3	Flag 3
+0x013F	d_a_obj_gomikabe	Garbage Wall
+0x0140	d_a_obj_yousei	Fairy
+0x0141	d_a_obj_kabuto	Insect - Beetle
+0x0142	d_a_obj_cho	Insect - Butterfly
+0x0143	d_a_obj_kuwagata	Insect - Stag Beetle
+0x0144	d_a_obj_nan	Insect - Phasmid
+0x0145	d_a_obj_dan	Insect - Pillbug
+0x0146	d_a_obj_kamakiri	Insect - Mantis (Kamakiri)
+0x0147	d_a_obj_ten	Insect - Ladybug
+0x0148	d_a_obj_ari	Insect - Ant
+0x0149	d_a_obj_kag	Insect - Dayfly
+0x014A	d_a_obj_batta	Insect - Grasshopper (Batta)
+0x014B	d_a_obj_tombo	Insect - Dragonfly (Tonbo)
+0x014C	d_a_obj_katatsumuri	Insect - Snail (Katatsumuri)
+0x014D	d_a_obj_h_saku	H - Fence
+0x014E	d_a_obj_yobikusa	Hawk Grass
+0x014F	d_a_obj_kazeneko	Weather Vane
+0x0150	d_a_obj_kznkarm	???
+0x0151	d_a_obj_nameplate	Ordon Village Nameplate
+0x0152	d_a_obj_ornament_cloth	Ordon Village Flag
+0x0153	d_a_obj_laundry_rope	Laundry Rope
+0x0154	d_a_obj_sakuita_rope	Rope Banner Fence
+0x0155	d_a_obj_sakuita	Rope Plank
+0x0156	d_a_obj_laundry	Laundry
+0x0157	d_a_warp_bug	Warp Bug (unused)
+0x0158	d_a_izumi_gate	Ordon Spring Gate
+0x0159	d_a_obj_fchain	Wolf Chain Shackle
+0x015A	d_a_obj_wchain	Wolf Chain
+0x015B	d_a_tag_attention	
+0x015C	d_a_obj_tornado	Wind Column
+0x015D	d_a_obj_tornado2	Strong Wind Column
+0x015E	d_a_obj_firepillar	Fire Pillar
+0x015F	d_a_obj_firepillar2	Lava Fire Pillar
+0x0160	d_a_obj_inobone	Boar Bone
+0x0161	d_a_obj_stopper	Stopper
+0x0162	d_a_obj_mhole	Magnet Hole
+0x0163	d_a_tag_magne	
+0x0164	d_a_obj_bosswarp	Boss Warp
+0x0165	d_a_obj_wood_pendulum	Wooden Pendulum
+0x0166	d_a_obj_wdStick	Wooden Stick
+0x0167	d_a_obj_stairBlock	Stair Block
+0x0168	d_a_obj_geyser	Geyser
+0x0169	d_a_obj_ktOnFire	Lantern Fire
+0x016A	d_a_obj_fireWood	Kakariko Stove Flame?
+0x016B	d_a_obj_fireWood2	Firewood 2 (Flame)
+0x016C	d_a_obj_gpTaru	Gunpowder Barrel
+0x016D	d_a_obj_onsenTaru	Hotspring Water Barrel
+0x016E	d_a_obj_kiPot	Coro Pot
+0x016F	d_a_tboxSw	Treasure Box Switch
+0x0170	d_a_obj_swchain	Chain Switch
+0x0171	d_a_obj_wsword	Wooden Sword
+0x0172	d_a_obj_stoneMark	Stone Mark
+0x0173	d_a_obj_lv3Candle	Lakebed Temple Torch
+0x0174	d_a_obj_lv4CandleTag	Arbiter's Grounds Torch Tag
+0x0175	d_a_obj_lv4CandleDemoTag	Arbiter's Grounds Torch Cutscene Tag
+0x0176	d_a_obj_damCps	Damage Cylinder
+0x0177	d_a_obj_smoke	Elde Inn Stove Smoke
+0x0178	d_a_obj_waterfall	Waterfall Collision
+0x0179	d_a_obj_zcloth	Zora Armor?
+0x017A	d_a_obj_poFire	Poe Fire
+0x017B	d_a_tag_poFire	
+0x017C	d_a_obj_glowSphere	STAR Game Glow Sphere
+0x017D	d_a_tag_lightball	
+0x017E	d_a_swLBall	Switch L Ball
+0x017F	d_a_swBall	Switch Ball
+0x0180	d_a_obj_lv3waterEff	Room 09 Water
+0x0181	d_a_tag_river_back	
+0x0182	d_a_tag_kago_fall	
+0x0183	d_a_tag_lv2prchk	
+0x0184	d_a_obj_lv4gear	Arbiter's Grounds Spinner Gear
+0x0185	d_a_obj_master_sword	Master Sword
+0x0186	d_a_obj_wood_statue	Wooden Statue
+0x0187	d_a_obj_fan	(City in the Sky?) Fan)
+0x0188	d_a_obj_iceleaf	Ice Leaf
+0x0189	d_a_obj_zrTuraraRock	Zora Drop Rock
+0x018A	d_a_tag_ret_room	
+0x018B	d_a_obj_wind_stone	Howling Stone (Hole)
+0x018C	d_a_tag_wara_howl	
+0x018D	d_a_obj_scannon	Sky Cannon (City in the Sky)
+0x018E	d_a_obj_smw_stone	Howling Stone
+0x018F	d_a_obj_scannon_crs	Sky Cannon (Broken)
+0x0190	d_a_obj_snowEffTag	Snow Effect Tag
+0x0191	d_a_tag_CstaSw	
+0x0192	d_a_tag_lv6CstaSw	
+0x0193	d_a_obj_bubblePilar	Bubble Pillar
+0x0194	d_a_obj_poTbox	Poe Treasure Chest
+0x0195	d_a_obj_timeFire	Time Fire
+0x0196	d_a_obj_tmoon	Howling Moon
+0x0197	d_a_obj_ganonwall	Gannon Wall
+0x0198	d_a_obj_prop	City in the Sky Propeller?
+0x0199	d_a_cstatue	Dominion Rod Statue
+0x019A	d_a_obj_swBallA	Ball Switch A
+0x019B	d_a_obj_swBallB	Ball Switch B
+0x019C	d_a_obj_snow_soup	Snowpeak Ruins Soup Pot?
+0x019D	d_a_obj_nagaisu	Couch
+0x019E	d_a_obj_rcircle	River Circle
+0x019F	d_a_obj_picture	Hyrule Castle Painting
+0x01A0	d_a_tag_setBall	
+0x01A1	d_a_tag_smk_emt	
+0x01A2	d_a_swTime	Switch Time
+0x01A3	d_a_obj_hakai_ftr	Destruction Furniture
+0x01A4	d_a_obj_hakai_brl	Destructable Barrel
+0x01A5	d_a_obj_crystal	Crystal Switch
+0x01A6	d_a_obj_scannon_ten	Sky Cannon (Lake Hylia, Fixed)
+0x01A7	d_a_obj_swBallC	Ball Switch C
+0x01A8	d_a_scene_exit2	Scene Exit 2
+0x01A9	d_a_obj_hata	Flag ???
+0x01AA	d_a_obj_toaru_maki	Ordon Bundle
+0x01AB	d_a_tag_attack_item	
+0x01AC	d_a_tag_rmbit_sw	
+0x01AD	d_a_obj_sword	Ordon Sword
+0x01AE	d_a_tag_spring	
+0x01AF	d_a_tag_statue_evt	
+0x01B0	d_a_e_ai	Armos
+0x01B1	d_a_e_gs	Ghost Soldier
+0x01B2	d_a_e_gob	Dangoro (Goron Boss)
+0x01B3	d_a_e_dd	Dodongo
+0x01B4	d_a_e_dn	Lizalfos
+0x01B5	d_a_e_s1	Shadow Beast
+0x01B6	d_a_e_mf	Dynalfos
+0x01B7	d_a_e_sg	Skullfish
+0x01B8	d_a_e_bs	Stalkin (Baby Stal)
+0x01B9	d_a_e_sf	Stalfos
+0x01BA	d_a_e_sh	Stalhound
+0x01BB	d_a_e_df	Deku Flower
+0x01BC	d_a_e_gm	Baby Gohma / Gohma Eye
+0x01BD	d_a_e_md	Suit of Armor
+0x01BE	d_a_e_sm	Chu Worm
+0x01BF	d_a_e_sm2	Chuchu 2
+0x01C0	d_a_e_st	Skulltula
+0x01C1	d_a_e_st_line	Skulltula Web Line
+0x01C2	d_a_e_sb	Shell Blade
+0x01C3	d_a_e_th	Darkhammer (Tekkyuuhei)
+0x01C4	d_a_e_cr	Bombskit (Crazy Runner)
+0x01C5	d_a_e_cr_egg	Bombskit Egg
+0x01C6	d_a_e_db	Deku Baba
+0x01C7	d_a_e_db_leaf	Deku Baba - Leaf
+0x01C8	d_a_e_ga	Decorative Moth
+0x01C9	d_a_e_gb	Giant Baba
+0x01CA	d_a_e_hb	Hebi Baba
+0x01CB	d_a_e_hb_leaf	Hebi Baba - Leaf
+0x01CC	d_a_e_hzelda	Puppet Zelda
+0x01CD	d_a_e_yd	Twilight Deku Baba
+0x01CE	d_a_e_yh	Twilight Hebi Baba
+0x01CF	d_a_e_yd_leaf	Twilight Deku Baba - Leaf
+0x01D0	d_a_e_hm	Torch Slug
+0x01D1	d_a_e_tk	Water Toadpoli
+0x01D2	d_a_e_tk2	Fire Toadpoli
+0x01D3	d_a_e_tk_ball	Fire/Water Toadpoli Ball
+0x01D4	d_a_e_rb	Leever (Riiba)
+0x01D5	d_a_e_rd	Rider (Bulblin / King Bulblin on Boar)
+0x01D6	d_a_e_rdb	King Bulblin
+0x01D7	d_a_e_rdy	Shadow Bulblin
+0x01D8	d_a_e_fm	Fyrus (Fire Man)
+0x01D9	d_a_e_fs	Wooden Puppet
+0x01DA	d_a_e_pm	Skullkid
+0x01DB	d_a_e_po	Poe
+0x01DC	d_a_e_mb	Ook - Diababa Fight (Monkey Boomerang)
+0x01DD	d_a_e_mk	Ook
+0x01DE	d_a_e_mm	Helmasaur
+0x01DF	d_a_e_fz	Freezard header file.
+0x01E0	d_a_e_zs	Staltroop
+0x01E1	d_a_e_kk	Chilfos (Koori no Kenshi)
+0x01E2	d_a_e_hp	Huge Poe?
+0x01E3	d_a_e_zh	Ball Master
+0x01E4	d_a_e_zm	Zant Mask
+0x01E5	d_a_e_pz	Phantom Zant
+0x01E6	d_a_e_fb	Freezard
+0x01E7	d_a_e_fk	Phantom Rider
+0x01E8	d_a_e_ms	Rat
+0x01E9	d_a_e_nest	Beehive
+0x01EA	d_a_e_nz	Ghoul Rat
+0x01EB	d_a_e_ba	Keese
+0x01EC	d_a_e_bu	Bubble
+0x01ED	d_a_e_bug	Poison Mite
+0x01EE	d_a_e_bee	Bee
+0x01EF	d_a_e_is	Armos Titan (Idelia Statue)
+0x01F0	d_a_e_kg	Young Gohma
+0x01F1	d_a_e_kr	Kargorok
+0x01F2	d_a_e_sw	Moldorm
+0x01F3	d_a_e_ge	Guay
+0x01F4	d_a_tag_watchge	
+0x01F5	d_a_e_ym	Twilight Insect
+0x01F6	d_a_e_ym_tag	Twilight Insect Tag
+0x01F7	d_a_e_ymb	Twilight Insect Boss
+0x01F8	d_a_tag_firewall	
+0x01F9	d_a_tag_waterfall	Waterfall Without Collision Tag
+0x01FA	d_a_e_yk	Shadow Keese current action. 
+0x01FB	d_a_e_yr	Twilight Kargorok Rider?
+0x01FC	d_a_e_yg	Twilight Vermin
+0x01FD	d_a_e_hz	Tile Worm
+0x01FE	d_a_e_ws	Wall Skulltula
+0x01FF	d_a_e_oc	Bokoblin
+0x0200	d_a_e_ot	Toado
+0x0201	d_a_e_dt	Deku Toad
+0x0202	d_a_e_bg	Bomb Fish
+0x0203	d_a_e_oct_bg	Morpheel Bomb Fish
+0x0204	d_a_L7demo_dr	
+0x0205	d_a_L7low_dr	
+0x0206	d_a_L7op_demo_dr	
+0x0207	d_a_e_tt	Tektite
+0x0208	d_a_e_dk	Bari
+0x0209	d_a_e_vt	Death Sword
+0x020A	d_a_e_ww	White Wolfos
+0x020B	d_a_e_gi	Gibdo
+0x020C	d_a_b_bh	Diababa - Baba Hand
+0x020D	d_a_b_bq	Diababa
+0x020E	d_a_b_gm	Armogohma
+0x020F	d_a_b_gnd	Ganondorf
+0x0210	d_a_b_go	Goron Golem
+0x0211	d_a_b_oh2	Morpheel (tentacle)
+0x0212	d_a_b_yo	Blizzeta
+0x0213	d_a_b_yo_ice	Blizzeta Second Phase Ice Block
+0x0214	d_a_b_tn	Darknut
+0x0215	d_a_b_gg	Aeralfos (Gargoyle)
+0x0216	d_a_b_dre	Argorok (child actor?)
+0x0217	d_a_b_mgn	Beast Ganon
+0x0218	d_a_e_warpappear	Shadow Beast Warp Appear
+0x021A	d_a_obj_smallkey	Small Key
+0x021B	d_a_obj_kantera	Lantern
+0x021C	d_a_obj_life_container	Heart Piece
+0x021D	d_a_obj_shield	Ordon Shield
+0x021E	d_a_demo_item	Cutscene Item
+0x021F	d_a_shop_item	
+0x0220	d_a_obj_drop	Tear of Light
+0x0221	d_a_obj_rw	Wild Boar Roast
+0x0222	d_a_nbomb	Bomb
+0x0223	d_a_tag_csw	
+0x0224	d_a_tag_qs	
+0x0225	d_a_hozelda	Zelda (Horseback)
+0x0226	d_a_swc00	Switch Area C
+0x0227	d_a_door_knob00	Knob Door
+0x0228	d_a_door_dbdoor00	Double Door
+0x0229	d_a_door_boss	Boss Door (Unused?)
+0x022A	d_a_door_bossL1	Boss Door
+0x022B	d_a_door_mbossL1	Mini Boss Door
+0x022C	d_a_door_bossL5	Snowpeak Ruins Boss Door
+0x022D	d_a_dshutter	Death Sword Shutter Gate
+0x022E	d_a_door_spiral	
+0x022F	d_a_tag_chgrestart	
+0x0230	d_a_tag_setrestart	
+0x0231	d_a_andsw	
+0x0232	d_a_andsw2	
+0x0233	d_a_myna	Trill
+0x0234	d_a_npc_gnd	Ganondorf
+0x0235	d_a_npc_gra	Goron (Adult)
+0x0236	d_a_npc_grc	Goron (Child)
+0x0237	d_a_npc_grd	Gor Coron
+0x0238	d_a_npc_grmc	Goron Child (Shopkeeper)
+0x023A	d_a_npc_gro	Gor Ebizo
+0x023B	d_a_npc_grr	Gor Liggs
+0x023C	d_a_npc_grs	Gor Amoto
+0x023D	d_a_npc_grz	Darbus
+0x023E	d_a_npc_yamid	Twili (Fat)
+0x023F	d_a_npc_yamit	Twili (Tall)
+0x0240	d_a_npc_yamis	Twili (Short)
+0x0241	d_a_npc_blue_ns	Shadow Beast (Twili)
+0x0242	d_a_npc_kakashi	Scarecrow
+0x0243	d_a_npc_kdk	Temporary Cutscene Guy?
+0x0244	d_a_npc_aru	Fado
+0x0245	d_a_npc_bans	Barnes
+0x0246	d_a_npc_besu	Beth
+0x0247	d_a_npc_bou	Mayor Bo
+0x0248	d_a_npc_bouS	Mayor Bo (inside house)
+0x0249	d_a_npc_clerka	Chudley
+0x024A	d_a_npc_clerkb	Malver
+0x024B	d_a_npc_clerkt	Ooccaa (City in the Sky Shop)
+0x024C	d_a_npc_wrestler	Goron (Fat)
+0x024D	d_a_tag_arena	
+0x024E	d_a_tag_instruction	
+0x024F	d_a_npc_doc	Dr. Borville
+0x0250	d_a_npc_gwolf	Golden Wolf
+0x0251	d_a_npc_len	Renado
+0x0252	d_a_npc_lud	Luda
+0x0253	d_a_npc_fairy_seirei	Fairy Spirit
+0x0254	d_a_npc_fairy	Great Fairy
+0x0255	d_a_npc_hanjo	Hanch
+0x0256	d_a_npc_henna	Hena
+0x0257	d_a_npc_henna0	Henna 0 (unused?)
+0x0258	d_a_npc_hoz	Iza
+0x0259	d_a_npc_jagar	Jaggle
+0x025A	d_a_npc_kkri	Coro
+0x025B	d_a_npc_kn	Hero's Shade
+0x025C	d_a_obj_knBullet	Hero's Shade Energy Ball? (Knight Bullet)
+0x025D	d_a_npc_knj	Sage
+0x025E	d_a_npc_kolin	Colin
+0x025F	d_a_npc_kolinb	Colin (Bedridden) / Ralis (Bedridden)
+0x0260	d_a_npc_kyury	Pergie
+0x0261	d_a_npc_maro	Malo
+0x0262	d_a_npc_midp	Midna (True Form)
+0x0263	d_a_npc_moi	Rusl
+0x0264	d_a_npc_raca	Falbi
+0x0265	d_a_npc_saru	Monkey NPC
+0x0266	d_a_npc_seib	Faron Spirit
+0x0267	d_a_npc_seic	Eldin Spirit
+0x0268	d_a_npc_seid	Lanayru Spirit
+0x0269	d_a_npc_seira	Sera
+0x026A	d_a_npc_seira2	Sera (Shopkeeper)
+0x026B	d_a_npc_seirei	Light Spirit Ordona
+0x026C	d_a_npc_shaman	Fanadi
+0x026D	d_a_npc_shop_maro	Malo (Shopkeeper)
+0x026E	d_a_npc_sola	Soldier A (Castle Town?)
+0x026F	d_a_npc_taro	Talo
+0x0270	d_a_npc_pachi_besu	Beth (Slingshot Tutorial)
+0x0271	d_a_npc_pachi_taro	Talo (Slingshot Tutorial)
+0x0272	d_a_npc_pachi_maro	Malo (Slingshot Tutorial)
+0x0273	d_a_tag_pachi	
+0x0274	d_a_npc_the	Telma
+0x0275	d_a_npc_tkj	Oocca
+0x0276	d_a_npc_tks	Ooccoo
+0x0277	d_a_npc_tkc	Ooccoo Jr.
+0x0278	d_a_obj_tks	Ooccoo Jr. (small)
+0x0279	d_a_npc_toby	Fyer
+0x027A	d_a_npc_uri	Uli
+0x027B	d_a_npc_yelia	Ilia
+0x027C	d_a_npc_ykm	Yeto
+0x027D	d_a_npc_ykw	Yeta
+0x027E	d_a_npc_zanb	Zant Boss (Unused?)
+0x027F	d_a_npc_zant	Zant
+0x0280	d_a_npc_zelda	Zelda
+0x0281	d_a_npc_zelR	Zelda (Cloaked & Hooded)
+0x0282	d_a_npc_zelRo	Zelda (Cloaked)
+0x0283	d_a_obj_zra_freeze	Zora (Frozen)
+0x0284	d_a_npc_zrc	Ralis
+0x0285	d_a_npc_zrz	Rutela
+0x0286	d_a_obj_zraMark	Iza's River Ride Destructible Buoy
+0x0287	d_a_npc_myna2	Plumm
+0x0288	d_a_tag_myna2	
+0x0289	d_a_npc_cdn3	Hylian Adult
+0x028A	d_a_tag_schedule	
+0x028B	d_a_tag_escape	
+0x028C	d_a_npc_chat	NPC Chat
+0x028D	d_a_npc_soldierA	Soldier A (Castle Town?)
+0x028E	d_a_npc_soldierB	Soldier B (Castle Town?)
+0x028F	d_a_passer_mng	Hylian Passerby Manager?
+0x0290	d_a_npc_passer	Hylian Passerby
+0x0291	d_a_npc_passer2	Low-Poly Hylian Passerby
+0x0292	d_a_npc_post	Postman
+0x0293	d_a_npc_pouya	Poe Merchant (Jovani?)
+0x0294	d_a_formation_mng	
+0x0295	d_a_npc_fguard	???
+0x0296	d_a_guard_mng	Guard Manager?
+0x0297	d_a_tag_guard	
+0x0298	d_a_npc_guard	Guard (Hyrule Castle Town Guard?)
+0x0299	d_a_npc_ash	Ashei
+0x029A	d_a_npc_ashB	Ashei (Yeti Garb)
+0x029B	d_a_npc_shad	Shad
+0x029C	d_a_npc_rafrel	Auru
+0x029D	d_a_npc_moir	Rusl (Resistance)
+0x029E	d_a_npc_impal	Impaz
+0x029F	d_a_npc_shoe	Soal
+0x02A0	d_a_npc_doorboy	Door Boy (This isn't Soal?)
+0x02A1	d_a_npc_prayer	Charlo
+0x02A2	d_a_npc_kasi_hana	Hannah
+0x02A3	d_a_npc_kasi_kyu	Kili
+0x02A4	d_a_npc_kasi_mich	Misha
+0x02A5	d_a_npc_drainSol	Drain Soldier (Hyrule Castle Sewer Soldier?)
+0x02A6	d_a_npc_chin	Purlo
+0x02A7	d_a_npc_ins	Agitha
+0x02A8	d_a_npc_shop0	Shop 0?
+0x02A9	d_a_npc_mk	
+0x02AA	d_a_npc_p2	
+0x02AB	d_a_kytag00	Twilight Tag 0
+0x02AC	d_a_kytag01	Twilight Tag 1
+0x02AD	d_a_kytag02	Twilight Tag 2
+0x02AE	d_a_kytag03	Smell Effect Generation Tag
+0x02AF	d_a_kytag04	Twilight Portal Tag
+0x02B0	d_a_kytag05	Peep Hole Tag
+0x02B1	d_a_kytag06	Weather Handler Tag
+0x02B2	d_a_kytag07	Plight Setter Tag
+0x02B3	d_a_kytag08	Fog Avoid Tag
+0x02B4	d_a_kytag09	Twilight Film Tag
+0x02B5	d_a_kytag10	Lava Particles Tag
+0x02B6	d_a_kytag11	Time Control Tag
+0x02B7	d_a_kytag12	Palace of Twilight - Dark Fog Tag
+0x02B8	d_a_kytag13	Blowing Snow Tag
+0x02B9	d_a_kytag14	Save Memory to File Tag
+0x02BA	d_a_kytag15	Z Shake Tag
+0x02BB	d_a_kytag16	Pikari Tag
+0x02BC	d_a_kytag17	Light Mask Tag
+0x02BD	d_a_ykgr	Floor Gravity On/Off
+0x02BE	d_a_talk	Talk (Unused?)
+0x02BF	d_a_obj_crope	Wolf Tightrope
+0x02C0	d_a_obj_bombf	Bomb Flower
+0x02C1	d_a_obj_bk_leaf	Baba Stem Leaf
+0x02C2	d_a_tag_mhint	
+0x02C3	d_a_tag_mmsg	
+0x02C4	d_a_tag_mwait	
+0x02C5	d_a_tag_mstop	Midna Stop Tag
+0x02C6	d_a_tag_stream	
+0x02C7	d_a_tag_sppath	
+0x02C8	d_a_tag_wljump	
+0x02C9	d_a_tag_TWgate	
+0x02CA	d_a_tag_Lv6Gate	
+0x02CB	d_a_tag_Lv7Gate	
+0x02CC	d_a_tag_Lv8Gate	
+0x02CD	d_a_tag_theB_hint	
+0x02CE	d_a_tag_assistance	
+0x02CF	d_a_demo00	Cutscene
+0x02D0	d_a_tag_camera	
+0x02D1	d_a_tag_chkpoint	
+0x02D2	d_a_tag_event	
+0x02D3	d_a_tag_evt	
+0x02D4	d_a_tag_telop	
+0x02D5	d_a_tag_howl	
+0x02D6	d_a_tag_msg	
+0x02D7	d_a_tag_lantern	
+0x02D8	d_a_tag_mist	
+0x02D9	d_a_dmidna	Dying Midna (White Midna)
+0x02DB	d_a_vrbox	VR Box
+0x02DC	d_a_vrbox2	VR Box 2
+0x02DD	d_a_bg	Background
+0x02DE	d_a_set_bgobj	Set Background Object
+0x02DF	d_a_bg_obj	Moving Background Obj?
+0x02E0	d_a_mirror	Mirror
+0x02E1	d_a_movie_player	Movie Player
+0x02E2	d_a_title	Title Logo
+0x02E3	d_a_fr	Frog
+0x02E4	d_a_econt	Encounter
+0x02E5	d_a_mg_rod	Fishing Rod
+0x02E6	d_a_e_arrow	Enemy Arrow
+0x02E7	d_a_bullet	Bullet (Unused?)
+0x02E8	d_a_swhit0	Crystal Switch (?)
+0x02E9	d_a_e_th_ball	Darkhammer Ball and Chain
+0x02EA	d_a_tag_evtarea	
+0x02EB	d_a_tag_evtmsg	
+0x02EC	d_a_tag_kmsg	
+0x02ED	d_a_tag_push	
+0x02EE	d_a_e_mk_bo	Ook's Boomerang
+0x02EF	d_a_e_mm_mt	Helmasaur Shell
+0x02F0	d_a_obj_kbox	(Kakariko?) Crate
+0x02F1	d_a_obj_fw	Firewood
+0x02F2	d_a_b_gos	Goron Golem (small)
+0x02F3	d_a_obj_ystone	??? (Shadow Stone?)
+0x02F4	d_a_mant	Ganondorf's Cloak
+0x02F5	d_a_crod	Dominion Rod
+0x02F6	d_a_obj_pleaf	Ordon Pumpkin Vine
+0x02F7	d_a_obj_kbacket	(Kakariko?) Bucket
+0x02F8	d_a_obj_yel_bag	Ilia's Bag
+0x02F9	d_a_obj_pumpkin	Ordon Village Pumpkin
+0x02FA	d_a_obj_automata	Falbi's Music Box
+0x02FB	d_a_obj_gadget	Gadget
+0x02FC	d_a_obj_kago	Basket
+0x02FD	d_a_obj_carry	Carryable Object
+0x02FE	d_a_obj_stone	Small / Large Stones
+0x02FF	d_a_obj_hb	Huge Baba Seed
+0x0300	d_a_npc_inko	Inko (Hena's Bird)
+0x0301	d_a_bd	Bird
+0x0302	d_a_obj_eff	Object Effect?
+0x0305	d_a_e_bi	Bomb Insect
+0x0306	d_a_e_bi_leaf	Bomb Insect - Leaf
+0x0307	d_a_startAndGoal	
+0x0308	d_a_npc_df	Dragonfly
+0x0309	d_a_arrow	Arrow
+0x030A	d_a_path_line	
+0x030B	d_a_tag_allmato	
+0x030C	d_a_obj_timer	Timer
+0x030D	d_a_scene_exit	Scene Exit
+0x0310	d_a_suspend	Suspend
+0x0311	d_a_grass	Grass

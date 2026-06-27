@@ -1,0 +1,48 @@
+# enemy_spawn_options.txt -- spawn parameter reference for the (planned) enemy actor spawner.
+#
+# One block per actor. The spawner sets a 32-bit `params` value and an s8 `subtype`
+# (cArgument) when it calls dActor_spawn (see include/game/d_actor.h). This file
+# documents what those bits mean PER ACTOR. Param meaning is unchanged from vanilla
+# TP (only the proc IDs were renumbered in TPHD), so values are taken from the
+# zeldaret/tp decomp (mirrored locally in ../dusklight) -- cite the source file.
+#
+# Block format:
+#   actor   <proc_name>            # matches actor_data/actor_table.tsv
+#   name    <friendly name>
+#   src     <decomp file the decode came from>
+#   param   <field> <bitRange> <value:label ...>   # bitRange is lo-hi inclusive
+#   subtype <meaning, or "unused">
+#   note    <free text>
+#   example <label> = <0xPARAM>   # a ready-to-use params value
+# Lines starting with # are comments. Blank lines separate nothing (use blocks).
+#
+# STATUS: seeded with Keese + Kargarok. Fill in the rest of the enemy actors
+# (every d_a_e_* / d_a_b_* in actor_table.tsv) over time -- see actor_data/README.md.
+
+actor   d_a_e_ba
+name    Keese
+src     dusklight/src/d/actor/d_a_e_ba.cpp (create @ ~line 1010)
+param   homeType   0-7    255:roof(default)  0:roof  1:fly  2:appear
+param   distance   8-11   15:default(=10)        # fight-fly distance = value * 100
+param   type       12-15  0:normal  1:fire  2:ice   # >2 falls back to normal
+param   pathIndex  16-23  255:none
+param   switch     24-31  255:always present     # else gated on this switch index
+subtype unused
+note    Each type loads its own archive (E_ba / fire / ice variant).
+example normal keese (appear, default dist)  = 0xFFFF0F02
+example fire keese   (appear, default dist)  = 0xFFFF1F02
+example ice keese    (appear, default dist)  = 0xFFFF2F02
+example ice keese    (fly home)              = 0xFFFF2F01
+
+actor   d_a_e_kr
+name    Kargorok
+src     dusklight/src/d/actor/d_a_e_kr.cpp (create @ ~line 2300)
+param   action     0-7    255:0(default)     # initial action/behaviour mode (mCurAction); seen 0,3,4,7
+param   distance   8-11   255:disabled       # chase-distance gate (value * 100); 0xff disables
+param   pathIndex  16-23  255:none           # dPath route to follow (per-room path index)
+param   switch     24-31                      # high byte read as a flag id (getId / bomb-drop tracking)
+subtype unused
+note    home.angle.z (the placement Z angle, NOT a param bit) is a defeat-switch index:
+note    255 = none; if set and that switch is on, the Kargorok stays dead (won't respawn).
+note    action values aren't fully enumerated yet -- 0 is a safe default for a plain spawn.
+example plain kargorok (default action) = 0x00000000
