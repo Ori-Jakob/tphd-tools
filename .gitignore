@@ -6,4 +6,4 @@ build**/
 *.wps
 **/*.zip
 research/
-tools/
+/tools/
