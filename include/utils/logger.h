@@ -20,6 +20,12 @@ enum Level {
 // Start the worker if needed. Safe to call more than once.
 void Init();
 
+// Aroma only: the plugin's statics outlive the game process, but the worker
+// thread (and any queued messages) die with it. Call at every application
+// start so the next Log/Init re-creates the thread and queue in the new
+// process instead of enqueueing into a dead one forever.
+void OnApplicationStart();
+
 // Begin a fresh boot log: log.txt.old is replaced by the current log.txt, then
 // a new log.txt is created. Safe to call once per game/application boot.
 void StartNewLog();

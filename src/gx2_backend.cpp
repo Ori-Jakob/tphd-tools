@@ -12,6 +12,7 @@
 // directly to the GPU from there, so adapt the stock backend's allocation and
 // GX2R calls to MemoryMappingModule-backed memory. Keeping the substitutions in
 // this unity shim leaves the Cemu backend byte-for-byte on its normal path.
+#include <coreinit/debug.h>
 #include <gx2/mem.h>
 #include <gx2/utils.h>
 #include <gx2r/surface.h>
@@ -23,8 +24,13 @@
 
 static void* TphdMappedMemalign(size_t alignment, size_t size)
 {
-    return MEMAllocFromMappedMemoryForGX2Ex((uint32_t)size,
-                                            (int32_t)alignment);
+    void* ptr = MEMAllocFromMappedMemoryForGX2Ex((uint32_t)size,
+                                                 (int32_t)alignment);
+    if (!ptr)
+        OSReport("[tphd_tools][gfx] mapped GX2 alloc failed "
+                 "(%u bytes, align %u)\n",
+                 (unsigned)size, (unsigned)alignment);
+    return ptr;
 }
 
 static void TphdMappedFree(void* ptr)
@@ -39,8 +45,13 @@ static BOOL TphdMappedCreateSurface(GX2Surface* surface,
     GX2CalcSurfaceSizeAndAlignment(surface);
     surface->image = MEMAllocFromMappedMemoryForGX2Ex(
         surface->imageSize, (int32_t)surface->alignment);
-    if (!surface->image)
+    if (!surface->image) {
+        OSReport("[tphd_tools][gfx] font surface alloc failed "
+                 "(%ux%u, %u bytes)\n",
+                 (unsigned)surface->width, (unsigned)surface->height,
+                 (unsigned)surface->imageSize);
         return FALSE;
+    }
 
     // This is user/mapped memory, not an allocation owned by GX2R.
     surface->resourceFlags = flags;

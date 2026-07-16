@@ -13,6 +13,8 @@
 #include <gx2/mem.h>
 #include <gx2r/surface.h>
 
+#include <coreinit/debug.h>     // OSReport (device-object failure diagnostics)
+
 // Include shader data
 #include "shaders/shader.h"
 
@@ -100,8 +102,23 @@ void    ImGui_ImplGX2_NewFrame()
     ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplGX2_Init()?");
 
-    if (!bd->ShaderGroup)
-        ImGui_ImplGX2_CreateDeviceObjects();
+    if (!bd->ShaderGroup && !ImGui_ImplGX2_CreateDeviceObjects())
+    {
+        // Without device objects RenderDrawData silently no-ops, which on a
+        // console presents as "hooks work but nothing draws" -- say so once.
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            OSReport("[imgui_impl_gx2] CreateDeviceObjects failed -- overlay will not draw\n");
+        }
+    }
+}
+
+bool    ImGui_ImplGX2_DeviceObjectsCreated()
+{
+    ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
+    return bd && bd->ShaderGroup != NULL;
 }
 
 static void ImGui_ImplGX2_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height)

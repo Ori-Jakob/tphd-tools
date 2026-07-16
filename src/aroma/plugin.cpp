@@ -83,6 +83,7 @@ static bool s_logStarted = false;
 static GX2ContextState* s_overlayContext = nullptr;
 static GX2ContextState* s_gameContext = nullptr;
 static bool s_overlayContextReady = false;
+static uint32_t s_presentBlockedFrames = 0;
 
 #ifdef TPHD_TOOLS_DEBUG
 static bool s_presentHookSeen = false;
@@ -346,6 +347,7 @@ ON_APPLICATION_START()
     s_gameContext = nullptr;
     s_overlayContextReady = false;
     s_tphdApplication = false;
+    s_presentBlockedFrames = 0;
 #ifdef TPHD_TOOLS_DEBUG
     s_presentHookSeen = false;
     s_vpadHookSeen = false;
@@ -363,11 +365,26 @@ ON_APPLICATION_START()
         return;
     }
 
+    // The logger's worker thread (if any) belonged to the previous game process
+    // and died with it; reset so the first log in this process starts a new one.
+    Logger::OnApplicationStart();
+
     uint64_t tid = OSGetTitleID();
     s_active = isTphd(tid);
     s_tphdApplication = s_active;
     OSMemoryBarrier();
     if (s_active) {
+        // Retry the overlay-context allocation if INITIALIZE_PLUGIN failed
+        // (e.g. the mapped-memory module was briefly out of space). Without a
+        // context the overlay can never draw.
+        if (!s_overlayContext) {
+            s_overlayContext = static_cast<GX2ContextState*>(
+                MEMAllocFromMappedMemoryForGX2Ex(
+                    sizeof(GX2ContextState), GX2_CONTEXT_STATE_ALIGNMENT));
+            if (!s_overlayContext)
+                OSReport("[tphd_tools.wps] overlay GX2 context alloc retry "
+                         "failed\n");
+        }
         Overlay::OnApplicationStart();
         bool phaseHookInstalled = installScenePhase1Hook();
         // Start the file logger on first present, after WUPS has completed the
@@ -429,8 +446,24 @@ DECL_FUNCTION(void, GX2CopyColorBufferToScanBuffer, const GX2ColorBuffer *buffer
         if (GX2ContextState* restoreContext = beginOverlayDraw()) {
             Overlay::Present(const_cast<GX2ColorBuffer *>(buffer), nullptr);
             endOverlayDraw(restoreContext);
+        } else {
+            // Can't draw this frame (no game context captured yet, or the
+            // overlay context allocation failed). Still consume this frame's
+            // input events: otherwise a pressed hotkey latches the input
+            // drain with no Present to ever release it, permanently zeroing
+            // the player's controls.
+            Input::BeginFrame();
+            if (++s_presentBlockedFrames == 600)
+                Logger::LogWarn("[tphd_tools.wps] overlay still waiting for a "
+                                "GX2 context after 600 presents (overlay=%p "
+                                "ready=%d game=%p)",
+                                s_overlayContext, (int)s_overlayContextReady,
+                                s_gameContext);
         }
-    } else if (s_active && scanTarget == GX2_SCAN_TARGET_DRC && buffer) {
+    } else if (s_active && scanTarget == GX2_SCAN_TARGET_DRC && buffer &&
+               Overlay::WantsGamePadDraw()) {
+        // Gated so TV-only configurations don't pay a context switch + flush
+        // on every DRC copy just to draw nothing.
         if (GX2ContextState* restoreContext = beginOverlayDraw()) {
             Overlay::PresentGamePad(const_cast<GX2ColorBuffer *>(buffer));
             endOverlayDraw(restoreContext);

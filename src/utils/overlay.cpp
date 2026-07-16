@@ -154,6 +154,11 @@ void PresentGamePad(GX2ColorBuffer* gamePad)
         drawGamePad(gamePad);
 }
 
+bool WantsGamePadDraw()
+{
+    return Renderer::IsReady() && s_frameReady && drawsGamePad();
+}
+
 void OnApplicationStart()
 {
     s_frameReady = false;

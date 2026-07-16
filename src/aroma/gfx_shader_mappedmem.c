@@ -7,6 +7,7 @@
 
 #include "gfx_shader_mappedmem.h"
 
+#include <coreinit/debug.h>     // OSReport: these failures are otherwise silent
 #include <gfd.h>
 #include <gx2/mem.h>
 #include <gx2/shaders.h>
@@ -18,23 +19,32 @@ static GX2PixelShader* loadPixelShader(uint32_t index, const void* file)
 {
     GX2PixelShader* shader = NULL;
     void* program = NULL;
+    const char* fail = NULL;
 
-    if (index >= GFDGetPixelShaderCount(file))
+    if (index >= GFDGetPixelShaderCount(file)) {
+        fail = "GFD index/count";
         goto error;
+    }
 
     const uint32_t headerSize = GFDGetPixelShaderHeaderSize(index, file);
     const uint32_t programSize = GFDGetPixelShaderProgramSize(index, file);
-    if (!headerSize || !programSize)
+    if (!headerSize || !programSize) {
+        fail = "GFD header/program size";
         goto error;
+    }
 
     shader = (GX2PixelShader*)MEMAllocFromMappedMemoryEx(headerSize, 64);
     program = MEMAllocFromMappedMemoryForGX2Ex(
         programSize, GX2_SHADER_PROGRAM_ALIGNMENT);
-    if (!shader || !program)
+    if (!shader || !program) {
+        fail = "mapped memory alloc";
         goto error;
+    }
 
-    if (!GFDGetPixelShader(shader, program, index, file))
+    if (!GFDGetPixelShader(shader, program, index, file)) {
+        fail = "GFDGetPixelShader";
         goto error;
+    }
 
     shader->program = program;
     shader->size = programSize;
@@ -43,6 +53,7 @@ static GX2PixelShader* loadPixelShader(uint32_t index, const void* file)
     return shader;
 
 error:
+    OSReport("[tphd_tools][gfx] pixel shader load failed: %s\n", fail);
     if (program)
         MEMFreeToMappedMemory(program);
     if (shader)
@@ -54,23 +65,32 @@ static GX2VertexShader* loadVertexShader(uint32_t index, const void* file)
 {
     GX2VertexShader* shader = NULL;
     void* program = NULL;
+    const char* fail = NULL;
 
-    if (index >= GFDGetVertexShaderCount(file))
+    if (index >= GFDGetVertexShaderCount(file)) {
+        fail = "GFD index/count";
         goto error;
+    }
 
     const uint32_t headerSize = GFDGetVertexShaderHeaderSize(index, file);
     const uint32_t programSize = GFDGetVertexShaderProgramSize(index, file);
-    if (!headerSize || !programSize)
+    if (!headerSize || !programSize) {
+        fail = "GFD header/program size";
         goto error;
+    }
 
     shader = (GX2VertexShader*)MEMAllocFromMappedMemoryEx(headerSize, 64);
     program = MEMAllocFromMappedMemoryForGX2Ex(
         programSize, GX2_SHADER_PROGRAM_ALIGNMENT);
-    if (!shader || !program)
+    if (!shader || !program) {
+        fail = "mapped memory alloc";
         goto error;
+    }
 
-    if (!GFDGetVertexShader(shader, program, index, file))
+    if (!GFDGetVertexShader(shader, program, index, file)) {
+        fail = "GFDGetVertexShader";
         goto error;
+    }
 
     shader->program = program;
     shader->size = programSize;
@@ -79,6 +99,7 @@ static GX2VertexShader* loadVertexShader(uint32_t index, const void* file)
     return shader;
 
 error:
+    OSReport("[tphd_tools][gfx] vertex shader load failed: %s\n", fail);
     if (program)
         MEMFreeToMappedMemory(program);
     if (shader)
@@ -127,8 +148,11 @@ BOOL TphdGfxInitFetchShaderMapped(WHBGfxShaderGroup* group)
 
     group->fetchShaderProgram = MEMAllocFromMappedMemoryForGX2Ex(
         size, GX2_SHADER_PROGRAM_ALIGNMENT);
-    if (!group->fetchShaderProgram)
+    if (!group->fetchShaderProgram) {
+        OSReport("[tphd_tools][gfx] fetch shader alloc failed (%u bytes)\n",
+                 size);
         return FALSE;
+    }
 
     GX2InitFetchShaderEx(&group->fetchShader,
                          group->fetchShaderProgram,

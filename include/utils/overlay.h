@@ -40,7 +40,10 @@ struct Settings {
     bool     freezeOnMenu = false;         // halt the game (freeze bit) while the menu is open
     bool     gameResetHotkey = true;       // Start+X+B writes the engine reset flag
     int      controllerPref  = CTRL_AUTO;  // controller to select for title-screen loads
-    int      renderTarget = RENDER_TV;     // TV, GamePad, or both color buffers
+    // Draw on both screens by default: a console player may only be looking at
+    // the GamePad, and with a TV-only default they'd get the input block with
+    // no visible menu and no way to discover the setting that fixes it.
+    int      renderTarget = RENDER_BOTH;   // TV, GamePad, or both color buffers
     float    overlayOpacity  = 1.0f;       // shared background opacity for passive HUD windows
     bool     boldLetters     = true;       // black outline on passive HUD text
     float    windowAdjustDeadzone = 0.17f; // ZL+stick window move/resize stick deadzone (magnitude)
@@ -64,6 +67,12 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad);
 // Draw the most recently completed ImGui frame to a separately presented
 // GamePad buffer. Used by Aroma's DRC copy hook.
 void PresentGamePad(GX2ColorBuffer* gamePad);
+
+// True when PresentGamePad would actually draw (renderer up, a completed frame
+// is available, and the configured target includes the GamePad). Lets the DRC
+// hook skip the GX2 context switch + flush entirely on frames with nothing to
+// draw.
+bool WantsGamePadDraw();
 
 // Aroma lifecycle helpers. They are no-ops until the renderer has initialized.
 // Application transitions preserve ImGui settings but discard stale GX2 device

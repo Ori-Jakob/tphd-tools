@@ -15,10 +15,12 @@
 
 #include "imgui.h"
 #include "imgui_impl_gx2.h"
+#include "logger.h"
 
 namespace Renderer {
 
 static bool s_ready = false;
+static bool s_firstDrawLogged = false;
 
 bool IsReady()
 {
@@ -79,6 +81,21 @@ void Draw(GX2ColorBuffer* target)
     if (!drawData || drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
         return;
 
+    // One-time draw-path diagnostic (re-armed per application). On console a
+    // device-object failure makes RenderDrawData a silent no-op ("input blocks
+    // but nothing draws"), so record whether the backend can actually submit.
+    if (!s_firstDrawLogged) {
+        s_firstDrawLogged = true;
+        if (ImGui_ImplGX2_DeviceObjectsCreated())
+            Logger::Log("[tphd_tools] first overlay draw: %d verts -> %ux%u",
+                        drawData->TotalVtxCount,
+                        (unsigned)target->surface.width,
+                        (unsigned)target->surface.height);
+        else
+            Logger::LogError("[tphd_tools] overlay draw skipped: GX2 device "
+                             "objects failed to create (see OSReport)");
+    }
+
     // The GX2 backend derives its viewport and clip rectangles from
     // FramebufferScale. Temporarily scale the TV-sized draw data to this target.
     ImVec2 oldScale = drawData->FramebufferScale;
@@ -97,6 +114,7 @@ void Draw(GX2ColorBuffer* target)
 
 void ResetDeviceObjects()
 {
+    s_firstDrawLogged = false;   // log the draw-path status once per app run
     if (!s_ready || !ImGui::GetCurrentContext())
         return;
     ImGui_ImplGX2_DestroyDeviceObjects();
