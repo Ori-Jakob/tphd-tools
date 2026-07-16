@@ -65,4 +65,10 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad);
 // GamePad buffer. Used by Aroma's DRC copy hook.
 void PresentGamePad(GX2ColorBuffer* gamePad);
 
+// Aroma lifecycle helpers. They are no-ops until the renderer has initialized.
+// Application transitions preserve ImGui settings but discard stale GX2 device
+// objects and completed draw data.
+void OnApplicationStart();
+void OnApplicationEnd();
+
 } // namespace Overlay

@@ -27,6 +27,13 @@
 #define GAME_ADDR_startStage   0x1014a5e8u   // dStage_startStage_c (current)
 #define GAME_ADDR_nextStage    0x1014a5f6u   // dStage_nextStage_c  (pending)
 #define GAME_ADDR_restartMode  (GAME_ADDR_restart + 0x1Cu)
+// dScnPly's phase table. Ghidra: phase_1 is FUN_02ac1108 and the corresponding
+// table entry at 0x10129B28 is its only data xref. The save-state loader hooks
+// this slot so the restored info block is installed after old-scene teardown
+// and immediately before the new scene starts reading it.
+#define GAME_ADDR_dScnPly_phase1       0x02ac1108u
+#define GAME_ADDR_dScnPly_phase1_slot  0x10129b28u
+typedef int (*dScnPly_phase1_t)(void* scene);
 
 // dStage_startStage_c field offsets (shared by start/next stage).
 #define DSTAGE_OFF_NAME   0x0
@@ -40,6 +47,7 @@
 
 #define DSTAGE_LAYER_DEFAULT  (-1)   // 0xFF: let the engine resolve the layer
 #define DSTAGE_WIPE_INSTANT   13     // tpgz uses wipe 13 for an instant load
+#define DSTAGE_WIPE_SPEED_INSTANT 1
 #define DSTAGE_NAME_LEN       8
 
 #ifdef __cplusplus
@@ -93,6 +101,7 @@ static inline void dStage_setNextStage(const char* name, s8 room, s16 spawn, s8 
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_ROOM)  = room;
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_LAYER) = layer;
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_WIPE)  = DSTAGE_WIPE_INSTANT;
+    *(volatile u8*) (GAME_ADDR_nextStage + DSTAGE_OFF_WSPEED) = DSTAGE_WIPE_SPEED_INSTANT;
     *(volatile u32*) GAME_ADDR_restartMode                   = 0;          // mLastMode = 0
     // enabled LAST: the engine acts the instant it sees this byte set.
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_ENABLE) = 1;
@@ -169,6 +178,16 @@ static inline void dStage_loadStage(const char* name, s8 room, s16 spawn, s8 lay
 {
     dComIfGp_setNextStage(name, spawn, room, layer, 0.0f, 0, 1, 0, 0, 1,
                           DSTAGE_WIPESPEEDT_LOAD);
+}
+
+// Queue a memfile/save-state transition the way tpgz does: establish the saved
+// restart point, fill mNextStage directly, then publish `enabled` last. This
+// avoids deriving field-last-stay, item-start, and other transition metadata
+// from the outgoing scene immediately before phase_1 replaces dSv_info_c.
+static inline void dStage_loadStateDirect(const char* name, s8 room, s16 spawn, s8 layer)
+{
+    dSv_getRestart()->mStartPoint = spawn;
+    dStage_setNextStage(name, room, spawn, layer);
 }
 
 // Normal file-select resume transition, matching FUN_029076e4. Unlike the

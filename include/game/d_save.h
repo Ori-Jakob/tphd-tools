@@ -69,6 +69,58 @@ static inline int dSave_loadImage(const void* image)
     return dSv_info_loadImage((void*)GAME_ADDR_gameInfo_info, image);
 }
 
+// ---- rebuild the live current-stage save record -----------------------------
+// A full dSv_info_c snapshot contains both:
+//   mSavedata.mSave[32] @ info+0x2F0 (persistent per-stage records), and
+//   mMemory             @ info+0xDF8 (the live current-stage record).
+//
+// tpgz's phase_1 memfile injector calls dComIfGs_getSave(mDan.mStageNo)
+// immediately after its full-block memcpy. TPHD's equivalent is
+// FUN_02aa8520: it copies mSavedata.mSave[stageNo] to mMemory. Ghidra confirms
+// mDan.mStageNo at info+0xE18 and the selected-record stride of 0x20.
+#define DSV_INFO_STAGE_RECORDS_OFF 0x02F0u
+#define DSV_STAGE_RECORD_SIZE      0x0020u
+#define DSV_STAGE_RECORD_COUNT     32
+#define DSV_INFO_MEMORY_OFF        0x0DF8u
+#define DSV_INFO_MEMORY_SIZE       DSV_STAGE_RECORD_SIZE
+#define DSV_INFO_DAN_OFF           0x0E18u
+#define DSV_INFO_ZONE_OFF          0x0E54u
+#define DSV_INFO_ZONE_SIZE         0x0400u
+#define DSV_INFO_DAN_SIZE          (DSV_INFO_ZONE_OFF - DSV_INFO_DAN_OFF)
+#define DSV_INFO_DAN_STAGENO_OFF   DSV_INFO_DAN_OFF
+
+typedef void (*dSv_info_getSave_t)(void* info, int stageNo);
+#define dSv_info_getSave ((dSv_info_getSave_t)0x02aa8520u)
+
+// FUN_02aa856c is the inverse operation used by dComIfGs_putSave: copy live
+// mMemory back to mSavedata.mSave[stageNo]. tpgz performs this before capturing
+// a memfile so the serialized stage record cannot lag behind live room flags.
+typedef void (*dSv_info_putSave_t)(void* info, int stageNo);
+#define dSv_info_putSave ((dSv_info_putSave_t)0x02aa856cu)
+
+static inline s8 dSave_getStageNo(const void* info)
+{
+    return *(const s8*)((const u8*)info + DSV_INFO_DAN_STAGENO_OFF);
+}
+
+static inline bool dSave_commitCurrentStageMemory(void)
+{
+    s8 stageNo = dSave_getStageNo((const void*)GAME_ADDR_gameInfo_info);
+    if (stageNo < 0 || stageNo >= DSV_STAGE_RECORD_COUNT)
+        return false;
+    dSv_info_putSave((void*)GAME_ADDR_gameInfo_info, stageNo);
+    return true;
+}
+
+static inline bool dSave_rebuildCurrentStageMemory(void)
+{
+    s8 stageNo = dSave_getStageNo((const void*)GAME_ADDR_gameInfo_info);
+    if (stageNo < 0 || stageNo >= DSV_STAGE_RECORD_COUNT)
+        return false;
+    dSv_info_getSave((void*)GAME_ADDR_gameInfo_info, stageNo);
+    return true;
+}
+
 // ---- Link's oxygen/air (in the play struct) ---------------------------------
 #define GAME_ADDR_oxygen 0x1014B5E6u
 static inline volatile u16* dComIfGp_getOxygen(void)

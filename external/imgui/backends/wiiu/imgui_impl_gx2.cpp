@@ -16,6 +16,37 @@
 // Include shader data
 #include "shaders/shader.h"
 
+// Allocation/resource hooks. The stock backend uses the process heap and GX2R;
+// WUPS unity builds can override these before including this file so GPU-facing
+// data comes from MemoryMappingModule instead.
+#ifndef IMGUI_IMPL_GX2_ALLOC
+#define IMGUI_IMPL_GX2_ALLOC(size, alignment) memalign((alignment), (size))
+#endif
+#ifndef IMGUI_IMPL_GX2_FREE
+#define IMGUI_IMPL_GX2_FREE(ptr) free(ptr)
+#endif
+#ifndef IMGUI_IMPL_GX2_CREATE_SURFACE
+#define IMGUI_IMPL_GX2_CREATE_SURFACE(surface, flags) GX2RCreateSurface((surface), (flags))
+#endif
+#ifndef IMGUI_IMPL_GX2_LOCK_SURFACE
+#define IMGUI_IMPL_GX2_LOCK_SURFACE(surface, level, flags) GX2RLockSurfaceEx((surface), (level), (flags))
+#endif
+#ifndef IMGUI_IMPL_GX2_UNLOCK_SURFACE
+#define IMGUI_IMPL_GX2_UNLOCK_SURFACE(surface, level, flags) GX2RUnlockSurfaceEx((surface), (level), (flags))
+#endif
+#ifndef IMGUI_IMPL_GX2_DESTROY_SURFACE
+#define IMGUI_IMPL_GX2_DESTROY_SURFACE(surface, flags) GX2RDestroySurfaceEx((surface), (flags))
+#endif
+#ifndef IMGUI_IMPL_GX2_LOAD_SHADER_GROUP
+#define IMGUI_IMPL_GX2_LOAD_SHADER_GROUP(group, index, file) WHBGfxLoadGFDShaderGroup((group), (index), (file))
+#endif
+#ifndef IMGUI_IMPL_GX2_INIT_FETCH_SHADER
+#define IMGUI_IMPL_GX2_INIT_FETCH_SHADER(group) WHBGfxInitFetchShader(group)
+#endif
+#ifndef IMGUI_IMPL_GX2_FREE_SHADER_GROUP
+#define IMGUI_IMPL_GX2_FREE_SHADER_GROUP(group) WHBGfxFreeShaderGroup(group)
+#endif
+
 // GX2 Data
 struct ImGui_ImplGX2_Data
 {
@@ -122,6 +153,8 @@ void    ImGui_ImplGX2_RenderDrawData(ImDrawData* draw_data)
         return;
 
     ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
+    if (!bd || !bd->ShaderGroup)
+        return;
 
     ImGui_ImplGX2_SetupRenderState(draw_data, fb_width, fb_height);
 
@@ -132,20 +165,25 @@ void    ImGui_ImplGX2_RenderDrawData(ImDrawData* draw_data)
     // Create continuous vertex/index buffers
     uint32_t vtx_buffer_size = (uint32_t)draw_data->TotalVtxCount * (int)sizeof(ImDrawVert);
     uint32_t idx_buffer_size = (uint32_t)draw_data->TotalIdxCount * (int)sizeof(ImDrawIdx);
+    if (!vtx_buffer_size || !idx_buffer_size)
+        return;
 
     // Grow buffers if needed
     if (bd->VertexBufferSize < vtx_buffer_size)
     {
-        bd->VertexBufferSize = vtx_buffer_size;
-        free(bd->VertexBuffer);
-        bd->VertexBuffer = memalign(GX2_VERTEX_BUFFER_ALIGNMENT, vtx_buffer_size);
+        IMGUI_IMPL_GX2_FREE(bd->VertexBuffer);
+        bd->VertexBuffer = IMGUI_IMPL_GX2_ALLOC(vtx_buffer_size, GX2_VERTEX_BUFFER_ALIGNMENT);
+        bd->VertexBufferSize = bd->VertexBuffer ? vtx_buffer_size : 0;
     }
     if (bd->IndexBufferSize < idx_buffer_size)
     {
-        bd->IndexBufferSize = idx_buffer_size;
-        free(bd->IndexBuffer);
-        bd->IndexBuffer = memalign(GX2_INDEX_BUFFER_ALIGNMENT, idx_buffer_size);
+        IMGUI_IMPL_GX2_FREE(bd->IndexBuffer);
+        bd->IndexBuffer = IMGUI_IMPL_GX2_ALLOC(idx_buffer_size, GX2_INDEX_BUFFER_ALIGNMENT);
+        bd->IndexBufferSize = bd->IndexBuffer ? idx_buffer_size : 0;
     }
+    if ((vtx_buffer_size && !bd->VertexBuffer) ||
+        (idx_buffer_size && !bd->IndexBuffer))
+        return;
 
     // Copy data into continuous buffers
     uint8_t* vtx_dst = (uint8_t*)bd->VertexBuffer;
@@ -255,16 +293,30 @@ bool ImGui_ImplGX2_CreateFontsTexture()
     // swapped for endianness
     tex->compMap = GX2_COMP_MAP(GX2_SQ_SEL_A, GX2_SQ_SEL_B, GX2_SQ_SEL_G, GX2_SQ_SEL_R);
 
-    GX2RCreateSurface(&tex->surface, GX2R_RESOURCE_BIND_TEXTURE | GX2R_RESOURCE_USAGE_CPU_WRITE | GX2R_RESOURCE_USAGE_GPU_READ);
+    if (!IMGUI_IMPL_GX2_CREATE_SURFACE(&tex->surface, GX2R_RESOURCE_BIND_TEXTURE | GX2R_RESOURCE_USAGE_CPU_WRITE | GX2R_RESOURCE_USAGE_GPU_READ))
+    {
+        IM_DELETE(bd->FontTexture->Texture);
+        IM_DELETE(bd->FontTexture);
+        bd->FontTexture = NULL;
+        return false;
+    }
     GX2InitTextureRegs(tex);
 
-    unsigned char* dst_pixels = (unsigned char*) GX2RLockSurfaceEx(&tex->surface, 0, GX2R_RESOURCE_BIND_NONE);
+    unsigned char* dst_pixels = (unsigned char*) IMGUI_IMPL_GX2_LOCK_SURFACE(&tex->surface, 0, GX2R_RESOURCE_BIND_NONE);
+    if (!dst_pixels)
+    {
+        IMGUI_IMPL_GX2_DESTROY_SURFACE(&tex->surface, GX2R_RESOURCE_BIND_NONE);
+        IM_DELETE(bd->FontTexture->Texture);
+        IM_DELETE(bd->FontTexture);
+        bd->FontTexture = NULL;
+        return false;
+    }
 
     for (int y = 0; y < height; y++) {
         memcpy(dst_pixels + (y * tex->surface.pitch * 4), src_pixels + (y * width * 4), width * 4);
     }
 
-    GX2RUnlockSurfaceEx(&tex->surface, 0, GX2R_RESOURCE_BIND_NONE);
+    IMGUI_IMPL_GX2_UNLOCK_SURFACE(&tex->surface, 0, GX2R_RESOURCE_BIND_NONE);
 
     bd->FontTexture->Sampler = IM_NEW(GX2Sampler)();
     GX2InitSampler(bd->FontTexture->Sampler, GX2_TEX_CLAMP_MODE_CLAMP, GX2_TEX_XY_FILTER_MODE_LINEAR);
@@ -281,7 +333,8 @@ void ImGui_ImplGX2_DestroyFontsTexture()
     ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
     if (bd->FontTexture)
     {
-        GX2RDestroySurfaceEx(&bd->FontTexture->Texture->surface, GX2R_RESOURCE_BIND_NONE);
+        if (bd->FontTexture->Texture)
+            IMGUI_IMPL_GX2_DESTROY_SURFACE(&bd->FontTexture->Texture->surface, GX2R_RESOURCE_BIND_NONE);
         io.Fonts->SetTexID(0);
         IM_DELETE(bd->FontTexture->Texture);
         IM_DELETE(bd->FontTexture->Sampler);
@@ -293,11 +346,17 @@ void ImGui_ImplGX2_DestroyFontsTexture()
 bool    ImGui_ImplGX2_CreateDeviceObjects()
 {
     ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
+    if (!bd)
+        return false;
+    if (bd->ShaderGroup)
+        return true;
+
     bd->ShaderGroup = IM_NEW(WHBGfxShaderGroup)();
 
-    if (!WHBGfxLoadGFDShaderGroup(bd->ShaderGroup, 0, shader_gsh))
+    if (!IMGUI_IMPL_GX2_LOAD_SHADER_GROUP(bd->ShaderGroup, 0, shader_gsh))
     {
         IM_DELETE(bd->ShaderGroup);
+        bd->ShaderGroup = NULL;
         return false;
     }
 
@@ -305,13 +364,21 @@ bool    ImGui_ImplGX2_CreateDeviceObjects()
     WHBGfxInitShaderAttribute(bd->ShaderGroup, "UV", 0, 8, GX2_ATTRIB_FORMAT_FLOAT_32_32);
     WHBGfxInitShaderAttribute(bd->ShaderGroup, "Color", 0, 16, GX2_ATTRIB_TYPE_8_8_8_8);
 
-    if (!WHBGfxInitFetchShader(bd->ShaderGroup))
+    if (!IMGUI_IMPL_GX2_INIT_FETCH_SHADER(bd->ShaderGroup))
     {
+        IMGUI_IMPL_GX2_FREE_SHADER_GROUP(bd->ShaderGroup);
         IM_DELETE(bd->ShaderGroup);
+        bd->ShaderGroup = NULL;
         return false;
     }
 
-    ImGui_ImplGX2_CreateFontsTexture();
+    if (!ImGui_ImplGX2_CreateFontsTexture())
+    {
+        IMGUI_IMPL_GX2_FREE_SHADER_GROUP(bd->ShaderGroup);
+        IM_DELETE(bd->ShaderGroup);
+        bd->ShaderGroup = NULL;
+        return false;
+    }
 
     return true;
 }
@@ -319,16 +386,26 @@ bool    ImGui_ImplGX2_CreateDeviceObjects()
 void    ImGui_ImplGX2_DestroyDeviceObjects()
 {
     ImGui_ImplGX2_Data* bd = ImGui_ImplGX2_GetBackendData();
+    if (!bd)
+        return;
 
-    free(bd->VertexBuffer);
-    bd->VertexBuffer = NULL;
+    if (bd->VertexBuffer) {
+        IMGUI_IMPL_GX2_FREE(bd->VertexBuffer);
+        bd->VertexBuffer = NULL;
+    }
+    bd->VertexBufferSize = 0;
 
-    free(bd->IndexBuffer);
-    bd->IndexBuffer = NULL;
+    if (bd->IndexBuffer) {
+        IMGUI_IMPL_GX2_FREE(bd->IndexBuffer);
+        bd->IndexBuffer = NULL;
+    }
+    bd->IndexBufferSize = 0;
 
-    WHBGfxFreeShaderGroup(bd->ShaderGroup);
-    IM_DELETE(bd->ShaderGroup);
-    bd->ShaderGroup = NULL;
+    if (bd->ShaderGroup) {
+        IMGUI_IMPL_GX2_FREE_SHADER_GROUP(bd->ShaderGroup);
+        IM_DELETE(bd->ShaderGroup);
+        bd->ShaderGroup = NULL;
+    }
 
     ImGui_ImplGX2_DestroyFontsTexture();
 }

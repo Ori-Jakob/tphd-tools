@@ -6,4 +6,5 @@ build**/
 *.wps
 **/*.zip
 research/
+# Local root-level utilities only; keep src/tools/ and include/tools/ tracked.
 /tools/

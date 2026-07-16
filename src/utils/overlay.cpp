@@ -154,4 +154,16 @@ void PresentGamePad(GX2ColorBuffer* gamePad)
         drawGamePad(gamePad);
 }
 
+void OnApplicationStart()
+{
+    s_frameReady = false;
+    Renderer::ResetDeviceObjects();
+}
+
+void OnApplicationEnd()
+{
+    s_frameReady = false;
+    Renderer::ResetDeviceObjects();
+}
+
 } // namespace Overlay

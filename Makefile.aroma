@@ -24,6 +24,7 @@ TOPDIR ?= $(CURDIR)
 # wups_rules pulls in wut_rules and defines WUPS_ROOT / WUPSSPECS and the
 # %.wps : %.elf packaging rule.
 include $(DEVKITPRO)/wups/share/wups_rules
+WUMS_ROOT := $(DEVKITPRO)/wums
 
 #-------------------------------------------------------------------------------
 # Project layout -- shared with the RPL build, minus src/cemu (the RPL's
@@ -70,12 +71,14 @@ CXXFLAGS	:= $(CFLAGS) -fno-exceptions -fno-rtti
 
 ASFLAGS	:=	-g $(ARCH)
 # RPXSPECS + WUPSSPECS make this a relocatable WUPS plugin module (.wps).
-LDFLAGS	=	-g $(ARCH) $(RPXSPECS) $(WUPSSPECS) -Wl,-Map,$(notdir $*.map)
+# libmappedmemory's linker script imports MemoryMappingModule's allocation API.
+LDFLAGS	=	-g $(ARCH) $(RPXSPECS) -Wl,-Map,$(notdir $*.map) \
+			-T$(WUMS_ROOT)/share/libmappedmemory.ld $(WUPSSPECS)
 
-LIBS	:= -lwups -lwut
+LIBS	:= -lmappedmemory -lwups -lwut
 
 #-------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUT_ROOT)
+LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUMS_ROOT) $(WUT_ROOT)
 
 #-------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))

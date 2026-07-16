@@ -92,6 +92,7 @@ the camera to Link or `R3` to move Link to the camera.
 - devkitPro with the Wii U development packages and WUT
 - GNU Make
 - WiiUPluginSystem SDK for the Aroma target
+- `libmappedmemory` for the Aroma target (and MemoryMappingModule on the console)
 - The `external/imgui` Git submodule
 
 Initialize the submodule after cloning:
@@ -181,9 +182,11 @@ The Cemu graphics pack installs present, GamePad scan-out, `VPADRead`, and
 `KPADReadEx` hooks. All hooks dispatch through the RPL's single exported function,
 `TPHDToolsEntry(reason, a, b)`.
 
-The Aroma plugin replaces `GX2CopyColorBufferToScanBuffer`, `VPADRead`, and
-`KPADReadEx` for game processes. It draws immediately before the completed TV
-color buffer is copied to the scan buffer.
+The Aroma plugin replaces `GX2CopyColorBufferToScanBuffer`, the GX2
+initialization/context setters, `VPADRead`, and `KPADReadEx` for game processes.
+It draws immediately before the completed TV color buffer is copied to the scan
+buffer, under a private mapped GX2 context, then restores the game's context
+before chaining the real copy.
 
 Both front ends call the same overlay, input, storage, tool, cheat, and game
 binding code:
@@ -204,8 +207,7 @@ external/cjson/    cJSON source used for configuration and split files
 ## Known limitations
 
 - ImGui timing is fixed at TPHD's 30 Hz presentation rate.
-- The Aroma plugin does not tear down its static ImGui and GX2 state when a game
-  exits. Relaunching TPHD without rebooting the console may require renderer
-  lifecycle work.
+- The Aroma plugin preserves its ImGui settings across applications, but drops
+  and recreates all GPU-facing GX2 objects for each TPHD launch.
 - Several tools and cheats write directly to game state through fixed TPHD v81
   addresses. Unsupported revisions can crash or corrupt runtime state.

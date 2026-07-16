@@ -37,6 +37,12 @@ void DrawWindow(bool menuActive);
 // stage has loaded.
 void Tick();
 
+// Called immediately before Zelda.rpx dScnPly::phase_1. This is the exact
+// old-scene-gone/new-scene-not-started boundary used to install a pending save
+// block safely. Front ends own the platform-specific hook and call this shared
+// handler; calls made without a pending load are harmless.
+void OnScenePhase1();
+
 // Reload `stage` (room/spawn/layer) rebuilding the runtime from the CURRENT
 // in-memory save block. If `pos` is non-null Link is forced there (facing
 // `angle`) once the reload settles; otherwise the stage's spawn point places

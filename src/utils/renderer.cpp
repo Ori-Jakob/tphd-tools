@@ -95,4 +95,11 @@ void Draw(GX2ColorBuffer* target)
     drawData->FramebufferScale = oldScale;
 }
 
+void ResetDeviceObjects()
+{
+    if (!s_ready || !ImGui::GetCurrentContext())
+        return;
+    ImGui_ImplGX2_DestroyDeviceObjects();
+}
+
 } // namespace Renderer

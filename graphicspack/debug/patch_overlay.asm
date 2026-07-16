@@ -171,9 +171,41 @@ kpad_read_done:
     addi  r1, r1, 0x20
     blr
 
+; ------------------------ dScnPly::phase_1 hook -----------------------------
+; See the synchronized release pack for the RE notes. Dispatch reason 4 before
+; chaining Zelda.rpx dScnPly::phase_1 @ 0x02ac1108.
+scene_phase1_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   scene_phase1_real
+    mtctr r9
+    li    r3, 4
+    lwz   r4, 0x30(r1)
+    li    r5, 0
+    bctrl
+
+scene_phase1_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, 0x02ac
+    ori   r12, r12, 0x1108
+    mtctr r12
+    bctrl
+
+    lwz   r0, 0x34(r1)
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
 ; ------------------------------- hooks --------------------------------------
 0x02af0f94 = bla overlay_present_hook
 0x02bde82c = bla drc_copy_hook
 0x02bfae38 = bla vpad_read_hook
 0x02bfb94c = bla kpad_read_hook
 0x02bfceac = bla kpad_read_hook
+0x10129b28 = .int scene_phase1_hook

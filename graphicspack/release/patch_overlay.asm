@@ -8,13 +8,17 @@
 ;
 ;   reason 0 (PRESENT): a = &g_abTvColorBuffer, b = &g_abDrcColorBuffer
 ;   reason 1 (VPAD):    a = VPADStatus* buffers, b = sample count
+;   reason 2 (KPAD):    a = KPADStatus* buffers, b = sample count
 ;   reason 3 (DRC):     a = GX2ColorBuffer* at the DRC scan-out copy
+;   reason 4 (PHASE_1): a = dScnPly* immediately before dScnPly::phase_1
 ;
 ; Hook sites:
 ;   0x02af0f94  bl Gfx_PresentFrameAndSwap  -> draw ImGui, then chain present
 ;   0x02bde82c  bl GX2CopyColorBufferToScanBuffer -> draw DRC immediately
 ;               before scan-out, after the game has finished the buffer
 ;   0x02bfae38  bl VPADRead                 -> real read, then filter game input
+;   0x10129b28  dScnPly phase table slot    -> inject pending save-state data
+;                                               at the exact phase_1 boundary
 ;
 ; One-time on the first present: OSDynLoad_Acquire("tphd_tools") + one FindExport
 ; to resolve TPHDToolsEntry. Both hooks then call the resolved address.
@@ -220,9 +224,44 @@ kpad_read_done:
     addi  r1, r1, 0x20
     blr
 
+; ------------------------ dScnPly::phase_1 hook -----------------------------
+; Ghidra identifies FUN_02ac1108 as dScnPly::phase_1; its phase-table entry at
+; 0x10129b28 is the function's only data xref. Routing the table slot here gives
+; the loader the exact old-scene-gone/new-scene-not-started boundary. Call the
+; RPL first, then chain Nintendo's original phase function and preserve its
+; return value.
+scene_phase1_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)             ; above the callee parameter-save area
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   scene_phase1_real
+    mtctr r9
+    li    r3, 4                    ; reason = PHASE_1
+    lwz   r4, 0x30(r1)             ; a = dScnPly*
+    li    r5, 0
+    bctrl
+
+scene_phase1_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, 0x02ac
+    ori   r12, r12, 0x1108         ; dScnPly::phase_1
+    mtctr r12
+    bctrl
+
+    lwz   r0, 0x34(r1)             ; leave original return value in r3
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
 ; ------------------------------- hooks --------------------------------------
 0x02af0f94 = bla overlay_present_hook
 0x02bde82c = bla drc_copy_hook
 0x02bfae38 = bla vpad_read_hook
 0x02bfb94c = bla kpad_read_hook
 0x02bfceac = bla kpad_read_hook
+0x10129b28 = .int scene_phase1_hook

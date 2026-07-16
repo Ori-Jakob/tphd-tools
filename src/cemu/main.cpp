@@ -11,6 +11,7 @@
 //   reason 1 (VPAD):    a = VPADStatus* buffers, b = (int)sample count
 //   reason 2 (KPAD):    a = KPADStatus* buffers, b = (int)sample count
 //   reason 3 (DRC):     a = GX2ColorBuffer* immediately before DRC scan-out
+//   reason 4 (PHASE_1): a = dScnPly* immediately before dScnPly::phase_1
 
 #include <stdint.h>
 #include <coreinit/debug.h>     // OSReport
@@ -20,6 +21,7 @@
 #include "overlay.h"
 #include "input.h"
 #include "logger.h"
+#include "tools/save_state.h"
 
 static int Present(void* tvColorBuffer, void* drcColorBuffer)
 {
@@ -66,6 +68,9 @@ int TPHDToolsEntry(int reason, void* a, void* b)
         return 0;
     case 3:
         Overlay::PresentGamePad((GX2ColorBuffer*)a);
+        return 0;
+    case 4:
+        Tools::SaveState::OnScenePhase1();
         return 0;
     default:
         return 0;
