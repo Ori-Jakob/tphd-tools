@@ -94,8 +94,25 @@ static inline int dSave_loadImage(const void* image)
 #define DSV_INFO_DAN_OFF           0x0E18u
 #define DSV_INFO_ZONE_OFF          0x0E54u
 #define DSV_INFO_ZONE_SIZE         0x0400u
+#define DSV_ZONE_RECORD_COUNT      32
+#define DSV_ZONE_RECORD_SIZE       0x0020u
+#define DSV_ZONE_ROOMNO_OFF        0x0000u
+#define DSV_ZONE_FLAGS_OFF         0x0002u
+#define DSV_ZONE_FLAGS_SIZE        0x000Cu
 #define DSV_INFO_DAN_SIZE          (DSV_INFO_ZONE_OFF - DSV_INFO_DAN_OFF)
 #define DSV_INFO_DAN_STAGENO_OFF   DSV_INFO_DAN_OFF
+
+// mZone records contain a room id, 0x0C bytes of area/room switch+item flags,
+// an unknown u16, and 0x10 bytes of actor runtime state. The flag bytes are safe
+// to merge into the freshly initialized target-room slots; the remaining bytes
+// are deliberately left to stage creation.
+
+// Temporary event bits are a second dSv_event_c after mRestart. They use their
+// own label table: an mTmp bit number does NOT identify the same story flag in
+// mSavedata.mEvent, so these bytes must be restored as transient save-state data
+// rather than copied into the serialized permanent event array.
+#define DSV_INFO_TMP_EVENT_OFF     0x1278u
+#define DSV_INFO_TMP_EVENT_SIZE    0x0100u
 
 typedef void (*dSv_info_getSave_t)(void* info, int stageNo);
 #define dSv_info_getSave ((dSv_info_getSave_t)0x02aa8520u)

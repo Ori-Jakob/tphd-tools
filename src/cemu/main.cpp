@@ -12,6 +12,8 @@
 //   reason 2 (KPAD):    a = KPADStatus* buffers, b = (int)sample count
 //   reason 3 (DRC):     a = GX2ColorBuffer* immediately before DRC scan-out
 //   reason 4 (PHASE_1): a = dScnPly* immediately before dScnPly::phase_1
+//   reason 5 (ROOM_PRE):  a = dScnRoom* before room.dzr is parsed
+//   reason 6 (ROOM_POST): a = dScnRoom* after its transient zone is allocated
 
 #include <stdint.h>
 #include <coreinit/debug.h>     // OSReport
@@ -71,6 +73,12 @@ int TPHDToolsEntry(int reason, void* a, void* b)
         return 0;
     case 4:
         Tools::SaveState::OnScenePhase1();
+        return 0;
+    case 5:
+        Tools::SaveState::OnRoomCreateBegin(a);
+        return 0;
+    case 6:
+        Tools::SaveState::OnRoomZoneReady(a);
         return 0;
     default:
         return 0;

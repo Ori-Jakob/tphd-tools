@@ -24,7 +24,14 @@
 // RE'd from Zelda.rpx dCamera_c init/SetStyle (FUN_028e1f08 / FUN_028fec50),
 // layouts cross-checked against dusklight's dCamera_c / dCamParam_c:
 //   base = *(void**)GAME_ADDR_cameraPtr
-//   +0x1A4  int  current mode (row 0..10 into the camtype.dat type entry)
+//   +0x1A4  int  current mode (row 0..10 into the camtype.dat type entry).
+//                Committed by the mode control (FUN_028dae5c via FUN_028df72c)
+//                immediately BEFORE the engine dispatch, so it never lags the
+//                dispatched frame. 0 = normal follow; every other value is a
+//                special state: 1 = LockOn button held with no target (the
+//                recenter-behind-Link, chosen straight off the LockOn input
+//                mapping), 2 = locked on a target, 4 = first person,
+//                7 = charge, 8 = locked-on while riding, 10 = event.
 //   +0x68C  int  current camera type (index into camtype.dat)
 //   +0x694  int  the stage's default follow type (FieldS / DungeonS / ...)
 //   +0xB40  ptr  current style record (0x78-byte camtype.dat style entries)
@@ -121,26 +128,51 @@ static inline volatile dCamEngine_t* dCam_engineSlot(int index)
 // zoom transition when it changes).
 #define DCAM_OFF_GEAR             0x940u
 
-// dComIfG per-camera attention status words @ 0x1014B728 (stride 0x10,
-// indexed by the camera's pad id @ dCamera_c+0x17C) -- the array the chase
-// engine itself polls ((&DAT_1014b728)[padId*4] in the decompile). Bit 0x8 is
-// the attention lock (Z-target lock-on); dusklight's freeCamera checks this
-// exact bit to keep manual camera rotation off during lock-on, because
-// lock-on often keeps the CHASE engine running rather than switching to the
-// lockon engine.
-#define GAME_ADDR_camAttentionStatus 0x1014B728u
-#define DCAM_ATTENTION_STRIDE        0x10u
-#define DCAM_ATTENTION_LOCK          0x8u
+// play.mPlayerStatus[padId][0] @ 0x1014B728 (4 words per player = stride
+// 0x10, indexed by the camera's pad id @ dCamera_c+0x17C). This is the array
+// the camera MODE CONTROL (FUN_028dae5c) polls as
+// (&DAT_1014b728)[padId*4] -- it is the PLAYER STATUS word (GC
+// dComIfGp_checkPlayerStatus0 / check_owner_action), NOT the per-camera
+// attention status. Bit 0x200000 is "Z-target engaged": daAlink toggles it on
+// the LockOn button (FUN_0203b5f8, with the lock engage/disengage sounds),
+// and the mode control keys EVERY lock-on decision off it -- lock camera
+// when a target is held, recenter-behind-Link when there is none. While it
+// is set the follow camera must behave vanilla.
+#define GAME_ADDR_playerStatus0      0x1014B728u
+#define DPLY_STATUS_STRIDE           0x10u
+#define DPLY_STATUS0_ZTARGET         0x200000u
 #define DCAM_OFF_PAD_ID              0x17Cu
 
-static inline bool dCam_isAttentionLocked(const void* camera)
+// NOTE: bit 0x200000 is NOT the full lock-on signal -- the mode control only
+// consults it on the horseback/charge variants and picks the regular lock-on
+// and no-target-recenter modes straight off the LockOn input mapping. Gate
+// vanilla-camera passthrough on dCam_getMode() != 0 instead.
+static inline bool dCam_isZTargetEngaged(const void* camera)
 {
     u32 padId = *(const volatile u32*)((const u8*)camera + DCAM_OFF_PAD_ID);
     if (padId > 3)
         return false;
-    u32 status = *(volatile u32*)(GAME_ADDR_camAttentionStatus +
-                                  padId * DCAM_ATTENTION_STRIDE);
-    return (status & DCAM_ATTENTION_LOCK) != 0;
+    u32 status = *(volatile u32*)(GAME_ADDR_playerStatus0 +
+                                  padId * DPLY_STATUS_STRIDE);
+    return (status & DPLY_STATUS0_ZTARGET) != 0;
+}
+
+// Camera modes (the values committed to DCAM_OFF_MODE; see the offset table
+// above for how the mode control derives them).
+enum {
+    DCAM_MODE_FOLLOW    = 0,   // normal follow
+    DCAM_MODE_RESET     = 1,   // LockOn held, no target: recenter behind Link
+    DCAM_MODE_LOCK      = 2,   // locked on a target
+    DCAM_MODE_SUBJECT   = 4,   // first person
+    DCAM_MODE_CHARGE    = 7,   // charge/spin
+    DCAM_MODE_RIDE_LOCK = 8,   // locked on a target while riding
+    DCAM_MODE_EVENT     = 10,  // event camera
+};
+
+// Current camera mode (see DCAM_OFF_MODE). Fresh at dispatch time.
+static inline int dCam_getMode(const void* camera)
+{
+    return *(const volatile s32*)((const u8*)camera + DCAM_OFF_MODE);
 }
 
 // Current engine algorithm, or -1 while the camera/style isn't set up yet.

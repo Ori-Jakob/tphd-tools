@@ -11,6 +11,8 @@
 ;   reason 2 (KPAD):    a = KPADStatus* buffers, b = sample count
 ;   reason 3 (DRC):     a = GX2ColorBuffer* at the DRC scan-out copy
 ;   reason 4 (PHASE_1): a = dScnPly* immediately before dScnPly::phase_1
+;   reason 5 (ROOM_PRE):  a = dScnRoom* before room.dzr is parsed
+;   reason 6 (ROOM_POST): a = dScnRoom* after its dSv_zone_c is allocated
 ;
 ; Hook sites:
 ;   0x02af0f94  bl Gfx_PresentFrameAndSwap  -> draw ImGui, then chain present
@@ -19,6 +21,8 @@
 ;   0x02bfae38  bl VPADRead                 -> real read, then filter game input
 ;   0x10129b28  dScnPly phase table slot    -> inject pending save-state data
 ;                                               at the exact phase_1 boundary
+;   0x10129bd8  dScnRoom phase table slot   -> restore saved stage flags before
+;                                               room.dzr can order its events
 ;
 ; One-time on the first present: OSDynLoad_Acquire("tphd_tools") + one FindExport
 ; to resolve TPHDToolsEntry. Both hooks then call the resolved address.
@@ -258,6 +262,51 @@ scene_phase1_real:
     addi  r1, r1, 0x40
     blr
 
+; --------------------- dScnRoom zone-create phase hook ---------------------
+; FUN_02ac3f68 allocates the room's dSv_zone_c, stores its slot in room
+; control, and parses room.dzr. Restore mMemory/mDan before entering it -- the
+; same timing as a normal getSave load -- then merge the new zone after it.
+room_zone_phase_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)             ; dScnRoom*
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_real
+    mtctr r9
+    li    r3, 5                    ; reason = ROOM_PRE
+    lwz   r4, 0x30(r1)             ; a = dScnRoom*
+    li    r5, 0
+    bctrl
+
+room_zone_phase_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, 0x02ac
+    ori   r12, r12, 0x3f68         ; original room zone-create phase
+    mtctr r12
+    bctrl
+    stw   r3, 0x2c(r1)             ; preserve original phase result
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_done
+    mtctr r9
+    li    r3, 6                    ; reason = ROOM_POST
+    lwz   r4, 0x30(r1)             ; a = dScnRoom*
+    li    r5, 0
+    bctrl
+
+room_zone_phase_done:
+    lwz   r3, 0x2c(r1)
+    lwz   r0, 0x34(r1)
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
 ; ------------------------------- hooks --------------------------------------
 0x02af0f94 = bla overlay_present_hook
 0x02bde82c = bla drc_copy_hook
@@ -265,3 +314,4 @@ scene_phase1_real:
 0x02bfb94c = bla kpad_read_hook
 0x02bfceac = bla kpad_read_hook
 0x10129b28 = .int scene_phase1_hook
+0x10129bd8 = .int room_zone_phase_hook

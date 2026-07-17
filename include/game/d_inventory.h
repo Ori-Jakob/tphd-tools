@@ -20,6 +20,15 @@
 #define DSV_INFO       GAME_ADDR_gameInfo_info   // 0x10145348
 #define DSV_ITEM_NONE  0xFFu
 
+// Absolute offsets within dSv_info_c. Keeping these named lets tools prepare an
+// isolated save image (Boss Practice) with the same verified layout used by the
+// live Inventory Editor, without temporarily poking the running game's save.
+#define DSV_INFO_STATUS_A_OFF    0x000u
+#define DSV_INFO_ITEM_OFF        0x09Cu
+#define DSV_INFO_GET_ITEM_OFF    0x0CCu
+#define DSV_INFO_ITEM_RECORD_OFF 0x0ECu
+#define DSV_INFO_ITEM_MAX_OFF    0x0F8u
+
 // ---- player status A (GCN layout + 2 in TPHD), anchored at info+0x00 ---------
 typedef struct dSv_status_a_c {
     /* 0x00 */ u8  field_0x00[2];
@@ -68,11 +77,11 @@ typedef struct dSv_itemMax_c {
 #define DSV_MAX_POKE_BOMB    6
 
 // Typed views onto the live save block.
-#define g_svStatusA    ((volatile dSv_status_a_c*) (DSV_INFO + 0x00))
-#define g_svItem       ((volatile dSv_item_c*)     (DSV_INFO + 0x9C))
-#define g_svGetItem    ((volatile dSv_getItem_c*)  (DSV_INFO + 0xCC))
-#define g_svItemRecord ((volatile dSv_itemRecord_c*)(DSV_INFO + 0xEC))
-#define g_svItemMax    ((volatile dSv_itemMax_c*)  (DSV_INFO + 0xF8))
+#define g_svStatusA    ((volatile dSv_status_a_c*) (DSV_INFO + DSV_INFO_STATUS_A_OFF))
+#define g_svItem       ((volatile dSv_item_c*)     (DSV_INFO + DSV_INFO_ITEM_OFF))
+#define g_svGetItem    ((volatile dSv_getItem_c*)  (DSV_INFO + DSV_INFO_GET_ITEM_OFF))
+#define g_svItemRecord ((volatile dSv_itemRecord_c*)(DSV_INFO + DSV_INFO_ITEM_RECORD_OFF))
+#define g_svItemMax    ((volatile dSv_itemMax_c*)  (DSV_INFO + DSV_INFO_ITEM_MAX_OFF))
 
 // ---- item wheel get/set ------------------------------------------------------
 static inline u8 dInv_getItem(int slot) { return g_svItem->mItems[slot]; }

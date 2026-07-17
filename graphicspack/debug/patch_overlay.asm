@@ -202,6 +202,50 @@ scene_phase1_real:
     addi  r1, r1, 0x40
     blr
 
+; --------------------- dScnRoom zone-create phase hook ---------------------
+; See the synchronized release pack for the RE notes. Dispatch reason 5 before
+; Zelda.rpx FUN_02ac3f68 parses room.dzr, then reason 6 after zone allocation.
+room_zone_phase_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_real
+    mtctr r9
+    li    r3, 5
+    lwz   r4, 0x30(r1)
+    li    r5, 0
+    bctrl
+
+room_zone_phase_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, 0x02ac
+    ori   r12, r12, 0x3f68
+    mtctr r12
+    bctrl
+    stw   r3, 0x2c(r1)
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_done
+    mtctr r9
+    li    r3, 6
+    lwz   r4, 0x30(r1)
+    li    r5, 0
+    bctrl
+
+room_zone_phase_done:
+    lwz   r3, 0x2c(r1)
+    lwz   r0, 0x34(r1)
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
 ; ------------------------------- hooks --------------------------------------
 0x02af0f94 = bla overlay_present_hook
 0x02bde82c = bla drc_copy_hook
@@ -209,3 +253,4 @@ scene_phase1_real:
 0x02bfb94c = bla kpad_read_hook
 0x02bfceac = bla kpad_read_hook
 0x10129b28 = .int scene_phase1_hook
+0x10129bd8 = .int room_zone_phase_hook

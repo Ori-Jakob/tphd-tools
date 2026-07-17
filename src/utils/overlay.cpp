@@ -21,9 +21,12 @@
 #include "config.h"
 #include "swkbd.h"
 #include "tools/save_state.h"
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+#include "tools/boss_practice.h"
+#include "tools/auto_splitter.h"
+#endif
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
-#include "tools/auto_splitter.h"
 #include "cheats/cheats.h"
 #include "debug_save.h"
 #include "game/game.h"          // dCam_setFreeze (freeze-on-menu)
@@ -91,7 +94,9 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
     // customized hotkey is in effect before the input is consumed below.
     Config::Load();
     Tools::SaveState::Initialize();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     Tools::AutoSplitter::Initialize();
+#endif
 
     // Consume this frame's stashed controller input, then act on the hotkey.
     Input::BeginFrame();
@@ -121,7 +126,10 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
     Tools::FlyCam::Tick();
     Debug::DebugSave::Tick();   // may arm an in-place reload consumed below
     Tools::SaveState::Tick();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    Tools::BossPractice::Tick();
     Tools::AutoSplitter::Tick();
+#endif
     Cheats::Tick();
 
     // Optionally halt the game while the menu is open (the same freeze bit FlyCam

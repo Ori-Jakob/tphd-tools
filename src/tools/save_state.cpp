@@ -517,6 +517,9 @@ static char           s_readyLoadName[64] = {};
 static bool           s_applyPosNext = true;     // override Link's pos on this load?
 static bool           s_pendingSerialized = false; // pendingInfo starts as a 0xDF8 image
 static bool           s_normalSaveResume = false; // use file-select transition semantics
+static bool           s_practiceLoad = false;     // caller-prepared deterministic encounter image
+static PracticeSceneSetupFn s_practiceSceneSetup = nullptr;
+static char           s_practiceSource[64] = {};
 static StateCommand   s_loadCommands[kMaxCommands] = {};
 static uint32_t       s_loadCommandCount = 0;
 
@@ -555,6 +558,8 @@ static int          s_ovReadyFrames = 0;       // consecutive target-stage-ready
 static bool         s_ovApplyPos   = true;      // force Link to s_ovPos once settled?
 static bool         s_ovNeedsRuntimePrep = false; // load requested before gameplay HUD/items exist
 static bool         s_ovCommandsStarted = false;
+static bool         s_ovEarlyStageFlagsRestored = false;
+static uint32_t     s_ovEarlyZoneRoomMask[2] = {};
 
 // Commands continue after the load-position settle phase has completed.
 static StateCommand s_execCommands[kMaxCommands] = {};
@@ -1202,6 +1207,66 @@ void BeginInPlaceReload(const char* stage, s8 room, s16 spawn, s8 layer,
     s_loadReady = true;        // Tick() drives the warp + re-stamp
 }
 
+bool BeginPracticeLoad(const char* sourceName, const void* infoImage,
+                       uint32_t size, const char* stage, s8 room, s16 spawn,
+                       s8 layer, const cXyz* pos, s16 angle,
+                       const cXyz* camAt, const cXyz* camEye,
+                       PracticeSceneSetupFn sceneSetup)
+{
+    if (!infoImage || size < kInfoSize || !stage || !stage[0] ||
+        room < 0 || room > 63 ||
+        memchr(stage, '\0', DSTAGE_NAME_LEN) == nullptr ||
+        s_loadBusy || s_loadReady || s_ovPhase != OV_IDLE) {
+        return false;
+    }
+    for (const char* c = stage; *c; ++c) {
+        if (!isprint((unsigned char)*c))
+            return false;
+    }
+
+    uint8_t* copy = (uint8_t*)memalign(0x40, kInfoSize);
+    if (!copy)
+        return false;
+    memcpy(copy, infoImage, kInfoSize);
+    sanitizeSaveImageForEngine(copy);
+
+    if (s_pendingInfo)
+        free(s_pendingInfo);
+    s_pendingInfo = copy;
+
+    memset(&s_loadHeader, 0, sizeof(s_loadHeader));
+    memcpy(s_loadHeader.stage, stage, strnlen(stage, sizeof(s_loadHeader.stage) - 1));
+    s_loadHeader.room = room;
+    s_loadHeader.layer = layer;
+    s_loadHeader.spawn = spawn;
+    if (pos) {
+        s_loadHeader.pos = *pos;
+        s_loadHeader.angle = angle;
+    }
+    if (pos && camAt && camEye) {
+        s_loadHeader.camAt = *camAt;
+        s_loadHeader.camEye = *camEye;
+        s_loadHeader.camValid = 1;
+    }
+
+    s_applyPosNext = pos != nullptr;
+    s_readyLoadFolder[0] = '\0';
+    s_readyLoadName[0] = '\0';
+    s_pendingSerialized = false;
+    s_normalSaveResume = false;
+    s_practiceLoad = true;
+    s_practiceSceneSetup = sceneSetup;
+    snprintf(s_practiceSource, sizeof(s_practiceSource), "%.63s",
+             sourceName && sourceName[0] ? sourceName : "Practice");
+    s_loadCommandCount = 0;
+    s_loadReady = true;
+    Logger::Log("[tphd_tools][boss-practice] load queued: %s stage='%s' "
+                "room=%d spawn=%d layer=%d position=%d camera=%d",
+                s_practiceSource, s_loadHeader.stage, (int)room, (int)spawn,
+                (int)layer, pos != nullptr, s_loadHeader.camValid != 0);
+    return true;
+}
+
 bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
 {
 #ifdef TPHD_TOOLS_DEBUG
@@ -1578,9 +1643,23 @@ static void preparePositionRestartState()
     const bool nativeRestartEntry = useNativeRestartEntryForSaveState(s_loadHeader.stage);
     const s16 oldStartPoint = restart->mStartPoint;
     const s16 newStartPoint = nativeRestartEntry ? (s16)-1 : oldStartPoint;
+
+    // dStage_playerInit treats point -1 as a true restart: it copies mRoomParam
+    // verbatim into Link's actor parameters instead of taking the parameters
+    // from a PLYR entry. Link interprets the high byte as getStartEvent(). A
+    // stale/default value of zero therefore calls setStartDemo(0), which starts
+    // room 3's R03-neoshige camera STB even though the unrelated LV3R03OP
+    // completion switch 0x7A is already set. Normal PLYR entries use 0xFF for
+    // "no explicit map-tool start event". Apply that same sentinel to our
+    // synthetic exact-position restart, preserving the start-mode/misc bits in
+    // the middle and replacing only the event byte and destination room.
+    static const u32 kRestartRoomMask = 0x0000003Fu;
+    static const u32 kRestartStartEventMask = 0xFF000000u;
     const u32 newRoomParam =
         nativeRestartEntry
-            ? ((oldRoomParam & 0xFFFFFFC0u) | ((u32)s_loadHeader.room & 0x3Fu))
+            ? ((oldRoomParam & ~(kRestartStartEventMask | kRestartRoomMask)) |
+               kRestartStartEventMask |
+               ((u32)s_loadHeader.room & kRestartRoomMask))
             : oldRoomParam;
     TPHD_BREADCRUMB(
         "[tphd_tools][state-room] patch pending restart: room %d -> %d "
@@ -1859,9 +1938,15 @@ static void endLoad()
     s_ovHorseWait = 0;
     s_ovReadyFrames = 0;
     s_ovCommandsStarted = false;
+    s_ovEarlyStageFlagsRestored = false;
+    s_ovEarlyZoneRoomMask[0] = 0;
+    s_ovEarlyZoneRoomMask[1] = 0;
     s_loadCommandCount = 0;
     s_pendingSerialized = false;
     s_normalSaveResume = false;
+    s_practiceLoad = false;
+    s_practiceSceneSetup = nullptr;
+    s_practiceSource[0] = '\0';
     s_activeGameSaveTrace = 0;
     s_gameSaveTraceSource[0] = '\0';
     s_traceWaitEntryLogged = false;
@@ -1876,10 +1961,112 @@ static_assert(DSV_INFO_DAN_OFF == DSV_INFO_MEMORY_OFF + DSV_INFO_MEMORY_SIZE,
               "mDan should follow live mMemory");
 static_assert(DSV_INFO_DAN_OFF + DSV_INFO_DAN_SIZE == DSV_INFO_ZONE_OFF,
               "mZone/stage-event pool should follow mDan");
+static_assert(DSV_ZONE_RECORD_COUNT * DSV_ZONE_RECORD_SIZE == DSV_INFO_ZONE_SIZE,
+              "mZone record layout should cover the zone pool");
+static_assert(DSV_ZONE_FLAGS_OFF + DSV_ZONE_FLAGS_SIZE <= DSV_ZONE_RECORD_SIZE,
+              "mZone flag bytes should stay inside one zone record");
 static_assert(DSV_INFO_ZONE_OFF + DSV_INFO_ZONE_SIZE == DSV_INFO_RESTART_OFF,
               "mRestart should follow the stage-event pool");
-static_assert(DSV_INFO_RESTART_OFF + sizeof(dSv_restart_c) <= GAME_DSVINFO_SIZE,
-              "mRestart should stay inside dSv_info_c");
+static_assert(DSV_INFO_RESTART_OFF + sizeof(dSv_restart_c) ==
+                  DSV_INFO_TMP_EVENT_OFF,
+              "temporary event flags should follow mRestart");
+static_assert(DSV_INFO_TMP_EVENT_OFF + DSV_INFO_TMP_EVENT_SIZE <= GAME_DSVINFO_SIZE,
+              "temporary event flags should stay inside dSv_info_c");
+
+static void restoreSaveStateTemporaryEventFlags(const uint8_t* snapshot,
+                                                const char* point)
+{
+    if (!snapshot)
+        return;
+
+    memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_TMP_EVENT_OFF),
+           snapshot + DSV_INFO_TMP_EVENT_OFF, DSV_INFO_TMP_EVENT_SIZE);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored temporary event flags: "
+        "point=%s offset=0x%X size=0x%X",
+        point ? point : "?", (unsigned)DSV_INFO_TMP_EVENT_OFF,
+        (unsigned)DSV_INFO_TMP_EVENT_SIZE);
+}
+
+static int restoreSaveStateZoneFlags(const uint8_t* snapshot, const char* point)
+{
+    if (!snapshot)
+        return 0;
+
+    const uint8_t* savedZones = snapshot + DSV_INFO_ZONE_OFF;
+    volatile uint8_t* liveZones =
+        (volatile uint8_t*)(GAME_ADDR_gameInfo_info + DSV_INFO_ZONE_OFF);
+    int restored = 0;
+
+    // Zone slots are allocated dynamically as rooms stream in, so a slot number
+    // is not stable across a reload. Match records by their room id and copy only
+    // the area/room switch+item flag bytes. Actor flags and the unknown trailing
+    // u16 remain owned by the newly created scene.
+    for (int savedSlot = 0; savedSlot < DSV_ZONE_RECORD_COUNT; ++savedSlot) {
+        const uint8_t* savedRecord =
+            savedZones + (u32)savedSlot * DSV_ZONE_RECORD_SIZE;
+        const s8 savedRoom = *(const s8*)(savedRecord + DSV_ZONE_ROOMNO_OFF);
+        if (savedRoom < 0 || savedRoom >= 64)
+            continue;
+
+        for (int liveSlot = 0; liveSlot < DSV_ZONE_RECORD_COUNT; ++liveSlot) {
+            volatile uint8_t* liveRecord =
+                liveZones + (u32)liveSlot * DSV_ZONE_RECORD_SIZE;
+            const s8 liveRoom =
+                *(volatile const s8*)(liveRecord + DSV_ZONE_ROOMNO_OFF);
+            if (liveRoom != savedRoom)
+                continue;
+
+            memcpy((void*)(liveRecord + DSV_ZONE_FLAGS_OFF),
+                   savedRecord + DSV_ZONE_FLAGS_OFF, DSV_ZONE_FLAGS_SIZE);
+            ++restored;
+            break;
+        }
+    }
+
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored room-matched zone flags: "
+        "point=%s records=%d flagBytes=0x%X",
+        point ? point : "?", restored, (unsigned)DSV_ZONE_FLAGS_SIZE);
+    return restored;
+}
+
+static bool restoreSaveStateZoneFlagsForRoom(const uint8_t* snapshot, s8 roomNo,
+                                             int liveSlot, const char* point)
+{
+    if (!snapshot || roomNo < 0 || roomNo >= 64 ||
+        liveSlot < 0 || liveSlot >= DSV_ZONE_RECORD_COUNT) {
+        return false;
+    }
+
+    const uint8_t* savedRecord = nullptr;
+    const uint8_t* savedZones = snapshot + DSV_INFO_ZONE_OFF;
+    for (int slot = 0; slot < DSV_ZONE_RECORD_COUNT; ++slot) {
+        const uint8_t* record =
+            savedZones + (u32)slot * DSV_ZONE_RECORD_SIZE;
+        if (*(const s8*)(record + DSV_ZONE_ROOMNO_OFF) == roomNo) {
+            savedRecord = record;
+            break;
+        }
+    }
+    if (!savedRecord)
+        return false;
+
+    volatile uint8_t* liveRecord =
+        (volatile uint8_t*)(GAME_ADDR_gameInfo_info + DSV_INFO_ZONE_OFF) +
+        (u32)liveSlot * DSV_ZONE_RECORD_SIZE;
+    if (*(volatile const s8*)(liveRecord + DSV_ZONE_ROOMNO_OFF) != roomNo)
+        return false;
+
+    memcpy((void*)(liveRecord + DSV_ZONE_FLAGS_OFF),
+           savedRecord + DSV_ZONE_FLAGS_OFF, DSV_ZONE_FLAGS_SIZE);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored room zone flags before actors: "
+        "point=%s room=%d liveSlot=%d flagBytes=0x%X",
+        point ? point : "?", (int)roomNo, liveSlot,
+        (unsigned)DSV_ZONE_FLAGS_SIZE);
+    return true;
+}
 
 static void restoreFullSaveStateInfoSnapshot(uint8_t* snapshot, const char* point,
                                              bool normalizeSerializedImage)
@@ -2009,7 +2196,13 @@ void OnScenePhase1()
 
     if (s_pendingInfo) {
         const bool fullInfoSnapshot = !s_pendingSerialized;
-        if (s_pendingSerialized) {
+        if (s_practiceLoad) {
+            // Practice images deliberately contain only durable save state plus
+            // a freshly initialized target-stage working set. Never restore the
+            // outgoing scene's zone/event tail into a deterministic encounter.
+            restoreSaveStateInfoSnapshot(s_pendingInfo, "practice-phase1",
+                                         true, false);
+        } else if (s_pendingSerialized) {
             logGameSaveImageState("pre-deserialize", s_pendingInfo,
                                   GAME_DSV_SERIALIZED_SIZE);
             if (s_activeGameSaveTrace) {
@@ -2053,12 +2246,19 @@ void OnScenePhase1()
             s_pendingSerialized = false;
         } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
             restoreSaveStateInfoSnapshot(s_pendingInfo, "phase1", true, false);
+            // dSave_prepareLoadRuntime() clears mTmp. Restore it separately from
+            // mZone so event state is available while the target scene creates.
+            restoreSaveStateTemporaryEventFlags(s_pendingInfo, "phase1");
         } else {
             restoreFullSaveStateInfoSnapshot(s_pendingInfo, "phase1", true);
         }
 
         if (fullInfoSnapshot) {
-            if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
+            if (s_practiceLoad) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][boss-practice] durable image installed at "
+                    "phase1; target-stage working state remains deferred");
+            } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
                 TPHD_BREADCRUMB(
                     "[tphd_tools][state-load] deferred live mMemory/mDan restore; "
                     "dStage_stagInfoInit will run getSave/initDan during stage create");
@@ -2073,6 +2273,18 @@ void OnScenePhase1()
             "[tphd_tools][state-load] dScnPly::phase_1 barrier has no pendingInfo");
     }
 
+    // Run native encounter-entry setup after save normalization so the callback
+    // cannot be overwritten by dSave_loadImage, and before the target archive
+    // begins creating actors. The callback is consumed exactly once.
+    if (s_practiceLoad && s_practiceSceneSetup) {
+        PracticeSceneSetupFn setup = s_practiceSceneSetup;
+        s_practiceSceneSetup = nullptr;
+        setup();
+        TPHD_BREADCRUMB(
+            "[tphd_tools][boss-practice] native scene setup applied: source='%s'",
+            s_practiceSource);
+    }
+
     logRoomState("scene-phase1-after-inject", s_ovRoom, s_pendingInfo,
                  s_pendingInfo && !s_pendingSerialized);
     s_ovPhase = OV_WAIT;
@@ -2080,6 +2292,91 @@ void OnScenePhase1()
     TPHD_BREADCRUMB(
         "[tphd_tools][state-load] phase transition: OV_TEARDOWN -> OV_WAIT wait=%d",
         s_ovWait);
+}
+
+static bool getPendingRoomNumber(void* roomScene, s8* outRoomNo)
+{
+    if (!roomScene || !outRoomNo)
+        return false;
+
+    const s32 roomValue =
+        *(volatile const s32*)((const u8*)roomScene + DSCNROOM_OFF_ROOMNO);
+    if (roomValue < 0 || roomValue >= 64)
+        return false;
+    *outRoomNo = (s8)roomValue;
+    return true;
+}
+
+void OnRoomCreateBegin(void* roomScene)
+{
+    // FUN_02ac3f68 parses room.dzr inside the original phase call. Restore the
+    // same stage records a normal getSave() load supplies BEFORE entering it:
+    // Lakebed room 3's TagEv orders LV3R03OP (REVT id 0x23), and dEvt::order
+    // suppresses it only when the REVT completion switch 0x7A is already set.
+    if (!s_pendingInfo || s_normalSaveResume || s_ovEarlyStageFlagsRestored ||
+        (s_ovPhase != OV_WAIT && s_ovPhase != OV_APPLY)) {
+        return;
+    }
+
+    s8 roomNo = -1;
+    if (!getPendingRoomNumber(roomScene, &roomNo) || roomNo != s_ovRoom)
+        return;
+
+    const s8 savedStageNo = dSave_getStageNo(s_pendingInfo);
+    if (savedStageNo < 0 || savedStageNo >= DSV_STAGE_RECORD_COUNT)
+        return;
+
+    // Use Zelda.rpx's getSave implementation, exactly as a normal stage load
+    // does: persistent mSave[stageNo] -> live mMemory. requestSave() paired this
+    // with the inverse putSave call before it captured the snapshot.
+    dSv_info_getSave((void*)GAME_ADDR_gameInfo_info, savedStageNo);
+    memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_DAN_OFF),
+           s_pendingInfo + DSV_INFO_DAN_OFF, DSV_INFO_DAN_SIZE);
+    restoreSaveStateTemporaryEventFlags(s_pendingInfo, "room-create-begin");
+    s_ovEarlyStageFlagsRestored = true;
+
+    // Switch 0x7A is the concrete Lakebed room-3 opening-event gate. Log its
+    // captured/live value in debug builds while keeping this restore generic.
+#ifdef TPHD_TOOLS_DEBUG
+    const volatile dSv_memBit_c* liveMemory =
+        (const volatile dSv_memBit_c*)(GAME_ADDR_gameInfo_info +
+                                      DSV_INFO_MEMORY_OFF);
+    const dSv_memBit_c* savedMemory =
+        (const dSv_memBit_c*)(s_pendingInfo + DSV_INFO_MEMORY_OFF);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored live stage flags before room.dzr: "
+        "room=%d stageNo=%d getSave=1 memory=0x%X dan=0x%X "
+        "switch7A(saved/live)=%d/%d",
+        (int)roomNo, (int)savedStageNo, (unsigned)DSV_INFO_MEMORY_SIZE,
+        (unsigned)DSV_INFO_DAN_SIZE,
+        dMem_getBit((volatile u32*)savedMemory->mSwitch, 0x7A),
+        dMem_getBit((volatile u32*)liveMemory->mSwitch, 0x7A));
+#endif
+}
+
+void OnRoomZoneReady(void* roomScene)
+{
+    if (!s_pendingInfo || s_normalSaveResume ||
+        (s_ovPhase != OV_WAIT && s_ovPhase != OV_APPLY)) {
+        return;
+    }
+
+    s8 roomNo = -1;
+    if (!getPendingRoomNumber(roomScene, &roomNo))
+        return;
+    const s8 zoneSlot = dStage_getRoomZoneNo(roomNo);
+    if (zoneSlot < 0 || zoneSlot >= DSV_ZONE_RECORD_COUNT)
+        return; // this invocation was still waiting; createZone has not run
+    const uint32_t word = (uint32_t)roomNo >> 5;
+    const uint32_t bit = 1u << ((uint32_t)roomNo & 31u);
+
+    bool roomFlagsReady = (s_ovEarlyZoneRoomMask[word] & bit) != 0;
+    if (!roomFlagsReady) {
+        roomFlagsReady = restoreSaveStateZoneFlagsForRoom(
+            s_pendingInfo, roomNo, zoneSlot, "room-zone-ready");
+        if (roomFlagsReady)
+            s_ovEarlyZoneRoomMask[word] |= bit;
+    }
 }
 
 // After a normal card-save resume, the scene rebuild can reset the control-pad
@@ -2126,6 +2423,9 @@ void OnApplicationStart()
     s_readyLoadName[0] = '\0';
     s_pendingSerialized = false;
     s_normalSaveResume = false;
+    s_practiceLoad = false;
+    s_practiceSceneSetup = nullptr;
+    s_practiceSource[0] = '\0';
 
     s_ovPhase = OV_IDLE;
     s_ovNeedsRuntimePrep = false;
@@ -2134,6 +2434,9 @@ void OnApplicationStart()
     s_ovHorseWait = 0;
     s_ovReadyFrames = 0;
     s_ovCommandsStarted = false;
+    s_ovEarlyStageFlagsRestored = false;
+    s_ovEarlyZoneRoomMask[0] = 0;
+    s_ovEarlyZoneRoomMask[1] = 0;
     s_execCommandCount = 0;
     s_execCommandIndex = 0;
     s_execFrame = 0;
@@ -2287,6 +2590,9 @@ void Tick()
         s_ovReadyFrames = 0;
         s_ovApplyPos   = s_applyPosNext;
         s_ovCommandsStarted = false;
+        s_ovEarlyStageFlagsRestored = false;
+        s_ovEarlyZoneRoomMask[0] = 0;
+        s_ovEarlyZoneRoomMask[1] = 0;
         s_ovPhase = OV_TEARDOWN;
         s_ovWait = OV_PHASE1_TIMEOUT;
 
@@ -2480,9 +2786,20 @@ void Tick()
             // via its own getSave -- as the scene builds. Normal resume therefore
             // defers to the engine here.
             if (s_pendingInfo && !s_normalSaveResume) {
-                if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
+                if (s_practiceLoad) {
+                    // Practice state was installed before stage creation and
+                    // its target mMemory/mDan was restored before room.dzr.
+                    // Do not stamp it again here: encounter actors may have
+                    // legitimately changed start switches while coming alive.
+                    TPHD_BREADCRUMB(
+                        "[tphd_tools][boss-practice] target ready; preserving "
+                        "native actor changes made during scene creation");
+                } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
                     restoreSaveStateInfoSnapshot(s_pendingInfo, "target-ready",
                                                  false, true);
+                    restoreSaveStateTemporaryEventFlags(s_pendingInfo,
+                                                        "target-ready");
+                    restoreSaveStateZoneFlags(s_pendingInfo, "target-ready");
                 } else {
                     restoreFullSaveStateInfoSnapshot(s_pendingInfo,
                                                      "target-ready", false);

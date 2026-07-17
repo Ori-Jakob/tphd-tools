@@ -14,8 +14,8 @@ It builds from one shared codebase with two platform-specific front ends:
 ## Current status
 
 The overlay, input hooks, configuration storage, tools, cheats, Save Loader, and
-both build targets are implemented. Builds use the `EXPERIMENTAL` version label
-unless a version is provided at build time.
+both build targets are implemented. Boss Practice and the autosplitter are
+compile-time experimental features and are excluded from standard builds.
 
 Game bindings and hook addresses currently target TPHD v81. The Cemu graphics
 pack declares support for these title IDs:
@@ -36,9 +36,18 @@ module match are verified.
 - Warps by preset or stage, room, layer, and spawn
 - Save Loader with named states, folders, position restoration, and post-load
   actor or flag commands
-- Native timer and autosplitter driven by Wii U split JSON files
 - GamePad and Pro Controller input viewer
 - Link position and facing editor
+
+### Experimental
+
+These features require a build made with `EXPERIMENTAL=1` and appear under the
+in-game **Experimental** menu:
+
+- Boss Practice launcher with native opening/direct-fight entry modes and an
+  isolated current, recommended, or custom combat loadout (Deku Toad is the
+  first verified encounter)
+- Native timer and autosplitter driven by Wii U split JSON files
 
 ### Cheats
 
@@ -116,6 +125,14 @@ make debug
 # Aroma release and debug plugins
 make -f Makefile.aroma
 make -f Makefile.aroma debug
+
+# Experimental Cemu release and debug RPLs
+make EXPERIMENTAL=1
+make EXPERIMENTAL=1 debug
+
+# Experimental Aroma release and debug plugins
+make -f Makefile.aroma EXPERIMENTAL=1
+make -f Makefile.aroma EXPERIMENTAL=1 debug
 ```
 
 The outputs are:
@@ -125,11 +142,22 @@ tphd_tools.rpl
 tphd_tools_debug.rpl
 tphd_tools.wps
 tphd_tools_debug.wps
+tphd_tools_experimental.rpl
+tphd_tools_experimental_debug.rpl
+tphd_tools_experimental.wps
+tphd_tools_experimental_debug.wps
 ```
 
 Use `make clean` or `make -f Makefile.aroma clean` to remove the corresponding
-build output. A version string can be embedded with `VERSION=<version>`; builds
-without it report `EXPERIMENTAL`.
+build output. A version string can be embedded with `VERSION=<version>`.
+Without one, both Makefiles calculate a deterministic `CRC32-XXXXXXXX` from the
+shared build inputs. The displayed/logged version always includes `DEBUG` or
+`RELEASE`, and experimental builds also include `EXPERIMENTAL`.
+
+`run_build.ps1` applies the same automatic versioning rule. Pass `-e` or
+`--experimental` to opt into the experimental feature set, and combine it with
+`-d` or `--debug` when needed. The script installs the selected experimental
+artifact under the normal module filename expected by the Cemu graphics pack.
 
 ## Install on Cemu
 
@@ -144,6 +172,10 @@ module name directly.
 
 For a debug build, use `tphd_tools_debug.rpl` together with the files from
 `graphicspack/debug`. Do not mix release and debug artifacts.
+
+For a manual experimental install, rename `tphd_tools_experimental.rpl` to
+`tphd_tools.rpl`, or `tphd_tools_experimental_debug.rpl` to
+`tphd_tools_debug.rpl`, when copying it into the game directory.
 
 `run_build.ps1` is a developer convenience script with local Cemu and game
 paths. Edit its destination paths before using it on another system.
@@ -161,6 +193,8 @@ paths. Edit its destination paths before using it on another system.
 
 The Aroma build does not use the Cemu RPL or graphics pack. Its WUPS hooks are
 limited to game processes and only activate for the supported TPHD title IDs.
+Experimental Aroma artifacts may likewise be renamed to `tphd_tools.wps` when
+installed.
 
 ## SD card data
 

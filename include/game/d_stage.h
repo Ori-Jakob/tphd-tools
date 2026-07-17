@@ -35,6 +35,30 @@
 #define GAME_ADDR_dScnPly_phase1_slot  0x10129b28u
 typedef int (*dScnPly_phase1_t)(void* scene);
 
+// Room-create phase that allocates the room's dSv_zone_c and then parses
+// room.dzr. Its phase-table slot is the function's only data xref. A save-state
+// hook restores the current stage's saved records before chaining the function,
+// then merges the newly allocated room-zone flags after it returns.
+#define GAME_ADDR_dScnRoom_zone_phase       0x02ac3f68u
+#define GAME_ADDR_dScnRoom_zone_phase_slot  0x10129bd8u
+#define DSCNROOM_OFF_ROOMNO                 0x00b0u
+typedef int (*dScnRoom_zone_phase_t)(void* roomScene);
+
+// roomControl status table: TPHD's room zone-create phase reads/writes the s8
+// zone index at base + roomNo*0x404. A nonnegative value proves createZone has
+// claimed a live record for that room; the phase hook uses this to avoid
+// mistaking an injected pre-create snapshot record for a new allocation.
+#define GAME_ADDR_roomControlZoneNo  0x1016b5dfu
+#define DROOM_STATUS_STRIDE          0x0404u
+
+static inline s8 dStage_getRoomZoneNo(s8 roomNo)
+{
+    if (roomNo < 0 || roomNo >= 64)
+        return -1;
+    return *(volatile s8*)(GAME_ADDR_roomControlZoneNo +
+                           (u32)roomNo * DROOM_STATUS_STRIDE);
+}
+
 // dStage_startStage_c field offsets (shared by start/next stage).
 #define DSTAGE_OFF_NAME   0x0
 #define DSTAGE_OFF_POINT  0x8

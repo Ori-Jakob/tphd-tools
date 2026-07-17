@@ -16,10 +16,13 @@
 #include "debug_save.h"
 #include "tools/warp.h"
 #include "tools/save_state.h"
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+#include "tools/boss_practice.h"
+#include "tools/auto_splitter.h"
+#endif
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
 #include "tools/input_viewer.h"
-#include "tools/auto_splitter.h"
 #include "tools/link_position_editor.h"
 #include "cheats/cheats.h"
 #include "cheats/inventory_editor.h"
@@ -330,10 +333,17 @@ static void DrawToolsMenu()
     Tools::ModernCamera::DrawMenuItem();
     Tools::Warp::DrawMenuItem();
     Tools::SaveState::DrawMenuItem();
-    Tools::AutoSplitter::DrawMenuItem();
     Tools::InputViewer::DrawMenuItem();
     Tools::LinkPositionEditor::DrawMenuItem();
 }
+
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+static void DrawExperimentalMenu()
+{
+    Tools::BossPractice::DrawMenuItem();
+    Tools::AutoSplitter::DrawMenuItem();
+}
+#endif
 
 static void DrawDebugMenu()
 {
@@ -558,6 +568,12 @@ void Draw(ImGuiIO& io)
                 DrawToolsMenu();
                 ImGui::EndMenu();
             }
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+            if (ImGui::BeginMenu("Experimental")) {
+                DrawExperimentalMenu();
+                ImGui::EndMenu();
+            }
+#endif
             if (ImGui::BeginMenu("Cheats")) {
                 Cheats::DrawMenu();
                 ImGui::EndMenu();
@@ -584,6 +600,9 @@ void Draw(ImGuiIO& io)
         DrawHotkeysWindow();
         Tools::Warp::DrawWindow(true);
         Tools::SaveState::DrawWindow(true);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+        Tools::BossPractice::DrawWindow(true);
+#endif
         Tools::LinkPositionEditor::DrawWindow(true);
         Debug::DebugSave::DrawWindow(true);
         Cheats::InventoryEditor::DrawWindow(true);
@@ -591,7 +610,9 @@ void Draw(ImGuiIO& io)
 
     // Passive HUD windows stay on-screen (locked, no input) when the menu closes.
     Tools::InputViewer::DrawWindow(g_menuVisible);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     Tools::AutoSplitter::DrawWindow(g_menuVisible);
+#endif
     Debug::LinkPosition::DrawWindow(g_menuVisible);
 
     // Gamepad window management: Y cycles windows, L/R cycle the focused window's

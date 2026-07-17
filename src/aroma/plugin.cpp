@@ -55,6 +55,9 @@
 #include "version.h"
 #include "game/d_stage.h"
 #include "tools/save_state.h"
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+#include "tools/boss_practice.h"
+#endif
 #include "tools/modern_camera.h"
 #include "debug/debug_save.h"
 
@@ -188,6 +191,70 @@ static void restoreScenePhase1Hook()
     s_realScenePhase1 = nullptr;
 }
 
+// The room phase at 0x02ac3f68 allocates dSv_zone_c and parses room.dzr. Restore
+// mMemory/mDan before entering it (the same records a normal getSave supplies),
+// then merge dynamically allocated zone bytes after it returns.
+static dScnRoom_zone_phase_t s_realRoomZonePhase = nullptr;
+
+static volatile dScnRoom_zone_phase_t* roomZonePhaseSlot()
+{
+    return reinterpret_cast<volatile dScnRoom_zone_phase_t*>(
+        static_cast<uintptr_t>(GAME_ADDR_dScnRoom_zone_phase_slot));
+}
+
+static int roomZonePhaseHook(void* roomScene)
+{
+    dScnRoom_zone_phase_t real = s_realRoomZonePhase;
+    if (!real) {
+        real = reinterpret_cast<dScnRoom_zone_phase_t>(
+            static_cast<uintptr_t>(GAME_ADDR_dScnRoom_zone_phase));
+    }
+
+    if (s_active)
+        Tools::SaveState::OnRoomCreateBegin(roomScene);
+    const int result = real(roomScene);
+    if (s_active)
+        Tools::SaveState::OnRoomZoneReady(roomScene);
+    return result;
+}
+
+static bool installRoomZonePhaseHook()
+{
+    volatile dScnRoom_zone_phase_t* slot = roomZonePhaseSlot();
+    if (s_realRoomZonePhase && *slot == roomZonePhaseHook)
+        return true;
+
+    s_realRoomZonePhase = nullptr;
+    dScnRoom_zone_phase_t current = *slot;
+    if (!current)
+        return false;
+    if (current == roomZonePhaseHook) {
+        current = reinterpret_cast<dScnRoom_zone_phase_t>(
+            static_cast<uintptr_t>(GAME_ADDR_dScnRoom_zone_phase));
+    }
+
+    s_realRoomZonePhase = current;
+    *slot = roomZonePhaseHook;
+    DCFlushRange((void*)slot, sizeof(*slot));
+    OSMemoryBarrier();
+    return *slot == roomZonePhaseHook;
+}
+
+static void restoreRoomZonePhaseHook()
+{
+    dScnRoom_zone_phase_t real = s_realRoomZonePhase;
+    if (!real)
+        return;
+
+    volatile dScnRoom_zone_phase_t* slot = roomZonePhaseSlot();
+    if (*slot == roomZonePhaseHook) {
+        *slot = real;
+        DCFlushRange((void*)slot, sizeof(*slot));
+        OSMemoryBarrier();
+    }
+    s_realRoomZonePhase = nullptr;
+}
+
 static void deactivate(const char* reason)
 {
     bool wasActive = s_active;
@@ -198,10 +265,13 @@ static void deactivate(const char* reason)
     s_overlayContextReady = false;
     // Never dereference a Zelda.rpx address from a Wii U Menu lifecycle call,
     // even if stale plugin state somehow survives a process transition.
-    if (wasActive && upid == kGameUPID)
+    if (wasActive && upid == kGameUPID) {
         restoreScenePhase1Hook();
-    else if (upid != kGameUPID)
+        restoreRoomZonePhaseHook();
+    } else if (upid != kGameUPID) {
         s_realScenePhase1 = nullptr;
+        s_realRoomZonePhase = nullptr;
+    }
 
 #ifdef TPHD_TOOLS_DEBUG
     OSReport("[tphd_tools.wps] %s upid=%u wasActive=%d\n",
@@ -375,6 +445,9 @@ ON_APPLICATION_START()
     // snapshot, a wedged busy flag) belongs to the previous session and must
     // never leak into this one.
     Tools::SaveState::OnApplicationStart();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    Tools::BossPractice::OnApplicationStart();
+#endif
     Debug::DebugSave::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
 
@@ -396,16 +469,18 @@ ON_APPLICATION_START()
         }
         Overlay::OnApplicationStart();
         bool phaseHookInstalled = installScenePhase1Hook();
+        bool roomHookInstalled = installRoomZonePhaseHook();
         // Start the file logger on first present, after WUPS has completed the
         // application-start lifecycle. This mirrors the Cemu front end and
         // avoids creating a worker thread from inside the loader callback.
         OSReport("[tphd_tools.wps] ON_APPLICATION_START upid=%u titleID=%016llx "
-                 "active=1 phase1Hook=%d\n",
-                 (unsigned)upid, (unsigned long long)tid, (int)phaseHookInstalled);
+                 "active=1 phase1Hook=%d roomHook=%d\n",
+                 (unsigned)upid, (unsigned long long)tid,
+                 (int)phaseHookInstalled, (int)roomHookInstalled);
         sdBootTrace("ON_APPLICATION_START upid=%u titleID=%016llx active=1 "
-                    "phase1Hook=%d",
+                    "phase1Hook=%d roomHook=%d",
                     (unsigned)upid, (unsigned long long)tid,
-                    (int)phaseHookInstalled);
+                    (int)phaseHookInstalled, (int)roomHookInstalled);
     } else {
         OSReport("[tphd_tools.wps] ON_APPLICATION_START upid=%u titleID=%016llx active=0\n",
                  (unsigned)upid, (unsigned long long)tid);

@@ -29,24 +29,37 @@ include $(DEVKITPRO)/wut/share/wut_rules
 # (a unity shim) so we leave out the swkbd-heavy imgui_impl_wiiu.cpp;
 # backends/wiiu is on the include path only.
 DEBUG		?=	0
+EXPERIMENTAL	?=	0
 VERSION		?=
-BASE_TARGET	:=	tphd_tools
+VERSION		:=	$(strip $(VERSION))
+ifeq ($(VERSION),)
+VERSION		:=	$(shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(TOPDIR)/scripts/source_crc32.ps1" -ProjectRoot "$(TOPDIR)")
+endif
+ifeq ($(strip $(VERSION)),)
+$(error "Unable to calculate the automatic source CRC32 version")
+endif
+ROOT_TARGET	:=	tphd_tools
+ifeq ($(EXPERIMENTAL),1)
+BASE_TARGET	:=	$(ROOT_TARGET)_experimental
+BUILD_SUFFIX	:=	_experimental
+EXPERIMENTAL_DEFINES := -DTPHD_TOOLS_EXPERIMENTAL=1
+else
+BASE_TARGET	:=	$(ROOT_TARGET)
+BUILD_SUFFIX	:=
+EXPERIMENTAL_DEFINES :=
+endif
 ifeq ($(DEBUG),1)
 TARGET		:=	$(BASE_TARGET)_debug
-BUILD		:=	build_debug
+BUILD		:=	build$(BUILD_SUFFIX)_debug
 OPTFLAGS	:=	-O0
 DEBUG_DEFINES	:=	-DTPHD_TOOLS_DEBUG=1
 else
 TARGET		:=	$(BASE_TARGET)
-BUILD		:=	build
+BUILD		:=	build$(BUILD_SUFFIX)
 OPTFLAGS	:=	-O2
 DEBUG_DEFINES	:=
 endif
-ifneq ($(strip $(VERSION)),)
 VERSION_DEFINE	:=	'-DTPHD_TOOLS_VERSION_BASE="$(VERSION)"'
-else
-VERSION_DEFINE	:=
-endif
 SOURCES		:=	src src/cemu src/utils src/debug src/tools src/cheats external/imgui external/cjson
 DATA		:=	data
 INCLUDES	:=	include include/utils include/debug include/tools include/cheats external/imgui external/imgui/backends/wiiu external/cjson
@@ -57,7 +70,8 @@ INCLUDES	:=	include include/utils include/debug include/tools include/cheats ext
 CFLAGS	:=	-g -Wall $(OPTFLAGS) -ffunction-sections \
 			$(MACHDEP)
 
-CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ $(DEBUG_DEFINES) $(VERSION_DEFINE)
+CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ $(DEBUG_DEFINES) \
+			$(EXPERIMENTAL_DEFINES) $(VERSION_DEFINE)
 
 CXXFLAGS	:= $(CFLAGS) -fno-exceptions -fno-rtti
 
@@ -89,6 +103,10 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
 # Dear ImGui demo is not used by this project (ShowDemoWindow is never called).
 CPPFILES	:=	$(filter-out imgui_demo.cpp,$(CPPFILES))
+# Experimental tools are absent from standard binaries, not merely hidden in UI.
+ifneq ($(EXPERIMENTAL),1)
+CPPFILES	:=	$(filter-out auto_splitter.cpp boss_practice.cpp,$(CPPFILES))
+endif
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #-------------------------------------------------------------------------------
@@ -130,9 +148,11 @@ $(BUILD):
 #-------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr build build_debug \
-		$(BASE_TARGET).rpl $(BASE_TARGET).elf \
-		$(BASE_TARGET)_debug.rpl $(BASE_TARGET)_debug.elf
+	@rm -fr build build_debug build_experimental build_experimental_debug \
+		$(ROOT_TARGET).rpl $(ROOT_TARGET).elf \
+		$(ROOT_TARGET)_debug.rpl $(ROOT_TARGET)_debug.elf \
+		$(ROOT_TARGET)_experimental.rpl $(ROOT_TARGET)_experimental.elf \
+		$(ROOT_TARGET)_experimental_debug.rpl $(ROOT_TARGET)_experimental_debug.elf
 
 #-------------------------------------------------------------------------------
 else

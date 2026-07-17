@@ -10,7 +10,10 @@
 #include "link_position.h"
 #include "tools/input_viewer.h"
 #include "tools/save_state.h"
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+#include "tools/boss_practice.h"
 #include "tools/auto_splitter.h"
+#endif
 #include "tools/modern_camera.h"
 #include "cheats/cheats.h"
 #include "storage.h"
@@ -60,6 +63,9 @@ struct Snap {
     float windowAdjustDeadzone;
     bool saveStateOverridePosition;
     bool saveStateReloadLastHotkey;
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    bool bossPractice;
+#endif
     char saveStateLastLoadedFolder[64];
     char saveStateLastLoaded[64];
     bool inputViewer;
@@ -74,12 +80,14 @@ struct Snap {
     float inputPy;
     float inputW;
     float inputH;
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     bool autoSplitter;
     bool autoSplitterAutoStart;
     bool autoSplitterRemoveLoads;
     float autoSplitterDeltaPreviewSeconds;
     bool autoSplitterInitialsWhenDeltaShown;
     char autoSplitterPath[160];
+#endif
     bool modernCamera;
     float modernCameraFovScale;
     float modernCameraSensitivityX;
@@ -122,6 +130,9 @@ static Snap gather()
     s.windowAdjustDeadzone = g_settings.windowAdjustDeadzone;
     s.saveStateOverridePosition = Tools::SaveState::IsPositionOverrideEnabled();
     s.saveStateReloadLastHotkey = Tools::SaveState::IsReloadLastHotkeyEnabled();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    s.bossPractice = Tools::BossPractice::IsEnabled();
+#endif
     strncpy(s.saveStateLastLoadedFolder, Tools::SaveState::GetLastLoadedStateFolder(),
             sizeof(s.saveStateLastLoadedFolder) - 1);
     s.saveStateLastLoadedFolder[sizeof(s.saveStateLastLoadedFolder) - 1] = '\0';
@@ -136,6 +147,7 @@ static Snap gather()
     Debug::LinkPosition::GetWindowSize(&s.linkW, &s.linkH);
     Tools::InputViewer::GetWindowPos(&s.inputPx, &s.inputPy);
     Tools::InputViewer::GetWindowSize(&s.inputW, &s.inputH);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     s.autoSplitter = Tools::AutoSplitter::IsEnabled();
     s.autoSplitterAutoStart = Tools::AutoSplitter::IsAutoStartEnabled();
     s.autoSplitterRemoveLoads = Tools::AutoSplitter::IsLoadRemovalEnabled();
@@ -145,6 +157,7 @@ static Snap gather()
     strncpy(s.autoSplitterPath, Tools::AutoSplitter::GetSelectedPath(),
             sizeof(s.autoSplitterPath) - 1);
     s.autoSplitterPath[sizeof(s.autoSplitterPath) - 1] = '\0';
+#endif
     s.modernCamera = Tools::ModernCamera::IsEnabled();
     s.modernCameraFovScale = Tools::ModernCamera::GetFovScale();
     s.modernCameraSensitivityX = Tools::ModernCamera::GetSensitivityX();
@@ -175,6 +188,9 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.windowAdjustDeadzone == b.windowAdjustDeadzone &&
            a.saveStateOverridePosition == b.saveStateOverridePosition &&
            a.saveStateReloadLastHotkey == b.saveStateReloadLastHotkey &&
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+           a.bossPractice == b.bossPractice &&
+#endif
            strcmp(a.saveStateLastLoadedFolder, b.saveStateLastLoadedFolder) == 0 &&
            strcmp(a.saveStateLastLoaded, b.saveStateLastLoaded) == 0 &&
            a.inputViewer == b.inputViewer &&
@@ -182,12 +198,15 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.gameInfoRealDateTime == b.gameInfoRealDateTime && a.px == b.px &&
            a.py == b.py && a.linkW == b.linkW && a.linkH == b.linkH &&
            a.inputPx == b.inputPx && a.inputPy == b.inputPy && a.inputW == b.inputW &&
-           a.inputH == b.inputH && a.autoSplitter == b.autoSplitter &&
+           a.inputH == b.inputH &&
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+           a.autoSplitter == b.autoSplitter &&
            a.autoSplitterAutoStart == b.autoSplitterAutoStart &&
            a.autoSplitterRemoveLoads == b.autoSplitterRemoveLoads &&
            a.autoSplitterDeltaPreviewSeconds == b.autoSplitterDeltaPreviewSeconds &&
            a.autoSplitterInitialsWhenDeltaShown == b.autoSplitterInitialsWhenDeltaShown &&
            strcmp(a.autoSplitterPath, b.autoSplitterPath) == 0 &&
+#endif
            a.modernCamera == b.modernCamera &&
            a.modernCameraFovScale == b.modernCameraFovScale &&
            a.modernCameraSensitivityX == b.modernCameraSensitivityX &&
@@ -238,6 +257,9 @@ static char* serialize()
                           Tools::SaveState::IsPositionOverrideEnabled());
     cJSON_AddBoolToObject(root, "saveStateReloadLastHotkey",
                           Tools::SaveState::IsReloadLastHotkeyEnabled());
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    cJSON_AddBoolToObject(root, "bossPractice", Tools::BossPractice::IsEnabled());
+#endif
     cJSON_AddStringToObject(root, "saveStateLastLoadedFolder",
                             Tools::SaveState::GetLastLoadedStateFolder());
     cJSON_AddStringToObject(root, "saveStateLastLoaded",
@@ -258,6 +280,7 @@ static char* serialize()
     Tools::InputViewer::GetWindowSize(&px, &py);
     cJSON_AddNumberToObject(root, "inputViewerWidth", px);
     cJSON_AddNumberToObject(root, "inputViewerHeight", py);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     cJSON_AddBoolToObject(root, "autoSplitter", Tools::AutoSplitter::IsEnabled());
     cJSON_AddBoolToObject(root, "autoSplitterAutoStart",
                           Tools::AutoSplitter::IsAutoStartEnabled());
@@ -269,6 +292,7 @@ static char* serialize()
                           Tools::AutoSplitter::IsInitialsWhenDeltaShownEnabled());
     cJSON_AddStringToObject(root, "autoSplitterPath",
                             Tools::AutoSplitter::GetSelectedPath());
+#endif
     cJSON_AddBoolToObject(root, "modernCamera", Tools::ModernCamera::IsEnabled());
     cJSON_AddNumberToObject(root, "modernCameraFovScale",
                             Tools::ModernCamera::GetFovScale());
@@ -401,6 +425,15 @@ static void apply(const char* text)
     } else {
         s_forceSync = true;
     }
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "bossPractice")) &&
+        cJSON_IsBool(it)) {
+        Tools::BossPractice::SetEnabled(cJSON_IsTrue(it));
+    } else {
+        Tools::BossPractice::SetEnabled(false);
+        s_forceSync = true;
+    }
+#endif
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "inputViewer")) && cJSON_IsBool(it))
         Tools::InputViewer::SetEnabled(cJSON_IsTrue(it));
     else
@@ -461,6 +494,7 @@ static void apply(const char* text)
         else
             s_forceSync = true;
     }
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "autoSplitter")) &&
         cJSON_IsBool(it))
         Tools::AutoSplitter::SetEnabled(cJSON_IsTrue(it));
@@ -491,6 +525,7 @@ static void apply(const char* text)
         Tools::AutoSplitter::SetSelectedPath(it->valuestring);
     else
         s_forceSync = true;
+#endif
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCamera")) && cJSON_IsBool(it))
         Tools::ModernCamera::SetEnabled(cJSON_IsTrue(it));
     else
