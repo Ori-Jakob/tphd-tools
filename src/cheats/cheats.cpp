@@ -9,6 +9,7 @@
 #include "cheats/cheats.h"
 #include "cheats/inventory_editor.h"
 #include "input.h"
+#include "overlay.h"
 
 #include <coreinit/cache.h>   // DCFlushRange / ICInvalidateRange (code-patch cheats)
 
@@ -26,9 +27,10 @@ struct Cheat {
 
 // --- cheat implementations (one at a time, ported from tpgz / MegaCheats) ---
 
-// Moon Jump: hold ZR+A to drive Link straight up. n0ted's MegaCheats writes the
-// gravity value into Link's Y velocity (actor+0x4FC = speed.y) while the combo
-// is held; we do the same from the present hook.
+// Moon Jump: hold the rebindable combo (default ZR+A) to drive Link straight
+// up. n0ted's MegaCheats writes the gravity value into Link's Y velocity
+// (actor+0x4FC = speed.y) while the combo is held; we do the same from the
+// present hook.
 static void cheat_moonJump()
 {
     fopAc_ac_c* link = dComIfGp_getPlayer();
@@ -38,8 +40,8 @@ static void cheat_moonJump()
     if (!dCam_getInput(&in))
         return;
     u32 b = dCam_normalizeButtons(in.buttons, in.type);
-    const u32 combo = PRO_BTN_ZR | PRO_BTN_A;   // 0x14, MegaCheats' default
-    if ((b & combo) == combo)
+    u32 combo = ov::MenuButtonsToPro(ov::g_settings.moonJumpCombo);
+    if (combo != 0 && (b & combo) == combo)
         link->speed.y = 55.0f;
 }
 
@@ -161,13 +163,15 @@ static void cheat_unrestrictedItems()
 }
 
 static Cheat s_cheats[] = {
-    { "Moon Jump",        "Hold ZR+A",          false, cheat_moonJump },
+    // Tooltips for Moon Jump / Quick Transform are built live in DrawMenu
+    // (their combos are rebindable via Settings -> Rebind Hotkeys).
+    { "Moon Jump",        nullptr,              false, cheat_moonJump },
     { "Infinite Hearts",  nullptr,              false, cheat_infiniteHearts },
     { "Infinite Rupees",  nullptr,              false, cheat_infiniteRupees },
     { "Infinite Air",     nullptr,              false, cheat_infiniteAir },
     { "Infinite Ammo",    "Keep arrows/bombs/seeds/oil topped up",   false, cheat_infiniteAmmo },
     { "Invincibility",    nullptr,              false, cheat_invincibility },
-    { "Quick Transform",  "Press ZR+Y to switch human/wolf",     false, cheat_quickTransform }
+    { "Quick Transform",  nullptr,              false, cheat_quickTransform }
     //{ "Unrestricted Items", "Use any item anywhere (no area limits)", false, cheat_unrestrictedItems },
 };
 
@@ -185,8 +189,17 @@ void DrawMenu()
 {
     for (int i = 0; i < kCount; ++i) {
         ImGui::Checkbox(s_cheats[i].name, &s_cheats[i].enabled);
-        if (s_cheats[i].desc && ImGui::IsItemHovered())
+        if (s_cheats[i].tick == cheat_moonJump && ImGui::IsItemHovered()) {
+            char hk[64];
+            Input::HotkeyToString(ov::g_settings.moonJumpCombo, hk, sizeof(hk));
+            ImGui::SetTooltip("Hold %s", hk);
+        } else if (s_cheats[i].tick == cheat_quickTransform && ImGui::IsItemHovered()) {
+            char hk[64];
+            Input::HotkeyToString(ov::g_settings.quickTransformCombo, hk, sizeof(hk));
+            ImGui::SetTooltip("Press %s to switch human/wolf", hk);
+        } else if (s_cheats[i].desc && ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", s_cheats[i].desc);
+        }
     }
     ImGui::Separator();
     InventoryEditor::DrawMenuButton();

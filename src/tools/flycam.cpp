@@ -12,6 +12,7 @@
 #include "tools/flycam.h"
 
 #include "imgui.h"
+#include "overlay.h"     // ov::g_settings.flyCamCombo, MenuButtonsToPro
 #include "game/game.h"   // d_camera.h accessors
 
 #include <math.h>
@@ -39,10 +40,19 @@ static float s_speed = kSpeedInit;
 static float s_hcosYaw = 0, s_hsinYaw = 0, s_sinPitch = 0, s_cosPitch = 0;
 static cXyz  s_savedAt = {}, s_savedEye = {};
 
-void DrawMenuItem()     { ImGui::Checkbox("Fly Cam", &s_enabled); }
+void DrawMenuItem()
+{
+    ImGui::Checkbox("Fly Cam", &s_enabled);
+}
 bool IsEnabled()        { return s_enabled; }
 void SetEnabled(bool e) { s_enabled = e; }
 bool IsActive()         { return s_active; }
+
+// Pro-button mask for the configured activation combo (0 if unbound).
+static u32 activationCombo()
+{
+    return (u32)ov::MenuButtonsToPro(ov::g_settings.flyCamCombo);
+}
 
 // GamePad -> Pro button normalization (so the logic is device-neutral), matching
 // fc_normalize_buttons in the cheat. Pro input is already in the target codes.
@@ -170,14 +180,15 @@ void Tick()
     s_prevButtons = buttons;
 
     if (!s_active) {
-        // Activate on ZL+ZR+L3+R3 with at least one fresh press.
-        if ((buttons & PRO_COMBO) == PRO_COMBO && (newly & PRO_COMBO) != 0) {
+        // Activate on the rebindable combo with at least one fresh press.
+        u32 combo = activationCombo();
+        if (combo != 0 && (buttons & combo) == combo && (newly & combo) != 0) {
             CameraXform* cam = dCam_getXform();
             if (!cam)
                 return;
             s_savedAt  = cam->at;
             s_savedEye = cam->eye;
-            s_inputLock = PRO_COMBO;   // wait for release before in-mode buttons act
+            s_inputLock = combo;   // wait for release before in-mode buttons act
             s_active = true;
             s_initialized = false;
         }

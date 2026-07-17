@@ -28,6 +28,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"     // GImGui->NavWindow -- move the focused window
 
+#include <stdio.h>
 #include <string.h>
 
 using namespace ov;
@@ -39,6 +40,8 @@ static const float TOAST_TOTAL = 3.0f;
 static const float TOAST_FADE  = 1.0f;
 static float s_toast = 0.0f;     // seconds remaining; 0 = inactive
 static int   s_navKick = 0;      // frames left to synthesize the Alt menu-enter
+static bool  s_hotkeysWindow = false;  // Settings -> Rebind Hotkeys popup window
+static bool  s_openConflictPopup = false;
 
 void OnLoaded()
 {
@@ -49,8 +52,15 @@ void Toggle()
 {
     g_menuVisible = !g_menuVisible;
     s_toast = 0.0f;              // dismiss the toast once the user opens the menu
-    if (g_menuVisible)
+    if (g_menuVisible) {
         s_navKick = 2;          // Alt down (frame 2) then up (frame 1) -> enter menu layer
+    } else {
+        // Drop mid-rebind state so a held combo doesn't commit after the menu closes.
+        if (Input::IsCapturingHotkey() || Input::IsHotkeyConflictPending())
+            Input::CancelHotkeyCapture();
+        s_hotkeysWindow = false;
+        s_openConflictPopup = false;
+    }
 }
 
 static void DrawToast(ImGuiIO& io)
@@ -133,8 +143,10 @@ static void DrawSettingsMenu()
     ImGui::Checkbox("Freeze game while menu open", &g_settings.freezeOnMenu);
     ImGui::Checkbox("Game reset hotkey", &g_settings.gameResetHotkey);
     if (g_settings.gameResetHotkey) {
+        char gr[64];
+        Input::HotkeyToString(g_settings.gameResetCombo, gr, sizeof(gr));
         ImGui::Indent();
-        ImGui::TextDisabled("Start+X+B");
+        ImGui::TextDisabled("%s", gr);
         ImGui::Unindent();
     }
 
@@ -195,15 +207,113 @@ static void DrawSettingsMenu()
 
     ImGui::Separator();
 
-    char hk[64];
-    Input::HotkeyToString(g_settings.hotkey, hk, sizeof(hk));
-    if (Input::IsCapturingHotkey()) {
-        ImGui::TextDisabled("Hotkey: press buttons, release to set");
-    } else {
-        ImGui::Text("Hotkey: %s", hk);
-        ImGui::SameLine();
-        if (ImGui::Button("Rebind"))
-            Input::BeginHotkeyCapture();
+    {
+        char hk[64];
+        Input::HotkeyToString(g_settings.hotkey, hk, sizeof(hk));
+        ImGui::Text("Menu hotkey: %s", hk);
+    }
+    if (ImGui::Button("Rebind Hotkeys"))
+        s_hotkeysWindow = true;
+}
+
+// Popup table of every rebindable feature hotkey. Capture uses the same press-
+// then-release flow as the original menu-hotkey Rebind; exact collisions with
+// another assigned hotkey open a confirmation before overwriting that slot.
+static void DrawHotkeysWindow()
+{
+    if (!s_hotkeysWindow)
+        return;
+
+    ImGui::SetNextWindowSize(ImVec2(520.0f, 0.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(80.0f, 80.0f), ImGuiCond_FirstUseEver);
+    bool open = ImGui::Begin("Rebind Hotkeys", &s_hotkeysWindow, ImGuiWindowFlags_NoCollapse);
+    if (open) {
+        ImGui::TextDisabled(
+            "Press buttons, then release to set. Conflicts ask before overwriting.");
+        ImGui::Separator();
+
+        const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                                      ImGuiTableFlags_SizingStretchProp;
+        if (ImGui::BeginTable("##hotkey_table", 3, flags)) {
+            ImGui::TableSetupColumn("Feature", ImGuiTableColumnFlags_WidthStretch, 0.45f);
+            ImGui::TableSetupColumn("Hotkey",  ImGuiTableColumnFlags_WidthStretch, 0.35f);
+            ImGui::TableSetupColumn("",        ImGuiTableColumnFlags_WidthFixed,   90.0f);
+            ImGui::TableHeadersRow();
+
+            for (int i = 0; i < Input::HOTKEY_COUNT; ++i) {
+                Input::HotkeyId id = (Input::HotkeyId)i;
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(Input::HotkeyName(id));
+
+                ImGui::TableNextColumn();
+                bool capturingThis =
+                    Input::IsCapturingHotkey() && Input::CapturingHotkeyId() == id;
+                if (capturingThis) {
+                    ImGui::TextDisabled("press buttons, release to set");
+                } else {
+                    char hk[64];
+                    Input::HotkeyToString(Input::GetHotkey(id), hk, sizeof(hk));
+                    ImGui::TextUnformatted(hk);
+                }
+
+                ImGui::TableNextColumn();
+                // Disable other Rebind buttons while capturing or resolving a conflict.
+                bool busy = Input::IsCapturingHotkey() || Input::IsHotkeyConflictPending();
+                ImGui::BeginDisabled(busy && !capturingThis);
+                char label[32];
+                if (capturingThis)
+                    snprintf(label, sizeof(label), "Cancel##hk%d", i);
+                else
+                    snprintf(label, sizeof(label), "Rebind##hk%d", i);
+                if (ImGui::Button(label)) {
+                    if (capturingThis)
+                        Input::CancelHotkeyCapture();
+                    else
+                        Input::BeginHotkeyCapture(id);
+                }
+                ImGui::EndDisabled();
+            }
+            ImGui::EndTable();
+        }
+
+        // Capture finished onto a mask another feature already owns.
+        if (Input::IsHotkeyConflictPending())
+            s_openConflictPopup = true;
+        if (s_openConflictPopup) {
+            ImGui::OpenPopup("Hotkey conflict");
+            s_openConflictPopup = false;
+        }
+        if (ImGui::BeginPopupModal("Hotkey conflict", nullptr,
+                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+            char names[128];
+            char maskStr[64];
+            Input::HotkeyConflictNames(names, sizeof(names));
+            Input::HotkeyToString(Input::PendingHotkeyMask(), maskStr, sizeof(maskStr));
+            ImGui::Text("\"%s\" is already assigned to:", maskStr);
+            ImGui::TextWrapped("%s", names);
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Overwrite? The other feature(s) will be cleared.");
+            ImGui::Spacing();
+            if (ImGui::Button("Overwrite", ImVec2(120, 0))) {
+                Input::ConfirmHotkeyConflict();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                Input::CancelHotkeyConflict();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::End();
+
+    // Window X closed this frame -- drop any in-progress rebind state.
+    if (!s_hotkeysWindow) {
+        if (Input::IsCapturingHotkey() || Input::IsHotkeyConflictPending())
+            Input::CancelHotkeyCapture();
+        s_openConflictPopup = false;
     }
 }
 
@@ -211,8 +321,10 @@ static void DrawToolsMenu()
 {
     Tools::FlyCam::DrawMenuItem();
     if (Tools::FlyCam::IsEnabled()) {
+        char hk[64];
+        Input::HotkeyToString(g_settings.flyCamCombo, hk, sizeof(hk));
         ImGui::Indent();
-        ImGui::TextDisabled("ZL+ZR+L3+R3 to fly");
+        ImGui::TextDisabled("%s to fly", hk);
         ImGui::Unindent();
     }
     Tools::ModernCamera::DrawMenuItem();
@@ -469,6 +581,7 @@ void Draw(ImGuiIO& io)
     // Interactive tool panels (Warps, Save Loader, Debug Save Loader) only exist
     // while the menu bar is up -- they're not passive HUDs.
     if (g_menuVisible) {
+        DrawHotkeysWindow();
         Tools::Warp::DrawWindow(true);
         Tools::SaveState::DrawWindow(true);
         Tools::LinkPositionEditor::DrawWindow(true);

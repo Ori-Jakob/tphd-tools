@@ -2941,7 +2941,13 @@ void DrawWindow(bool menuActive)
         ImGui::Checkbox("Override saved position", &s_overridePosition);
         if (!s_overridePosition)
             ImGui::TextDisabled("Uses the saved stage, room, layer, and spawn point.");
-        ImGui::Checkbox("Reload last state hotkey (ZL + ZR + Start)", &s_reloadLastHotkey);
+        {
+            char hk[64];
+            Input::HotkeyToString(ov::g_settings.saveStateReloadCombo, hk, sizeof(hk));
+            char label[96];
+            snprintf(label, sizeof(label), "Reload last state hotkey (%s)", hk);
+            ImGui::Checkbox(label, &s_reloadLastHotkey);
+        }
         if (s_lastLoadedName[0]) {
             ImGui::TextDisabled("Last loaded: %s%s%s",
                                 s_lastLoadedFolder[0] ? s_lastLoadedFolder : "Main",

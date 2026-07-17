@@ -25,6 +25,31 @@ enum MenuButton : uint32_t {
     MB_PLUS   = 1u << 12, MB_MINUS  = 1u << 13, MB_LSTICK = 1u << 14, MB_RSTICK = 1u << 15,
 };
 
+// Map device-neutral MenuButton bits into the Pro-controller codes used by the
+// game's own input path (dCam_normalizeButtons / PRO_BTN_*). Fly Cam and Moon
+// Jump read that layout rather than the overlay's MenuButton set.
+inline uint32_t MenuButtonsToPro(uint32_t m)
+{
+    uint32_t p = 0;
+    if (m & MB_A)      p |= 0x00000010u;  // PRO_BTN_A
+    if (m & MB_B)      p |= 0x00000040u;  // PRO_BTN_B
+    if (m & MB_X)      p |= 0x00000008u;  // PRO_BTN_X
+    if (m & MB_Y)      p |= 0x00000020u;  // PRO_BTN_Y
+    if (m & MB_PLUS)   p |= 0x00000400u;  // +
+    if (m & MB_MINUS)  p |= 0x00001000u;  // -
+    if (m & MB_LSTICK) p |= 0x00020000u;  // PRO_BTN_L3
+    if (m & MB_RSTICK) p |= 0x00010000u;  // PRO_BTN_R3
+    if (m & MB_L)      p |= 0x00002000u;  // PRO_BTN_L
+    if (m & MB_ZL)     p |= 0x00000080u;  // PRO_BTN_ZL
+    if (m & MB_R)      p |= 0x00000200u;  // PRO_BTN_R
+    if (m & MB_ZR)     p |= 0x00000004u;  // PRO_BTN_ZR
+    if (m & MB_UP)     p |= 0x00000001u;  // D-Up
+    if (m & MB_DOWN)   p |= 0x00004000u;  // D-Down
+    if (m & MB_LEFT)   p |= 0x00000002u;  // D-Left
+    if (m & MB_RIGHT)  p |= 0x00008000u;  // D-Right
+    return p;
+}
+
 // Which controller to finalize when a save/debug-save load happens from the title
 // screen (before the boot controller-select). AUTO prefers a connected Pro.
 enum ControllerPref { CTRL_AUTO = 0, CTRL_GAMEPAD = 1, CTRL_PRO = 2 };
@@ -38,7 +63,14 @@ struct Settings {
     int      blockMode    = BLOCK_ALL;     // OverlayBlockMode
     uint32_t hotkey       = MB_ZR | MB_DOWN;  // open/close combo (MenuButton bits)
     bool     freezeOnMenu = false;         // halt the game (freeze bit) while the menu is open
-    bool     gameResetHotkey = true;       // Start+X+B writes the engine reset flag
+    bool     gameResetHotkey = true;       // game-reset combo writes the engine reset flag
+    // Rebindable feature hotkeys (MenuButton bits). Defaults match the original
+    // hard-coded combos (Start+X+B, ZL+ZR+Start, ZR+Y, ZL+ZR+L3+R3, ZR+A).
+    uint32_t gameResetCombo        = MB_PLUS | MB_X | MB_B;
+    uint32_t saveStateReloadCombo  = MB_ZL | MB_ZR | MB_PLUS;
+    uint32_t quickTransformCombo   = MB_ZR | MB_Y;
+    uint32_t flyCamCombo           = MB_ZL | MB_ZR | MB_LSTICK | MB_RSTICK;
+    uint32_t moonJumpCombo         = MB_ZR | MB_A;
     int      controllerPref  = CTRL_AUTO;  // controller to select for title-screen loads
     // Draw on both screens by default: a console player may only be looking at
     // the GamePad, and with a TV-only default they'd get the input block with

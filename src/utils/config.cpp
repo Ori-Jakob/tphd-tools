@@ -48,6 +48,11 @@ struct Snap {
     uint32_t hotkey;
     bool freeze;
     bool gameResetHotkey;
+    uint32_t gameResetCombo;
+    uint32_t saveStateReloadCombo;
+    uint32_t quickTransformCombo;
+    uint32_t flyCamCombo;
+    uint32_t moonJumpCombo;
     int controllerPref;
     int renderTarget;
     float overlayOpacity;
@@ -105,6 +110,11 @@ static Snap gather()
     s.hotkey = g_settings.hotkey;
     s.freeze = g_settings.freezeOnMenu;
     s.gameResetHotkey = g_settings.gameResetHotkey;
+    s.gameResetCombo = g_settings.gameResetCombo;
+    s.saveStateReloadCombo = g_settings.saveStateReloadCombo;
+    s.quickTransformCombo = g_settings.quickTransformCombo;
+    s.flyCamCombo = g_settings.flyCamCombo;
+    s.moonJumpCombo = g_settings.moonJumpCombo;
     s.controllerPref = g_settings.controllerPref;
     s.renderTarget = g_settings.renderTarget;
     s.overlayOpacity = g_settings.overlayOpacity;
@@ -154,6 +164,11 @@ static bool snapEqual(const Snap& a, const Snap& b)
 {
     return a.block == b.block && a.mode == b.mode && a.hotkey == b.hotkey &&
            a.freeze == b.freeze && a.gameResetHotkey == b.gameResetHotkey &&
+           a.gameResetCombo == b.gameResetCombo &&
+           a.saveStateReloadCombo == b.saveStateReloadCombo &&
+           a.quickTransformCombo == b.quickTransformCombo &&
+           a.flyCamCombo == b.flyCamCombo &&
+           a.moonJumpCombo == b.moonJumpCombo &&
            a.controllerPref == b.controllerPref && a.renderTarget == b.renderTarget &&
            a.overlayOpacity == b.overlayOpacity &&
            a.boldLetters == b.boldLetters &&
@@ -207,6 +222,13 @@ static char* serialize()
     cJSON_AddNumberToObject(root, "hotkey", (double)g_settings.hotkey);
     cJSON_AddBoolToObject(root, "freezeOnMenu", g_settings.freezeOnMenu);
     cJSON_AddBoolToObject(root, "gameResetHotkey", g_settings.gameResetHotkey);
+    cJSON_AddNumberToObject(root, "gameResetCombo", (double)g_settings.gameResetCombo);
+    cJSON_AddNumberToObject(root, "saveStateReloadCombo",
+                            (double)g_settings.saveStateReloadCombo);
+    cJSON_AddNumberToObject(root, "quickTransformCombo",
+                            (double)g_settings.quickTransformCombo);
+    cJSON_AddNumberToObject(root, "flyCamCombo", (double)g_settings.flyCamCombo);
+    cJSON_AddNumberToObject(root, "moonJumpCombo", (double)g_settings.moonJumpCombo);
     cJSON_AddNumberToObject(root, "controllerPref", g_settings.controllerPref);
     cJSON_AddNumberToObject(root, "renderTarget", g_settings.renderTarget);
     cJSON_AddNumberToObject(root, "overlayOpacity", g_settings.overlayOpacity);
@@ -293,6 +315,28 @@ static void apply(const char* text)
         g_settings.freezeOnMenu = cJSON_IsTrue(it);
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "gameResetHotkey")) && cJSON_IsBool(it))
         g_settings.gameResetHotkey = cJSON_IsTrue(it);
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "gameResetCombo")) && cJSON_IsNumber(it))
+        g_settings.gameResetCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "saveStateReloadCombo")) &&
+        cJSON_IsNumber(it))
+        g_settings.saveStateReloadCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "quickTransformCombo")) &&
+        cJSON_IsNumber(it))
+        g_settings.quickTransformCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "flyCamCombo")) && cJSON_IsNumber(it))
+        g_settings.flyCamCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "moonJumpCombo")) && cJSON_IsNumber(it))
+        g_settings.moonJumpCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "controllerPref")) && cJSON_IsNumber(it))
         g_settings.controllerPref = it->valueint;
     else

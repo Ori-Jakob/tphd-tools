@@ -1,7 +1,8 @@
 // tools/flycam.h -- free-fly camera (ported from the shipped FlyCam cheat).
 //
-// Enabled via a Tools-menu checkbox. While enabled, ZL+ZR+L3+R3 toggles fly
-// mode; in fly mode the game is frozen and the camera is driven by the sticks.
+// Enabled via a Tools-menu checkbox. While enabled, the rebindable Fly Cam
+// hotkey (default ZL+ZR+L3+R3) toggles fly mode; in fly mode the game is frozen
+// and the camera is driven by the sticks.
 #pragma once
 
 namespace Tools {

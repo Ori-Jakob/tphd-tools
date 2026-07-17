@@ -28,6 +28,13 @@ static bool     s_hotkeyFired = false;
 static bool     s_capturing   = false;
 static bool     s_captureArmed = false;  // set once the controller is fully released
 static uint32_t s_captureMask = 0;
+static HotkeyId s_captureTarget = HOTKEY_MENU;
+
+// Capture completed onto a mask already used by another slot -- wait for the UI
+// to confirm (clear the other slot) or cancel (discard).
+static bool     s_conflictPending = false;
+static HotkeyId s_pendingId       = HOTKEY_MENU;
+static uint32_t s_pendingMask     = 0;
 
 static Snapshot s_pendingSnapshot = {};
 static Snapshot s_snapshot = {};
@@ -51,17 +58,106 @@ static bool     s_stateReloadFired   = false;
 // game action). Cleared in BeginFrame once no buttons remain held.
 static bool     s_drainHeld = false;
 
-// Quick-transform takeover: strip Y from the game while ZR+Y is held so the item
-// doesn't equip, and report the combo's rising edge to the cheat.
+// Quick-transform takeover: strip the combo's buttons from the game while held
+// so e.g. Y doesn't equip an item, and report the combo's rising edge to the cheat.
 static bool     s_qtArmed = false;   // cheat enabled? (set by Cheats each frame)
 static bool     s_qtHeld  = false;   // combo held this frame (set in the hooks)
 static bool     s_qtPrev  = false;   // combo held last frame (for the edge)
 static bool     s_qtFired = false;   // rising edge, consumed by the cheat
-static const uint32_t kQtCombo = MB_ZR | MB_Y;
 
-// Start maps to Plus in the device-neutral button set.
-static const uint32_t kGameResetCombo = MB_PLUS | MB_X | MB_B;
-static const uint32_t kStateReloadCombo = MB_ZL | MB_ZR | MB_PLUS;
+static uint32_t* hotkeyPtr(HotkeyId id)
+{
+    switch (id) {
+    case HOTKEY_MENU:              return &g_settings.hotkey;
+    case HOTKEY_GAME_RESET:        return &g_settings.gameResetCombo;
+    case HOTKEY_SAVE_STATE_RELOAD: return &g_settings.saveStateReloadCombo;
+    case HOTKEY_QUICK_TRANSFORM:   return &g_settings.quickTransformCombo;
+    case HOTKEY_FLY_CAM:           return &g_settings.flyCamCombo;
+    case HOTKEY_MOON_JUMP:         return &g_settings.moonJumpCombo;
+    default:                       return nullptr;
+    }
+}
+
+// Neutral MenuButton bits -> device-native bits (for stripping a combo from the
+// game's samples while it is held for Quick Transform).
+static uint32_t unmapVpad(uint32_t m)
+{
+    uint32_t h = 0;
+    if (m & MB_UP)     h |= VPAD_BUTTON_UP;
+    if (m & MB_DOWN)   h |= VPAD_BUTTON_DOWN;
+    if (m & MB_LEFT)   h |= VPAD_BUTTON_LEFT;
+    if (m & MB_RIGHT)  h |= VPAD_BUTTON_RIGHT;
+    if (m & MB_A)      h |= VPAD_BUTTON_A;
+    if (m & MB_B)      h |= VPAD_BUTTON_B;
+    if (m & MB_X)      h |= VPAD_BUTTON_X;
+    if (m & MB_Y)      h |= VPAD_BUTTON_Y;
+    if (m & MB_L)      h |= VPAD_BUTTON_L;
+    if (m & MB_R)      h |= VPAD_BUTTON_R;
+    if (m & MB_ZL)     h |= VPAD_BUTTON_ZL;
+    if (m & MB_ZR)     h |= VPAD_BUTTON_ZR;
+    if (m & MB_PLUS)   h |= VPAD_BUTTON_PLUS;
+    if (m & MB_MINUS)  h |= VPAD_BUTTON_MINUS;
+    if (m & MB_LSTICK) h |= VPAD_BUTTON_STICK_L;
+    if (m & MB_RSTICK) h |= VPAD_BUTTON_STICK_R;
+    return h;
+}
+
+static uint32_t unmapPro(uint32_t m)
+{
+    uint32_t h = 0;
+    if (m & MB_UP)     h |= WPAD_PRO_BUTTON_UP;
+    if (m & MB_DOWN)   h |= WPAD_PRO_BUTTON_DOWN;
+    if (m & MB_LEFT)   h |= WPAD_PRO_BUTTON_LEFT;
+    if (m & MB_RIGHT)  h |= WPAD_PRO_BUTTON_RIGHT;
+    if (m & MB_A)      h |= WPAD_PRO_BUTTON_A;
+    if (m & MB_B)      h |= WPAD_PRO_BUTTON_B;
+    if (m & MB_X)      h |= WPAD_PRO_BUTTON_X;
+    if (m & MB_Y)      h |= WPAD_PRO_BUTTON_Y;
+    if (m & MB_L)      h |= WPAD_PRO_TRIGGER_L;
+    if (m & MB_R)      h |= WPAD_PRO_TRIGGER_R;
+    if (m & MB_ZL)     h |= WPAD_PRO_TRIGGER_ZL;
+    if (m & MB_ZR)     h |= WPAD_PRO_TRIGGER_ZR;
+    if (m & MB_PLUS)   h |= WPAD_PRO_BUTTON_PLUS;
+    if (m & MB_MINUS)  h |= WPAD_PRO_BUTTON_MINUS;
+    if (m & MB_LSTICK) h |= WPAD_PRO_BUTTON_STICK_L;
+    if (m & MB_RSTICK) h |= WPAD_PRO_BUTTON_STICK_R;
+    return h;
+}
+
+static uint32_t unmapClassic(uint32_t m)
+{
+    uint32_t h = 0;
+    if (m & MB_UP)    h |= WPAD_CLASSIC_BUTTON_UP;
+    if (m & MB_DOWN)  h |= WPAD_CLASSIC_BUTTON_DOWN;
+    if (m & MB_LEFT)  h |= WPAD_CLASSIC_BUTTON_LEFT;
+    if (m & MB_RIGHT) h |= WPAD_CLASSIC_BUTTON_RIGHT;
+    if (m & MB_A)     h |= WPAD_CLASSIC_BUTTON_A;
+    if (m & MB_B)     h |= WPAD_CLASSIC_BUTTON_B;
+    if (m & MB_L)     h |= WPAD_CLASSIC_BUTTON_L;
+    if (m & MB_R)     h |= WPAD_CLASSIC_BUTTON_R;
+    if (m & MB_ZL)    h |= WPAD_CLASSIC_BUTTON_ZL;
+    if (m & MB_ZR)    h |= WPAD_CLASSIC_BUTTON_ZR;
+    if (m & MB_PLUS)  h |= WPAD_CLASSIC_BUTTON_PLUS;
+    if (m & MB_MINUS) h |= WPAD_CLASSIC_BUTTON_MINUS;
+    // Classic has no dedicated X/Y/L3/R3 in the same layout; Classic X/Y map via
+    // the classic extension if present -- TPHD Classic uses A/B primarily.
+    return h;
+}
+
+// True if any other rebindable slot already has exactly this mask.
+static bool maskConflicts(HotkeyId self, uint32_t mask)
+{
+    if (mask == 0)
+        return false;
+    for (int i = 0; i < HOTKEY_COUNT; ++i) {
+        if (i == (int)self)
+            continue;
+        uint32_t* p = hotkeyPtr((HotkeyId)i);
+        if (p && *p == mask)
+            return true;
+    }
+    return false;
+}
 
 static float magSq(float x, float y)
 {
@@ -183,7 +279,7 @@ static bool blockKpad()
 // buttons held), so e.g. L+R only toggles when nothing else is pressed.
 static void detectHotkey(uint32_t neutral)
 {
-    if (s_capturing)
+    if (s_capturing || s_conflictPending)
         return;
     uint32_t hk = g_settings.hotkey;
     if (hk != 0 && neutral == hk && s_prev != hk) {
@@ -195,9 +291,10 @@ static void detectHotkey(uint32_t neutral)
 
 static void detectGameResetHotkey(uint32_t neutral)
 {
-    if (s_capturing || !g_settings.gameResetHotkey)
+    if (s_capturing || s_conflictPending || !g_settings.gameResetHotkey)
         return;
-    if (neutral == kGameResetCombo && s_prev != kGameResetCombo) {
+    uint32_t hk = g_settings.gameResetCombo;
+    if (hk != 0 && neutral == hk && s_prev != hk) {
         s_gameResetPending = true;
         s_consumeFrame     = true;
         s_drainHeld        = true;
@@ -206,9 +303,10 @@ static void detectGameResetHotkey(uint32_t neutral)
 
 static void detectSaveStateReloadHotkey(uint32_t neutral)
 {
-    if (s_capturing || !s_stateReloadArmed)
+    if (s_capturing || s_conflictPending || !s_stateReloadArmed)
         return;
-    if (neutral == kStateReloadCombo && s_prev != kStateReloadCombo) {
+    uint32_t hk = g_settings.saveStateReloadCombo;
+    if (hk != 0 && neutral == hk && s_prev != hk) {
         s_stateReloadPending = true;
         s_consumeFrame       = true;
         s_drainHeld          = true;
@@ -243,14 +341,18 @@ void FilterVpad(void* buffers, int count)
     detectSaveStateReloadHotkey(bits);
     SwKbd::SetVpad(&b[0]);   // feed the system keyboard (before we zero it)
 
-    // Quick transform: while ZR+Y is held (and not in the menu), strip Y from the
-    // game so it can't equip the Y-item -- the transform takes precedence.
-    if (s_qtArmed && !g_menuVisible && (bits & kQtCombo) == kQtCombo) {
-        s_qtHeld = true;
-        for (int i = 0; i < n; i++) {
-            b[i].hold    &= ~VPAD_BUTTON_Y;
-            b[i].trigger &= ~VPAD_BUTTON_Y;
-            b[i].release &= ~VPAD_BUTTON_Y;
+    // Quick transform: while the combo is held (and not in the menu), strip those
+    // buttons from the game so e.g. Y can't equip an item -- transform wins.
+    {
+        uint32_t qt = g_settings.quickTransformCombo;
+        if (s_qtArmed && !g_menuVisible && qt != 0 && (bits & qt) == qt) {
+            s_qtHeld = true;
+            uint32_t strip = unmapVpad(qt);
+            for (int i = 0; i < n; i++) {
+                b[i].hold    &= ~strip;
+                b[i].trigger &= ~strip;
+                b[i].release &= ~strip;
+            }
         }
     }
 
@@ -292,16 +394,21 @@ void FilterKpad(void* buffers, int count)
     detectSaveStateReloadHotkey(bits);
     SwKbd::SetKpad(b, count);   // feed the system keyboard (before we zero it)
 
-    // Quick transform: strip Y (Pro + Classic) while ZR+Y is held (see FilterVpad).
-    if (s_qtArmed && !g_menuVisible && (bits & kQtCombo) == kQtCombo) {
-        s_qtHeld = true;
-        for (int i = 0; i < count && i < 4; i++) {
-            b[i].pro.hold        &= ~WPAD_PRO_BUTTON_Y;
-            b[i].pro.trigger     &= ~WPAD_PRO_BUTTON_Y;
-            b[i].pro.release     &= ~WPAD_PRO_BUTTON_Y;
-            b[i].classic.hold    &= ~WPAD_CLASSIC_BUTTON_Y;
-            b[i].classic.trigger &= ~WPAD_CLASSIC_BUTTON_Y;
-            b[i].classic.release &= ~WPAD_CLASSIC_BUTTON_Y;
+    // Quick transform: strip the combo's buttons (Pro + Classic) while held.
+    {
+        uint32_t qt = g_settings.quickTransformCombo;
+        if (s_qtArmed && !g_menuVisible && qt != 0 && (bits & qt) == qt) {
+            s_qtHeld = true;
+            uint32_t stripPro = unmapPro(qt);
+            uint32_t stripCl  = unmapClassic(qt);
+            for (int i = 0; i < count && i < 4; i++) {
+                b[i].pro.hold        &= ~stripPro;
+                b[i].pro.trigger     &= ~stripPro;
+                b[i].pro.release     &= ~stripPro;
+                b[i].classic.hold    &= ~stripCl;
+                b[i].classic.trigger &= ~stripCl;
+                b[i].classic.release &= ~stripCl;
+            }
         }
     }
 
@@ -346,7 +453,15 @@ void BeginFrame()
             s_captureMask |= s_cur;
             // Commit when the user releases everything (>=1 button seen).
             if (s_cur == 0 && s_captureMask != 0) {
-                g_settings.hotkey = s_captureMask;
+                if (maskConflicts(s_captureTarget, s_captureMask)) {
+                    s_pendingId       = s_captureTarget;
+                    s_pendingMask     = s_captureMask;
+                    s_conflictPending = true;
+                } else {
+                    uint32_t* p = hotkeyPtr(s_captureTarget);
+                    if (p)
+                        *p = s_captureMask;
+                }
                 s_capturing = false;
             }
         }
@@ -472,16 +587,126 @@ void FeedMenu(ImGuiIO& io, float dispW, float dispH)
 
 // hotkey rebinding
 
-void BeginHotkeyCapture()
+const char* HotkeyName(HotkeyId id)
 {
-    s_capturing    = true;
-    s_captureArmed = false;   // wait for a clean release before listening
-    s_captureMask  = 0;
+    switch (id) {
+    case HOTKEY_MENU:              return "Open/Close Menu";
+    case HOTKEY_GAME_RESET:        return "Game Reset";
+    case HOTKEY_SAVE_STATE_RELOAD: return "Reload Last State";
+    case HOTKEY_QUICK_TRANSFORM:   return "Quick Transform";
+    case HOTKEY_FLY_CAM:           return "Fly Cam";
+    case HOTKEY_MOON_JUMP:         return "Moon Jump";
+    default:                       return "";
+    }
+}
+
+uint32_t GetHotkey(HotkeyId id)
+{
+    uint32_t* p = hotkeyPtr(id);
+    return p ? *p : 0;
+}
+
+void SetHotkey(HotkeyId id, uint32_t mask)
+{
+    uint32_t* p = hotkeyPtr(id);
+    if (p)
+        *p = mask;
+}
+
+void BeginHotkeyCapture(HotkeyId id)
+{
+    if (id < 0 || id >= HOTKEY_COUNT)
+        return;
+    s_conflictPending = false;
+    s_capturing       = true;
+    s_captureArmed    = false;   // wait for a clean release before listening
+    s_captureMask     = 0;
+    s_captureTarget   = id;
+}
+
+void CancelHotkeyCapture()
+{
+    s_capturing       = false;
+    s_captureArmed    = false;
+    s_captureMask     = 0;
+    s_conflictPending = false;
 }
 
 bool IsCapturingHotkey()
 {
     return s_capturing;
+}
+
+HotkeyId CapturingHotkeyId()
+{
+    return s_captureTarget;
+}
+
+bool IsHotkeyConflictPending()
+{
+    return s_conflictPending;
+}
+
+HotkeyId PendingHotkeyId()
+{
+    return s_pendingId;
+}
+
+uint32_t PendingHotkeyMask()
+{
+    return s_pendingMask;
+}
+
+void HotkeyConflictNames(char* out, int outSize)
+{
+    if (outSize <= 0)
+        return;
+    out[0] = '\0';
+    int len = 0;
+    bool first = true;
+    for (int i = 0; i < HOTKEY_COUNT; ++i) {
+        if (i == (int)s_pendingId)
+            continue;
+        uint32_t* p = hotkeyPtr((HotkeyId)i);
+        if (!p || *p != s_pendingMask)
+            continue;
+        const char* name = HotkeyName((HotkeyId)i);
+        const char* sep = first ? "" : ", ";
+        for (const char* q = sep; *q && len < outSize - 1; ++q) out[len++] = *q;
+        for (const char* q = name; *q && len < outSize - 1; ++q) out[len++] = *q;
+        out[len] = '\0';
+        first = false;
+    }
+    if (first) {
+        const char* none = "(unknown)";
+        for (const char* q = none; *q && len < outSize - 1; ++q) out[len++] = *q;
+        out[len] = '\0';
+    }
+}
+
+void ConfirmHotkeyConflict()
+{
+    if (!s_conflictPending)
+        return;
+    // Clear every other slot that currently owns this mask, then assign it.
+    for (int i = 0; i < HOTKEY_COUNT; ++i) {
+        if (i == (int)s_pendingId)
+            continue;
+        uint32_t* p = hotkeyPtr((HotkeyId)i);
+        if (p && *p == s_pendingMask)
+            *p = 0;
+    }
+    uint32_t* dest = hotkeyPtr(s_pendingId);
+    if (dest)
+        *dest = s_pendingMask;
+    s_conflictPending = false;
+    s_pendingMask     = 0;
+}
+
+void CancelHotkeyConflict()
+{
+    s_conflictPending = false;
+    s_pendingMask     = 0;
 }
 
 void HotkeyToString(uint32_t mask, char* out, int outSize)
