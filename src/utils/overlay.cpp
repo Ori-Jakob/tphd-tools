@@ -22,6 +22,7 @@
 #include "swkbd.h"
 #include "tools/save_state.h"
 #include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "tools/auto_splitter.h"
 #include "cheats/cheats.h"
 #include "debug_save.h"
@@ -113,7 +114,10 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
         Input::FeedMenu(io, (float)tv->surface.width, (float)tv->surface.height);
 
     // Fly cam runs every frame from the live game controller (independent of the
-    // menu); apply any pending save-state load / Link-position override.
+    // menu); apply any pending save-state load / Link-position override. The
+    // modern camera ticks first so it can yield the same frame the fly cam
+    // activates (it checks FlyCam::IsActive()).
+    Tools::ModernCamera::Tick();
     Tools::FlyCam::Tick();
     Debug::DebugSave::Tick();   // may arm an in-place reload consumed below
     Tools::SaveState::Tick();

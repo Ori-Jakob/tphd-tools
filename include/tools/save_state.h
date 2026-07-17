@@ -37,6 +37,13 @@ void DrawWindow(bool menuActive);
 // stage has loaded.
 void Tick();
 
+// Aroma: called at ON_APPLICATION_START. The previous game process took the
+// worker thread and any in-flight load with it; this drops that stale state so
+// nothing from the last session (a pending warp, a handed-off snapshot, a
+// wedged busy flag) can leak into the new one. Cemu front ends load the module
+// fresh per boot and don't need it.
+void OnApplicationStart();
+
 // Called immediately before Zelda.rpx dScnPly::phase_1. This is the exact
 // old-scene-gone/new-scene-not-started boundary used to install a pending save
 // block safely. Front ends own the platform-specific hook and call this shared

@@ -17,6 +17,7 @@
 #include "tools/warp.h"
 #include "tools/save_state.h"
 #include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "tools/input_viewer.h"
 #include "tools/auto_splitter.h"
 #include "tools/link_position_editor.h"
@@ -214,6 +215,7 @@ static void DrawToolsMenu()
         ImGui::TextDisabled("ZL+ZR+L3+R3 to fly");
         ImGui::Unindent();
     }
+    Tools::ModernCamera::DrawMenuItem();
     Tools::Warp::DrawMenuItem();
     Tools::SaveState::DrawMenuItem();
     Tools::AutoSplitter::DrawMenuItem();

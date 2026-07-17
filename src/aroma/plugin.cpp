@@ -55,6 +55,8 @@
 #include "version.h"
 #include "game/d_stage.h"
 #include "tools/save_state.h"
+#include "tools/modern_camera.h"
+#include "debug/debug_save.h"
 
 
 // WUPS plugin metadata (shown in the Aroma plugin config menu).
@@ -368,6 +370,13 @@ ON_APPLICATION_START()
     // The logger's worker thread (if any) belonged to the previous game process
     // and died with it; reset so the first log in this process starts a new one.
     Logger::OnApplicationStart();
+    // Same lifecycle rule for the loaders: their worker threads died with the
+    // process, and any in-flight load state (a pending warp, a handed-off
+    // snapshot, a wedged busy flag) belongs to the previous session and must
+    // never leak into this one.
+    Tools::SaveState::OnApplicationStart();
+    Debug::DebugSave::OnApplicationStart();
+    Tools::ModernCamera::OnApplicationStart();
 
     uint64_t tid = OSGetTitleID();
     s_active = isTphd(tid);

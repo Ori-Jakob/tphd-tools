@@ -49,6 +49,14 @@ static inline bool dSv_hasSaveTimestamp(void)
 typedef int (*dSv_info_loadImage_t)(void* info, const void* image);
 #define dSv_info_loadImage ((dSv_info_loadImage_t)0x02aa8af8u)
 
+// FUN_02aa8af8 trusts the image it deserializes: the camera-config selector at
+// image+0x1E5 (live byte @ 0x1014552D) is used as an UNCLAMPED index into a
+// 4-entry table on the function's own stack frame, so a corrupt image with a
+// value > 3 makes the ENGINE read out-of-bounds stack memory during the load.
+// Clamp the byte before handing any external image to dSave_loadImage.
+#define DSV_IMAGE_CAMERA_CONFIG_OFF 0x1E5u
+#define DSV_IMAGE_CAMERA_CONFIG_MAX 3u
+
 // FUN_02aa84d0 / FUN_0290a3e8 are called by the game's own debug-save request
 // consumer before it reads the .dat. Together they clear transient save/meter
 // state and rebuild dComIfG_play_c item/HUD counters from a sane baseline.

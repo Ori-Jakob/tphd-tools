@@ -63,6 +63,23 @@ static inline volatile dSv_memBit_c* dArea_saveBit(int region)
     return (volatile dSv_memBit_c*)(GAME_ADDR_memBitSave + (u32)region * DSV_MEMBIT_STRIDE);
 }
 
+// ---- live event/demo status (dEvt_control_c inside play) --------------------
+// dComIfG_play_c::mEvent kept its GameCube offset in TPHD:
+//   play(0x10146720) + 0x3F90 = 0x1014A6B0 (dEvt_control_c)
+// runCheck() == (mEventStatus != 0), mEventStatus @ +0xE5 -> 0x1014A795. This
+// is the byte TPHD's own HD-added message force-delete (FUN_02a6bfac) tests
+// before acting, and the same byte d_camera.h's GAME_ADDR_freezeFlag writes to
+// halt gameplay (an active event is what pauses the world). Nonzero while any
+// event, demo, or talk is running -- actors participating in it are owned by
+// the event system and must not be spawned around or deleted until it ends.
+#define GAME_ADDR_evtControl 0x1014A6B0u
+#define GAME_ADDR_evtStatus  0x1014A795u
+
+static inline bool dEvt_isEventRunning(void)
+{
+    return *(volatile u8*)GAME_ADDR_evtStatus != 0;
+}
+
 // ---- per-zone "stage event" scratch pool ------------------------------------
 // A 32-slot array of 0x20-byte records at info+0xE54 (0x1014619C), distinct from
 // the chest/switch memBit above. The save initializer (FUN_0290b914) builds it as

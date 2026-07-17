@@ -22,5 +22,11 @@ void DrawWindow(bool menuActive);
 // appropriate game/debug-save transition outside the ImGui draw.
 void Tick();
 
+// Aroma: called at ON_APPLICATION_START. The previous game process took the
+// scan/load worker thread with it; this drops that stale state (thread flag,
+// queued mailboxes, busy latches) so the loader works on relaunch instead of
+// wedging until a reboot. Cemu front ends load the module fresh per boot.
+void OnApplicationStart();
+
 } // namespace DebugSave
 } // namespace Debug

@@ -11,6 +11,7 @@
 #include "tools/input_viewer.h"
 #include "tools/save_state.h"
 #include "tools/auto_splitter.h"
+#include "tools/modern_camera.h"
 #include "cheats/cheats.h"
 #include "storage.h"
 #include "logger.h"
@@ -74,6 +75,14 @@ struct Snap {
     float autoSplitterDeltaPreviewSeconds;
     bool autoSplitterInitialsWhenDeltaShown;
     char autoSplitterPath[160];
+    bool modernCamera;
+    float modernCameraFovScale;
+    float modernCameraSensitivityX;
+    float modernCameraSensitivityY;
+    bool modernCameraGlobalFov;
+    bool modernCameraHorse;
+    bool modernCameraInvertX;
+    bool modernCameraInvertY;
     uint32_t cheatsMask;   // bit i = cheat i enabled (for change detection)
 };
 static Snap s_lastSaved;
@@ -126,6 +135,14 @@ static Snap gather()
     strncpy(s.autoSplitterPath, Tools::AutoSplitter::GetSelectedPath(),
             sizeof(s.autoSplitterPath) - 1);
     s.autoSplitterPath[sizeof(s.autoSplitterPath) - 1] = '\0';
+    s.modernCamera = Tools::ModernCamera::IsEnabled();
+    s.modernCameraFovScale = Tools::ModernCamera::GetFovScale();
+    s.modernCameraSensitivityX = Tools::ModernCamera::GetSensitivityX();
+    s.modernCameraSensitivityY = Tools::ModernCamera::GetSensitivityY();
+    s.modernCameraGlobalFov = Tools::ModernCamera::IsGlobalFovEnabled();
+    s.modernCameraHorse = Tools::ModernCamera::IsHorseEnabled();
+    s.modernCameraInvertX = Tools::ModernCamera::IsInvertXEnabled();
+    s.modernCameraInvertY = Tools::ModernCamera::IsInvertYEnabled();
     s.cheatsMask = 0;
     for (int i = 0; i < Cheats::Count() && i < 32; ++i)
         if (Cheats::IsEnabled(i))
@@ -156,6 +173,14 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.autoSplitterDeltaPreviewSeconds == b.autoSplitterDeltaPreviewSeconds &&
            a.autoSplitterInitialsWhenDeltaShown == b.autoSplitterInitialsWhenDeltaShown &&
            strcmp(a.autoSplitterPath, b.autoSplitterPath) == 0 &&
+           a.modernCamera == b.modernCamera &&
+           a.modernCameraFovScale == b.modernCameraFovScale &&
+           a.modernCameraSensitivityX == b.modernCameraSensitivityX &&
+           a.modernCameraSensitivityY == b.modernCameraSensitivityY &&
+           a.modernCameraGlobalFov == b.modernCameraGlobalFov &&
+           a.modernCameraHorse == b.modernCameraHorse &&
+           a.modernCameraInvertX == b.modernCameraInvertX &&
+           a.modernCameraInvertY == b.modernCameraInvertY &&
            a.cheatsMask == b.cheatsMask;
 }
 
@@ -222,6 +247,21 @@ static char* serialize()
                           Tools::AutoSplitter::IsInitialsWhenDeltaShownEnabled());
     cJSON_AddStringToObject(root, "autoSplitterPath",
                             Tools::AutoSplitter::GetSelectedPath());
+    cJSON_AddBoolToObject(root, "modernCamera", Tools::ModernCamera::IsEnabled());
+    cJSON_AddNumberToObject(root, "modernCameraFovScale",
+                            Tools::ModernCamera::GetFovScale());
+    cJSON_AddNumberToObject(root, "modernCameraSensitivityX",
+                            Tools::ModernCamera::GetSensitivityX());
+    cJSON_AddNumberToObject(root, "modernCameraSensitivityY",
+                            Tools::ModernCamera::GetSensitivityY());
+    cJSON_AddBoolToObject(root, "modernCameraGlobalFov",
+                          Tools::ModernCamera::IsGlobalFovEnabled());
+    cJSON_AddBoolToObject(root, "modernCameraHorse",
+                          Tools::ModernCamera::IsHorseEnabled());
+    cJSON_AddBoolToObject(root, "modernCameraInvertX",
+                          Tools::ModernCamera::IsInvertXEnabled());
+    cJSON_AddBoolToObject(root, "modernCameraInvertY",
+                          Tools::ModernCamera::IsInvertYEnabled());
     // Enabled cheats, keyed by name so the file survives registry reordering.
     cJSON* cheats = cJSON_AddObjectToObject(root, "cheats");
     if (cheats)
@@ -405,6 +445,54 @@ static void apply(const char* text)
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "autoSplitterPath")) &&
         cJSON_IsString(it) && it->valuestring)
         Tools::AutoSplitter::SetSelectedPath(it->valuestring);
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCamera")) && cJSON_IsBool(it))
+        Tools::ModernCamera::SetEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraFovScale")) &&
+        cJSON_IsNumber(it))
+        Tools::ModernCamera::SetFovScale((float)it->valuedouble);
+    else
+        s_forceSync = true;
+    {
+        // Older files stored one shared sensitivity; use it as the default
+        // for both axes, then let the split keys override.
+        cJSON* legacy = cJSON_GetObjectItemCaseSensitive(root, "modernCameraSensitivity");
+        if (legacy && cJSON_IsNumber(legacy)) {
+            Tools::ModernCamera::SetSensitivityX((float)legacy->valuedouble);
+            Tools::ModernCamera::SetSensitivityY((float)legacy->valuedouble);
+        }
+        if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraSensitivityX")) &&
+            cJSON_IsNumber(it))
+            Tools::ModernCamera::SetSensitivityX((float)it->valuedouble);
+        else
+            s_forceSync = true;
+        if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraSensitivityY")) &&
+            cJSON_IsNumber(it))
+            Tools::ModernCamera::SetSensitivityY((float)it->valuedouble);
+        else
+            s_forceSync = true;
+    }
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraGlobalFov")) &&
+        cJSON_IsBool(it))
+        Tools::ModernCamera::SetGlobalFovEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraHorse")) &&
+        cJSON_IsBool(it))
+        Tools::ModernCamera::SetHorseEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraInvertX")) &&
+        cJSON_IsBool(it))
+        Tools::ModernCamera::SetInvertXEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "modernCameraInvertY")) &&
+        cJSON_IsBool(it))
+        Tools::ModernCamera::SetInvertYEnabled(cJSON_IsTrue(it));
     else
         s_forceSync = true;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "cheats")) && cJSON_IsObject(it)) {

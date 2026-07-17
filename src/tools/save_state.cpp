@@ -30,6 +30,7 @@
 #include <math.h>
 #include <malloc.h>     // memalign -- FS read/write buffers need 0x40 alignment
 
+#include <coreinit/cache.h>     // OSMemoryBarrier -- worker->present handoff
 #include <coreinit/debug.h>
 #include <coreinit/thread.h>
 #include <coreinit/messagequeue.h>
@@ -169,6 +170,19 @@ static const uint32_t kDeleteRecordSize =
     sizeof(CommandRecordHeader) + sizeof(DeleteActorsPayload);
 static const uint32_t kAreaFlagRecordSize =
     sizeof(CommandRecordHeader) + sizeof(SetAreaFlagPayload);
+
+// Clamp image fields the game's deserializer trusts blindly. FUN_02aa8af8 uses
+// the saved camera-config byte as an unclamped index into a 4-entry table on
+// its own stack frame, so a corrupt image would make the ENGINE read
+// out-of-bounds memory during the load. Applied to every external image before
+// it can reach dSave_loadImage.
+static void sanitizeSaveImageForEngine(uint8_t* image)
+{
+    if (!image)
+        return;
+    if (image[DSV_IMAGE_CAMERA_CONFIG_OFF] > DSV_IMAGE_CAMERA_CONFIG_MAX)
+        image[DSV_IMAGE_CAMERA_CONFIG_OFF] = DSV_IMAGE_CAMERA_CONFIG_MAX;
+}
 
 // ---- background worker (save write / load read / delete) --------------------
 enum { OP_SAVE = 0, OP_LOAD = 1, OP_DELETE = 2, OP_EDIT_LOAD = 3 };
@@ -897,6 +911,9 @@ static int worker(int argc, const char** argv)
                 }
                 free(buf);
                 s_editResult = result;
+                // PPC stores are weakly ordered across cores: make the result
+                // fields visible before the ready flag.
+                OSMemoryBarrier();
                 s_editReady = true; // set LAST
             } else {
                 s_editBusy = false;
@@ -916,6 +933,7 @@ static int worker(int argc, const char** argv)
                 uint8_t* info = (uint8_t*)memalign(0x40, kInfoSize);
                 if (info) {
                     memcpy(info, buf + sizeof(StateHeader), kInfoSize);
+                    sanitizeSaveImageForEngine(info);
                     s_loadHeader  = *hdr;
                     s_pendingInfo = info;
                     memcpy(s_loadCommands, commands,
@@ -925,6 +943,11 @@ static int worker(int argc, const char** argv)
                     s_readyLoadFolder[sizeof(s_readyLoadFolder) - 1] = '\0';
                     strncpy(s_readyLoadName, job->name, sizeof(s_readyLoadName) - 1);
                     s_readyLoadName[sizeof(s_readyLoadName) - 1] = '\0';
+                    // PPC stores are weakly ordered across cores: make the
+                    // header/info/command writes above visible before the
+                    // ready flag, or the present thread can consume a
+                    // half-published load.
+                    OSMemoryBarrier();
                     s_loadReady   = true;   // set LAST
                     queued = true;
                     Logger::Log("[tphd_tools] state load queued: %s/%s",
@@ -1205,10 +1228,25 @@ bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
     const uint8_t* bytes = (const uint8_t*)image;
     const dSv_player_return_place_c* destination =
         (const dSv_player_return_place_c*)(bytes + DSV_DAT_RETURN_PLACE_OFF);
-    if (!destination->mName[0]) {
+    // The destination record drives a real engine warp, so reject images whose
+    // return place could not have been written by the game: the stage must be
+    // a printable, NUL-terminated name and the room a valid stage room index.
+    // A garbage stage name would otherwise send the engine after a nonexistent
+    // stage archive.
+    bool destinationValid =
+        destination->mName[0] &&
+        memchr(destination->mName, '\0', sizeof(destination->mName)) != nullptr &&
+        destination->mRoomNo >= 0 && destination->mRoomNo <= 63;
+    for (const char* c = destination->mName; destinationValid && *c; ++c) {
+        if (!isprint((unsigned char)*c))
+            destinationValid = false;
+    }
+    if (!destinationValid) {
         TPHD_BREADCRUMB(
-            "[tphd_tools][personal:%u] bridge rejected: empty destination stage",
-            (unsigned)trace);
+            "[tphd_tools][personal:%u] bridge rejected: invalid destination "
+            "record (stage[0]=%02X room=%d)",
+            (unsigned)trace, (unsigned)(u8)destination->mName[0],
+            (int)destination->mRoomNo);
         return false;
     }
 
@@ -1237,6 +1275,7 @@ bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
     }
     memset(copy, 0, kInfoSize);
     memcpy(copy, image, GAME_DSV_SERIALIZED_SIZE);
+    sanitizeSaveImageForEngine(copy);
     TPHD_BREADCRUMB(
         "[tphd_tools][personal:%u] bridge image copied into pending buffer",
         (unsigned)trace);
@@ -1342,6 +1381,7 @@ static void consumeEditResult()
 {
     if (!s_editReady)
         return;
+    OSMemoryBarrier();   // acquire the worker's result fields behind the flag
     s_editReady = false;
     EditLoadResult* result = s_editResult;
     s_editResult = nullptr;
@@ -1757,6 +1797,17 @@ static void tickCommandExecution()
         cancelCommandExecution("target stage changed");
         return;
     }
+    // Never touch actors while the scene isn't quiet: Link must be live and no
+    // event/demo may be running. A load can drop Link straight into an EvtArea
+    // (Gate Clip: the F_SP121 triggers start the King Bulblin event whose
+    // participants are the very e_rd actors a delete command targets); killing
+    // an event's actors while it runs leaves the event/message system walking
+    // freed processes. Defer -- hold the frame clock rather than cancel -- so
+    // the commands still run, delays intact, once the event has finished.
+    // dEvt_isEventRunning() also covers our own menu-freeze, which sets the
+    // same status byte; commands then apply when the game unfreezes.
+    if (!dComIfGp_getPlayer() || dEvt_isEventRunning())
+        return;
 
     while (s_execCommandIndex < s_execCommandCount &&
            s_execCommands[s_execCommandIndex].frameDelay <= s_execFrame) {
@@ -2038,6 +2089,78 @@ void OnScenePhase1()
 // window after the load so it sticks even if the settle resets it more than once.
 static int s_ctrlReselect = 0;
 
+// Aroma relaunch support. The worker thread and any in-flight load belonged to
+// the game process that just ended; only these plugin statics survived. Drop
+// the thread flag (the next job starts a fresh worker in the new process) and
+// neutralize every handed-off or mid-warp load, or a stale s_loadReady /
+// s_ovPhase from last session would warp the NEW game and inject the old
+// snapshot at its first scene transition. All freed buffers live in the plugin
+// heap, which persists across game processes, so freeing them here is valid.
+// Must be called before any hook can run gameplay; never touches game memory.
+void OnApplicationStart()
+{
+    // Free jobs still queued for the dead worker (their buffers are ours).
+    // No thread can race this: the old worker died with its process and the
+    // new one hasn't been created yet.
+    if (s_threadStarted) {
+        OSMessage msg;
+        while (OSReceiveMessage(&s_queue, &msg, OS_MESSAGE_FLAGS_NONE)) {
+            Job* job = (Job*)msg.message;
+            if (job) {
+                free(job->image);
+                free(job);
+            }
+        }
+    }
+    s_threadStarted = false;
+
+    s_loadReady = false;
+    s_loadBusy = false;
+    s_loadError = 0;
+    if (s_pendingInfo) {
+        free(s_pendingInfo);
+        s_pendingInfo = nullptr;
+    }
+    s_loadCommandCount = 0;
+    s_readyLoadFolder[0] = '\0';
+    s_readyLoadName[0] = '\0';
+    s_pendingSerialized = false;
+    s_normalSaveResume = false;
+
+    s_ovPhase = OV_IDLE;
+    s_ovNeedsRuntimePrep = false;
+    s_ovHorseRiding = false;
+    s_ovHorseSpawnRequested = false;
+    s_ovHorseWait = 0;
+    s_ovReadyFrames = 0;
+    s_ovCommandsStarted = false;
+    s_execCommandCount = 0;
+    s_execCommandIndex = 0;
+    s_execFrame = 0;
+    s_execStage[0] = '\0';
+    s_ctrlReselect = 0;
+
+    s_editReady = false;
+    s_editBusy = false;
+    if (s_editResult) {
+        free(s_editResult->baseImage);
+        free(s_editResult);
+        s_editResult = nullptr;
+    }
+    s_editorOpen = false;
+    if (s_editorBaseImage) {
+        free(s_editorBaseImage);
+        s_editorBaseImage = nullptr;
+    }
+    s_editorCommandCount = 0;
+
+    s_activeGameSaveTrace = 0;
+    s_gameSaveTraceSource[0] = '\0';
+    s_traceWaitEntryLogged = false;
+    s_traceTargetReadyLogged = false;
+    s_status[0] = '\0';
+}
+
 void Tick()
 {
     Input::SetSaveStateReloadHotkeyArmed(s_reloadLastHotkey);
@@ -2068,6 +2191,8 @@ void Tick()
     // boundary used by tpgz: the old scene cleans up with its own data, then the
     // new scene builds from ours.
     if (s_loadReady) {
+        // Acquire the worker's header/info/command writes behind the flag.
+        OSMemoryBarrier();
         cancelCommandExecution("another save state load began");
         logRoomState("loadReady-before-warp", s_loadHeader.room, s_pendingInfo,
                      s_pendingInfo && !s_pendingSerialized);
