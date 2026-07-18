@@ -27,6 +27,16 @@
 #define GAME_ADDR_startStage   0x1014a5e8u   // dStage_startStage_c (current)
 #define GAME_ADDR_nextStage    0x1014a5f6u   // dStage_nextStage_c  (pending)
 #define GAME_ADDR_restartMode  (GAME_ADDR_restart + 0x1Cu)
+
+// Native room streaming/control state. Verified in TPHD against
+// dStage_roomControl_c::init (FUN_02ab9c40), setStayNo (FUN_02ab61b4),
+// loadRoom (FUN_02ab61ec), and dStage_RoomCheck (FUN_02aba488).
+#define GAME_ADDR_roomControlStayNo       0x1016b1e4u
+#define GAME_ADDR_roomControlOldStayNo    0x1016b1e5u
+#define GAME_ADDR_roomControlNextStayNo   0x1016b1e6u
+#define GAME_ADDR_roomControlRoomReadId   0x10126c92u
+#define GAME_ADDR_roomControlStatusFlag   0x1016b5dcu
+#define GAME_ADDR_dStage_RoomCheck        0x02aba488u
 // dScnPly's phase table. Ghidra: phase_1 is FUN_02ac1108 and the corresponding
 // table entry at 0x10129B28 is its only data xref. The save-state loader hooks
 // this slot so the restored info block is installed after old-scene teardown
@@ -57,6 +67,48 @@ static inline s8 dStage_getRoomZoneNo(s8 roomNo)
         return -1;
     return *(volatile s8*)(GAME_ADDR_roomControlZoneNo +
                            (u32)roomNo * DROOM_STATUS_STRIDE);
+}
+
+static inline s8 dStage_getStayRoomNo(void)
+{
+    return *(volatile s8*)GAME_ADDR_roomControlStayNo;
+}
+
+static inline u8 dStage_getRoomStatusFlags(s8 roomNo)
+{
+    if (roomNo < 0 || roomNo >= 64)
+        return 0;
+    return *(volatile u8*)(GAME_ADDR_roomControlStatusFlag +
+                           (u32)roomNo * DROOM_STATUS_STRIDE);
+}
+
+// daBg_Create sets status bit 0x10 only after the room's collision has been
+// registered with dComIfG_Bgsp. It is the safe point for placing Link there.
+static inline bool dStage_isRoomBackgroundReady(s8 roomNo)
+{
+    return (dStage_getRoomStatusFlags(roomNo) & 0x10u) != 0;
+}
+
+static inline void dStage_setRoomReadId(s8 roomNo)
+{
+    *(volatile s8*)GAME_ADDR_roomControlRoomReadId = roomNo;
+}
+
+typedef int (*dStage_RoomCheck_t)(void* groundCheck);
+#define dStage_RoomCheck ((dStage_RoomCheck_t)GAME_ADDR_dStage_RoomCheck)
+
+// Force the same native RTBL-driven path used by no-change-room triggers and
+// Zant's multi-room fight. Calling with no ground check makes mRoomReadId both
+// the new stay room and the room-table entry whose room group is streamed.
+static inline int dStage_requestRoom(s8 roomNo)
+{
+    dStage_setRoomReadId(roomNo);
+    return dStage_RoomCheck((void*)0);
+}
+
+static inline void dStage_clearRoomRequest(void)
+{
+    dStage_setRoomReadId(-1);
 }
 
 // dStage_startStage_c field offsets (shared by start/next stage).
@@ -107,6 +159,25 @@ static inline s8 dStage_getRoomNo(void)
     if (link)
         return link->current.roomNo;
     return *(volatile s8*)(GAME_ADDR_startStage + DSTAGE_OFF_ROOM);
+}
+
+// Rewrite the live start-stage descriptor without requesting a scene change.
+// Coordinate loads use this to make the game's current room/spawn/layer agree
+// with the in-place Link/camera transform.
+static inline void dStage_setCurrentInfo(s8 room, s16 spawn, s8 layer)
+{
+    *(volatile s16*)(GAME_ADDR_startStage + DSTAGE_OFF_POINT) = spawn;
+    *(volatile s8*) (GAME_ADDR_startStage + DSTAGE_OFF_ROOM)  = room;
+    *(volatile s8*) (GAME_ADDR_startStage + DSTAGE_OFF_LAYER) = layer;
+}
+
+static inline void dStage_setLinkRoom(s8 roomNo)
+{
+    fopAc_ac_c* link = dComIfGp_getPlayer();
+    if (!link)
+        return;
+    link->old.roomNo = roomNo;
+    link->current.roomNo = roomNo;
 }
 
 // ---- queue a warp -----------------------------------------------------------
@@ -233,12 +304,13 @@ static inline void dStage_setLinkPos(const cXyz* pos, s16 angleY, s8 roomNo)
     fopAc_ac_c* link = dComIfGp_getPlayer();
     if (!link)
         return;
-    link->current.pos    = *pos;
-    link->old.roomNo     = roomNo;
-    link->current.roomNo = roomNo;
-    link->shape_angle.y  = angleY;
-    link->speed.x = link->speed.y = link->speed.z = 0.0f;
-    link->speedF  = 0.0f;
+    link->current.pos     = *pos;
+    link->old.roomNo      = roomNo;
+    link->current.roomNo  = roomNo;
+    link->old.angle.y     = angleY;
+    link->current.angle.y = angleY;
+    link->shape_angle.y   = angleY;
+    daAlink_clearMomentum(link);
 }
 
 #ifdef __cplusplus

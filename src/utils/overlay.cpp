@@ -21,6 +21,7 @@
 #include "config.h"
 #include "swkbd.h"
 #include "tools/save_state.h"
+#include "tools/save_load_coords.h"
 #ifdef TPHD_TOOLS_EXPERIMENTAL
 #include "tools/boss_practice.h"
 #include "tools/auto_splitter.h"
@@ -124,6 +125,7 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
     // activates (it checks FlyCam::IsActive()).
     Tools::ModernCamera::Tick();
     Tools::FlyCam::Tick();
+    Tools::SaveLoadCoords::Tick();
     Debug::DebugSave::Tick();   // may arm an in-place reload consumed below
     Tools::SaveState::Tick();
 #ifdef TPHD_TOOLS_EXPERIMENTAL

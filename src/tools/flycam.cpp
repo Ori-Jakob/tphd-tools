@@ -39,6 +39,7 @@ static u32   s_inputLock = 0;       // activation buttons ignored until released
 static float s_speed = kSpeedInit;
 static float s_hcosYaw = 0, s_hsinYaw = 0, s_sinPitch = 0, s_cosPitch = 0;
 static cXyz  s_savedAt = {}, s_savedEye = {};
+static void deactivate();
 
 void DrawMenuItem()
 {
@@ -47,6 +48,21 @@ void DrawMenuItem()
 bool IsEnabled()        { return s_enabled; }
 void SetEnabled(bool e) { s_enabled = e; }
 bool IsActive()         { return s_active; }
+void Stop()
+{
+    if (s_active)
+        deactivate();
+}
+
+void OnApplicationStart()
+{
+    // Aroma plugin statics survive process changes; game-owned flags do not.
+    s_active = false;
+    s_initialized = false;
+    s_prevButtons = 0;
+    s_inputLock = 0;
+    s_speed = kSpeedInit;
+}
 
 // Pro-button mask for the configured activation combo (0 if unbound).
 static u32 activationCombo()

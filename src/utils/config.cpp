@@ -10,12 +10,15 @@
 #include "link_position.h"
 #include "tools/input_viewer.h"
 #include "tools/save_state.h"
+#include "tools/save_load_coords.h"
+#include "tools/flycam.h"
 #ifdef TPHD_TOOLS_EXPERIMENTAL
 #include "tools/boss_practice.h"
 #include "tools/auto_splitter.h"
 #endif
 #include "tools/modern_camera.h"
 #include "cheats/cheats.h"
+#include "game/d_stage.h"
 #include "storage.h"
 #include "logger.h"
 
@@ -56,6 +59,8 @@ struct Snap {
     uint32_t quickTransformCombo;
     uint32_t flyCamCombo;
     uint32_t moonJumpCombo;
+    uint32_t saveCoordinatesCombo;
+    uint32_t loadCoordinatesCombo;
     int controllerPref;
     int renderTarget;
     float overlayOpacity;
@@ -63,6 +68,10 @@ struct Snap {
     float windowAdjustDeadzone;
     bool saveStateOverridePosition;
     bool saveStateReloadLastHotkey;
+    bool flyCam;
+    bool saveLoadCoords;
+    bool savedCoordinatesValid;
+    Tools::SaveLoadCoords::SavedCoordinates savedCoordinates;
 #ifdef TPHD_TOOLS_EXPERIMENTAL
     bool bossPractice;
 #endif
@@ -123,6 +132,8 @@ static Snap gather()
     s.quickTransformCombo = g_settings.quickTransformCombo;
     s.flyCamCombo = g_settings.flyCamCombo;
     s.moonJumpCombo = g_settings.moonJumpCombo;
+    s.saveCoordinatesCombo = g_settings.saveCoordinatesCombo;
+    s.loadCoordinatesCombo = g_settings.loadCoordinatesCombo;
     s.controllerPref = g_settings.controllerPref;
     s.renderTarget = g_settings.renderTarget;
     s.overlayOpacity = g_settings.overlayOpacity;
@@ -130,6 +141,11 @@ static Snap gather()
     s.windowAdjustDeadzone = g_settings.windowAdjustDeadzone;
     s.saveStateOverridePosition = Tools::SaveState::IsPositionOverrideEnabled();
     s.saveStateReloadLastHotkey = Tools::SaveState::IsReloadLastHotkeyEnabled();
+    s.flyCam = Tools::FlyCam::IsEnabled();
+    s.saveLoadCoords = Tools::SaveLoadCoords::IsEnabled();
+    memset(&s.savedCoordinates, 0, sizeof(s.savedCoordinates));
+    s.savedCoordinatesValid =
+        Tools::SaveLoadCoords::GetSavedCoordinates(&s.savedCoordinates);
 #ifdef TPHD_TOOLS_EXPERIMENTAL
     s.bossPractice = Tools::BossPractice::IsEnabled();
 #endif
@@ -175,6 +191,27 @@ static Snap gather()
 
 static bool snapEqual(const Snap& a, const Snap& b)
 {
+    bool coordinatesEqual =
+        a.savedCoordinatesValid == b.savedCoordinatesValid;
+    if (coordinatesEqual && a.savedCoordinatesValid) {
+        coordinatesEqual =
+            memcmp(a.savedCoordinates.stage, b.savedCoordinates.stage,
+                   sizeof(a.savedCoordinates.stage)) == 0 &&
+            a.savedCoordinates.room == b.savedCoordinates.room &&
+            a.savedCoordinates.layer == b.savedCoordinates.layer &&
+            a.savedCoordinates.spawn == b.savedCoordinates.spawn &&
+            a.savedCoordinates.linkPos.x == b.savedCoordinates.linkPos.x &&
+            a.savedCoordinates.linkPos.y == b.savedCoordinates.linkPos.y &&
+            a.savedCoordinates.linkPos.z == b.savedCoordinates.linkPos.z &&
+            a.savedCoordinates.linkAngle == b.savedCoordinates.linkAngle &&
+            a.savedCoordinates.camAt.x == b.savedCoordinates.camAt.x &&
+            a.savedCoordinates.camAt.y == b.savedCoordinates.camAt.y &&
+            a.savedCoordinates.camAt.z == b.savedCoordinates.camAt.z &&
+            a.savedCoordinates.camEye.x == b.savedCoordinates.camEye.x &&
+            a.savedCoordinates.camEye.y == b.savedCoordinates.camEye.y &&
+            a.savedCoordinates.camEye.z == b.savedCoordinates.camEye.z;
+    }
+
     return a.block == b.block && a.mode == b.mode && a.hotkey == b.hotkey &&
            a.freeze == b.freeze && a.gameResetHotkey == b.gameResetHotkey &&
            a.gameResetCombo == b.gameResetCombo &&
@@ -182,12 +219,16 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.quickTransformCombo == b.quickTransformCombo &&
            a.flyCamCombo == b.flyCamCombo &&
            a.moonJumpCombo == b.moonJumpCombo &&
+           a.saveCoordinatesCombo == b.saveCoordinatesCombo &&
+           a.loadCoordinatesCombo == b.loadCoordinatesCombo &&
            a.controllerPref == b.controllerPref && a.renderTarget == b.renderTarget &&
            a.overlayOpacity == b.overlayOpacity &&
            a.boldLetters == b.boldLetters &&
            a.windowAdjustDeadzone == b.windowAdjustDeadzone &&
            a.saveStateOverridePosition == b.saveStateOverridePosition &&
            a.saveStateReloadLastHotkey == b.saveStateReloadLastHotkey &&
+           a.flyCam == b.flyCam && a.saveLoadCoords == b.saveLoadCoords &&
+           coordinatesEqual &&
 #ifdef TPHD_TOOLS_EXPERIMENTAL
            a.bossPractice == b.bossPractice &&
 #endif
@@ -248,6 +289,10 @@ static char* serialize()
                             (double)g_settings.quickTransformCombo);
     cJSON_AddNumberToObject(root, "flyCamCombo", (double)g_settings.flyCamCombo);
     cJSON_AddNumberToObject(root, "moonJumpCombo", (double)g_settings.moonJumpCombo);
+    cJSON_AddNumberToObject(root, "saveCoordinatesCombo",
+                            (double)g_settings.saveCoordinatesCombo);
+    cJSON_AddNumberToObject(root, "loadCoordinatesCombo",
+                            (double)g_settings.loadCoordinatesCombo);
     cJSON_AddNumberToObject(root, "controllerPref", g_settings.controllerPref);
     cJSON_AddNumberToObject(root, "renderTarget", g_settings.renderTarget);
     cJSON_AddNumberToObject(root, "overlayOpacity", g_settings.overlayOpacity);
@@ -257,6 +302,32 @@ static char* serialize()
                           Tools::SaveState::IsPositionOverrideEnabled());
     cJSON_AddBoolToObject(root, "saveStateReloadLastHotkey",
                           Tools::SaveState::IsReloadLastHotkeyEnabled());
+    cJSON_AddBoolToObject(root, "flyCam", Tools::FlyCam::IsEnabled());
+    cJSON_AddBoolToObject(root, "saveLoadCoords",
+                          Tools::SaveLoadCoords::IsEnabled());
+    Tools::SaveLoadCoords::SavedCoordinates coordinates = {};
+    const bool hasCoordinates =
+        Tools::SaveLoadCoords::GetSavedCoordinates(&coordinates);
+    cJSON_AddBoolToObject(root, "saveLoadCoordsHasSaved", hasCoordinates);
+    if (hasCoordinates) {
+        cJSON* slot = cJSON_AddObjectToObject(root, "saveLoadCoordsSlot");
+        if (slot) {
+            cJSON_AddStringToObject(slot, "stage", coordinates.stage);
+            cJSON_AddNumberToObject(slot, "room", coordinates.room);
+            cJSON_AddNumberToObject(slot, "spawn", coordinates.spawn);
+            cJSON_AddNumberToObject(slot, "layer", coordinates.layer);
+            cJSON_AddNumberToObject(slot, "linkX", coordinates.linkPos.x);
+            cJSON_AddNumberToObject(slot, "linkY", coordinates.linkPos.y);
+            cJSON_AddNumberToObject(slot, "linkZ", coordinates.linkPos.z);
+            cJSON_AddNumberToObject(slot, "linkAngle", coordinates.linkAngle);
+            cJSON_AddNumberToObject(slot, "camAtX", coordinates.camAt.x);
+            cJSON_AddNumberToObject(slot, "camAtY", coordinates.camAt.y);
+            cJSON_AddNumberToObject(slot, "camAtZ", coordinates.camAt.z);
+            cJSON_AddNumberToObject(slot, "camEyeX", coordinates.camEye.x);
+            cJSON_AddNumberToObject(slot, "camEyeY", coordinates.camEye.y);
+            cJSON_AddNumberToObject(slot, "camEyeZ", coordinates.camEye.z);
+        }
+    }
 #ifdef TPHD_TOOLS_EXPERIMENTAL
     cJSON_AddBoolToObject(root, "bossPractice", Tools::BossPractice::IsEnabled());
 #endif
@@ -361,6 +432,16 @@ static void apply(const char* text)
         g_settings.moonJumpCombo = (uint32_t)it->valuedouble;
     else
         s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "saveCoordinatesCombo")) &&
+        cJSON_IsNumber(it))
+        g_settings.saveCoordinatesCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "loadCoordinatesCombo")) &&
+        cJSON_IsNumber(it))
+        g_settings.loadCoordinatesCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "controllerPref")) && cJSON_IsNumber(it))
         g_settings.controllerPref = it->valueint;
     else
@@ -424,6 +505,77 @@ static void apply(const char* text)
         Tools::SaveState::SetPositionOverrideEnabled(cJSON_IsTrue(it));
     } else {
         s_forceSync = true;
+    }
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "flyCam")) && cJSON_IsBool(it))
+        Tools::FlyCam::SetEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "saveLoadCoords")) &&
+        cJSON_IsBool(it))
+        Tools::SaveLoadCoords::SetEnabled(cJSON_IsTrue(it));
+    else
+        s_forceSync = true;
+    {
+        cJSON* has = cJSON_GetObjectItemCaseSensitive(root,
+                                                       "saveLoadCoordsHasSaved");
+        if (!has || !cJSON_IsBool(has)) {
+            Tools::SaveLoadCoords::SetSavedCoordinates(nullptr);
+            s_forceSync = true;
+        } else if (!cJSON_IsTrue(has)) {
+            Tools::SaveLoadCoords::SetSavedCoordinates(nullptr);
+        } else {
+            cJSON* slot = cJSON_GetObjectItemCaseSensitive(root,
+                                                            "saveLoadCoordsSlot");
+            cJSON* stage = slot ? cJSON_GetObjectItemCaseSensitive(slot, "stage") : nullptr;
+            const char* numericKeys[] = {
+                "room", "spawn", "layer", "linkX", "linkY", "linkZ",
+                "linkAngle", "camAtX", "camAtY", "camAtZ",
+                "camEyeX", "camEyeY", "camEyeZ"
+            };
+            cJSON* numbers[13] = {};
+            bool valid = slot && cJSON_IsObject(slot) && stage &&
+                         cJSON_IsString(stage) && stage->valuestring &&
+                         stage->valuestring[0] &&
+                         strnlen(stage->valuestring, DSTAGE_NAME_LEN + 1) <=
+                             DSTAGE_NAME_LEN;
+            for (int i = 0; valid && i < 13; ++i) {
+                numbers[i] = cJSON_GetObjectItemCaseSensitive(slot, numericKeys[i]);
+                valid = numbers[i] && cJSON_IsNumber(numbers[i]);
+            }
+            if (valid) {
+                const double room = numbers[0]->valuedouble;
+                const double spawn = numbers[1]->valuedouble;
+                const double layer = numbers[2]->valuedouble;
+                const double angle = numbers[6]->valuedouble;
+                valid = room >= -1.0 && room <= 63.0 &&
+                        spawn >= -32768.0 && spawn <= 32767.0 &&
+                        layer >= DSTAGE_LAYER_DEFAULT && layer <= 15.0 &&
+                        angle >= -32768.0 && angle <= 32767.0;
+            }
+            if (valid) {
+                Tools::SaveLoadCoords::SavedCoordinates saved = {};
+                strncpy(saved.stage, stage->valuestring,
+                        sizeof(saved.stage) - 1);
+                saved.room = (s8)numbers[0]->valuedouble;
+                saved.spawn = (s16)numbers[1]->valuedouble;
+                saved.layer = (s8)numbers[2]->valuedouble;
+                saved.linkPos.x = (float)numbers[3]->valuedouble;
+                saved.linkPos.y = (float)numbers[4]->valuedouble;
+                saved.linkPos.z = (float)numbers[5]->valuedouble;
+                saved.linkAngle = (s16)numbers[6]->valuedouble;
+                saved.camAt.x = (float)numbers[7]->valuedouble;
+                saved.camAt.y = (float)numbers[8]->valuedouble;
+                saved.camAt.z = (float)numbers[9]->valuedouble;
+                saved.camEye.x = (float)numbers[10]->valuedouble;
+                saved.camEye.y = (float)numbers[11]->valuedouble;
+                saved.camEye.z = (float)numbers[12]->valuedouble;
+                Tools::SaveLoadCoords::SetSavedCoordinates(&saved);
+            } else {
+                Tools::SaveLoadCoords::SetSavedCoordinates(nullptr);
+                s_forceSync = true;
+                Logger::LogWarn("[tphd_tools] config: invalid saved-coordinate slot");
+            }
+        }
     }
 #ifdef TPHD_TOOLS_EXPERIMENTAL
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "bossPractice")) &&

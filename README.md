@@ -33,6 +33,8 @@ module match are verified.
 
 - Fly Cam with independent movement, rotation, speed control, and optional
   teleport-to-camera exit
+- One-slot Save/Load Coordinates with same-stage validation, in-place
+  native same-stage room streaming, and exact Link facing plus camera restoration
 - Warps by preset or stage, room, layer, and spawn
 - Save Loader with named states, folders, position restoration, and post-load
   actor or flag commands
@@ -90,11 +92,24 @@ The menu is hidden on startup. The default open and close hotkey is
 | Hold ZL + right stick | Move the focused window |
 | Hold ZL + left stick | Resize the focused window |
 | Plus + X + B | Reset the game when the reset hotkey is enabled |
+| ZR + D-Pad Left | Save Link and camera coordinates |
+| ZR + D-Pad Right | Load saved coordinates in the same stage |
 
 Fly Cam is enabled from the Tools menu and toggled with
 `ZL + ZR + L3 + R3`. While flying, the left stick moves, the right stick rotates,
 `ZL` and `ZR` move vertically, and `L` and `R` change speed. Press `L3` to return
 the camera to Link or `R3` to move Link to the camera.
+
+Save/Load Coordinates is enabled from the Tools menu. Its saved slot includes
+the stage, room, spawn, layer, Link position/facing, and camera target/eye. A
+  load is rejected when the current stage differs. A different saved room is
+  streamed through the engine's native room-table path without a stage reload;
+  Link is pinned at the saved position with zero momentum until the destination
+  collision is ready. The tool then finalizes the room/spawn/layer and transforms,
+  puts Link into the normal idle action with zero momentum, and stamps the live
+  room information once more on the next frame. Both hotkeys are configurable
+  under **Settings > Rebind Hotkeys**, and the saved slot plus Fly Cam and
+  Save/Load Coordinates enabled states persist in `config.json`.
 
 ## Requirements
 

@@ -6,7 +6,20 @@
 #include "game/types.h"
 
 #define GAME_ADDR_cameraPtr       0x1014B578u
-#define GAME_CAMERA_XFORM_OFF     0x2ACu
+// GAME_ADDR_cameraPtr holds camera_process_class*. Its embedded dCamera_c is
+// at +0x248 (verified in TPHD's camera init at 0x028E1F08). There are three
+// distinct copies of the view transform:
+//   process +0x278  dCamera_c::mCenter/mEye (final collision-adjusted view)
+//   process +0x2AC  dCamera_c::mViewCache center/eye (next desired view)
+//   process +0x0D8  rendered lookat eye/center (note the reversed order)
+// Writing only mViewCache leaves the final and rendered copies stale, which
+// makes the camera appear to interpolate into a coordinate load.
+#define GAME_CAMERA_BODY_OFF              0x248u
+#define GAME_CAMERA_CURRENT_XFORM_OFF     0x278u
+#define GAME_CAMERA_XFORM_OFF             0x2ACu
+#define GAME_CAMERA_RENDER_EYE_OFF        0x0D8u
+#define GAME_CAMERA_RENDER_CENTER_OFF     0x0E4u
+#define GAME_ADDR_dCamera_reset            0x028FDF64u
 #define GAME_ADDR_linkPosPtr      0x1017F640u
 // These two "flags" are real engine state, identified via dusklight:
 //   freezeFlag   = play.mEvent.mEventStatus (0x1014A795) -- dEvt_control_c's
@@ -209,7 +222,8 @@ static inline int dCam_getStyleIndex(void)
 #define PRO_BTN_L3   0x00020000u
 #define PRO_COMBO    0x00030084u   // ZL | ZR | L3 | R3
 
-// Camera at/eye (dCamera_c center/eye) the decoupled camera renders from.
+// Camera target/eye pair. dCam_getXform() is the controller's desired cache,
+// which fly cam intentionally owns while the normal camera engine is disabled.
 typedef struct CameraXform {
     cXyz at;    // 0x00  ("target")
     cXyz eye;   // 0x0C  ("pos")
@@ -221,6 +235,41 @@ static inline CameraXform* dCam_getXform(void)
     if (!p)
         return (CameraXform*)0;
     return (CameraXform*)(p + GAME_CAMERA_XFORM_OFF);
+}
+
+// Final collision-adjusted target/eye used by the normal camera. This is the
+// right view to capture for coordinate saves; it may differ from mViewCache.
+static inline CameraXform* dCam_getCurrentXform(void)
+{
+    u32 p = *(volatile u32*)GAME_ADDR_cameraPtr;
+    if (!p)
+        return (CameraXform*)0;
+    return (CameraXform*)(p + GAME_CAMERA_CURRENT_XFORM_OFF);
+}
+
+typedef int (*dCameraReset_t)(void* camera);
+
+// Snap all camera layers to one transform through the game's own Reset().
+// TPHD 0x028FDF64 copies mCenter/mEye to mViewCache, rebuilds direction and
+// controlled yaw, and clears its HD transition scalar. Refresh the outer
+// rendered look-at pair too so no already-published view is left behind.
+static inline bool dCam_snapXform(const cXyz* at, const cXyz* eye)
+{
+    u32 process = *(volatile u32*)GAME_ADDR_cameraPtr;
+    if (!process || !at || !eye)
+        return false;
+
+    CameraXform* current =
+        (CameraXform*)(process + GAME_CAMERA_CURRENT_XFORM_OFF);
+    current->at = *at;
+    current->eye = *eye;
+
+    dCameraReset_t reset = (dCameraReset_t)GAME_ADDR_dCamera_reset;
+    reset((void*)(process + GAME_CAMERA_BODY_OFF));
+
+    *(cXyz*)(process + GAME_CAMERA_RENDER_EYE_OFF) = *eye;
+    *(cXyz*)(process + GAME_CAMERA_RENDER_CENTER_OFF) = *at;
+    return true;
 }
 
 static inline cXyz* dCam_getLinkPos(void)

@@ -16,6 +16,7 @@
 #include "debug_save.h"
 #include "tools/warp.h"
 #include "tools/save_state.h"
+#include "tools/save_load_coords.h"
 #ifdef TPHD_TOOLS_EXPERIMENTAL
 #include "tools/boss_practice.h"
 #include "tools/auto_splitter.h"
@@ -330,6 +331,7 @@ static void DrawToolsMenu()
         ImGui::TextDisabled("%s to fly", hk);
         ImGui::Unindent();
     }
+    Tools::SaveLoadCoords::DrawMenuItem();
     Tools::ModernCamera::DrawMenuItem();
     Tools::Warp::DrawMenuItem();
     Tools::SaveState::DrawMenuItem();

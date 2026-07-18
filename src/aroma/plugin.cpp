@@ -55,10 +55,12 @@
 #include "version.h"
 #include "game/d_stage.h"
 #include "tools/save_state.h"
+#include "tools/save_load_coords.h"
 #ifdef TPHD_TOOLS_EXPERIMENTAL
 #include "tools/boss_practice.h"
 #endif
 #include "tools/modern_camera.h"
+#include "tools/flycam.h"
 #include "debug/debug_save.h"
 
 
@@ -445,11 +447,13 @@ ON_APPLICATION_START()
     // snapshot, a wedged busy flag) belongs to the previous session and must
     // never leak into this one.
     Tools::SaveState::OnApplicationStart();
+    Tools::SaveLoadCoords::OnApplicationStart();
 #ifdef TPHD_TOOLS_EXPERIMENTAL
     Tools::BossPractice::OnApplicationStart();
 #endif
     Debug::DebugSave::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
+    Tools::FlyCam::OnApplicationStart();
 
     uint64_t tid = OSGetTitleID();
     s_active = isTphd(tid);

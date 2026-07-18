@@ -52,6 +52,14 @@ static inline s16   fopAcM_GetShapeAngleY(fopAc_ac_c* ac) { return ac->shape_ang
 // daAlink_c::mProcID drifted from TPGZ's 0x2FE8 to 0x305C in TPHD.
 #define DAPY_OFF_BODY_ANGLE_Y   0x059Eu
 #define DAALINK_OFF_ACTION_ID   0x305Cu
+#define DAALINK_OFF_NORMAL_SPEED 0x3458u
+#define DAALINK_ACTION_WAIT      3u
+
+// TPHD daAlink_c::procWaitInit. Ghidra verifies that this calls the common
+// process initializer with action 3, installs the wait process/mode, zeros
+// mNormalSpeed, selects the idle animation, and synchronizes actor facing.
+typedef int (*daAlink_procWaitInit_t)(fopAc_ac_c* link);
+#define daAlink_procWaitInit ((daAlink_procWaitInit_t)0x020243f8u)
 
 static inline s16 daPy_getLookAngleY(const fopAc_ac_c* link)
 {
@@ -61,4 +69,13 @@ static inline s16 daPy_getLookAngleY(const fopAc_ac_c* link)
 static inline u16 daAlink_getActionID(const fopAc_ac_c* link)
 {
     return *(const volatile u16*)((const u8*)link + DAALINK_OFF_ACTION_ID);
+}
+
+static inline void daAlink_clearMomentum(fopAc_ac_c* link)
+{
+    if (!link)
+        return;
+    link->speed.x = link->speed.y = link->speed.z = 0.0f;
+    link->speedF = 0.0f;
+    *(volatile f32*)((u8*)link + DAALINK_OFF_NORMAL_SPEED) = 0.0f;
 }

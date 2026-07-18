@@ -51,6 +51,11 @@ static bool     s_gameResetFired   = false; // consumed by Overlay::Present
 static bool     s_stateReloadArmed   = false;
 static bool     s_stateReloadPending = false;
 static bool     s_stateReloadFired   = false;
+static bool     s_coordinateHotkeysArmed = false;
+static bool     s_coordinateSavePending = false;
+static bool     s_coordinateSaveFired = false;
+static bool     s_coordinateLoadPending = false;
+static bool     s_coordinateLoadFired = false;
 
 // After the hotkey fires (esp. on close), keep zeroing ALL game input until the
 // controller is fully released -- otherwise the buttons still held when the menu
@@ -74,6 +79,8 @@ static uint32_t* hotkeyPtr(HotkeyId id)
     case HOTKEY_QUICK_TRANSFORM:   return &g_settings.quickTransformCombo;
     case HOTKEY_FLY_CAM:           return &g_settings.flyCamCombo;
     case HOTKEY_MOON_JUMP:         return &g_settings.moonJumpCombo;
+    case HOTKEY_SAVE_COORDINATES:  return &g_settings.saveCoordinatesCombo;
+    case HOTKEY_LOAD_COORDINATES:  return &g_settings.loadCoordinatesCombo;
     default:                       return nullptr;
     }
 }
@@ -313,6 +320,24 @@ static void detectSaveStateReloadHotkey(uint32_t neutral)
     }
 }
 
+static void detectCoordinateHotkeys(uint32_t neutral)
+{
+    if (s_capturing || s_conflictPending || !s_coordinateHotkeysArmed)
+        return;
+
+    const uint32_t save = g_settings.saveCoordinatesCombo;
+    const uint32_t load = g_settings.loadCoordinatesCombo;
+    if (save != 0 && neutral == save && s_prev != save) {
+        s_coordinateSavePending = true;
+        s_consumeFrame = true;
+        s_drainHeld = true;
+    } else if (load != 0 && neutral == load && s_prev != load) {
+        s_coordinateLoadPending = true;
+        s_consumeFrame = true;
+        s_drainHeld = true;
+    }
+}
+
 
 // hooks: stash + neutralize
 
@@ -339,6 +364,7 @@ void FilterVpad(void* buffers, int count)
     detectHotkey(bits);
     detectGameResetHotkey(bits);
     detectSaveStateReloadHotkey(bits);
+    detectCoordinateHotkeys(bits);
     SwKbd::SetVpad(&b[0]);   // feed the system keyboard (before we zero it)
 
     // Quick transform: while the combo is held (and not in the menu), strip those
@@ -392,6 +418,7 @@ void FilterKpad(void* buffers, int count)
     detectHotkey(bits);
     detectGameResetHotkey(bits);
     detectSaveStateReloadHotkey(bits);
+    detectCoordinateHotkeys(bits);
     SwKbd::SetKpad(b, count);   // feed the system keyboard (before we zero it)
 
     // Quick transform: strip the combo's buttons (Pro + Classic) while held.
@@ -471,9 +498,13 @@ void BeginFrame()
     s_hotkeyFired   = s_togglePending;
     s_gameResetFired = s_gameResetPending;
     s_stateReloadFired = s_stateReloadPending;
+    s_coordinateSaveFired = s_coordinateSavePending;
+    s_coordinateLoadFired = s_coordinateLoadPending;
     s_togglePending = false;
     s_gameResetPending = false;
     s_stateReloadPending = false;
+    s_coordinateSavePending = false;
+    s_coordinateLoadPending = false;
     s_consumeFrame  = false;   // clear for next frame's hooks
 
     // Keep draining game input until every button is released (so the combo held
@@ -505,6 +536,16 @@ bool SaveStateReloadHotkeyFired()
     return s_stateReloadFired;
 }
 
+bool SaveCoordinatesHotkeyFired()
+{
+    return s_coordinateSaveFired;
+}
+
+bool LoadCoordinatesHotkeyFired()
+{
+    return s_coordinateLoadFired;
+}
+
 void GetSnapshot(Snapshot* out)
 {
     if (out)
@@ -528,6 +569,17 @@ void SetSaveStateReloadHotkeyArmed(bool armed)
     s_stateReloadArmed = armed;
     if (!armed)
         s_stateReloadPending = s_stateReloadFired = false;
+}
+
+void SetCoordinateHotkeysArmed(bool armed)
+{
+    s_coordinateHotkeysArmed = armed;
+    if (!armed) {
+        s_coordinateSavePending = false;
+        s_coordinateSaveFired = false;
+        s_coordinateLoadPending = false;
+        s_coordinateLoadFired = false;
+    }
 }
 
 void FeedMenu(ImGuiIO& io, float dispW, float dispH)
@@ -596,6 +648,8 @@ const char* HotkeyName(HotkeyId id)
     case HOTKEY_QUICK_TRANSFORM:   return "Quick Transform";
     case HOTKEY_FLY_CAM:           return "Fly Cam";
     case HOTKEY_MOON_JUMP:         return "Moon Jump";
+    case HOTKEY_SAVE_COORDINATES:  return "Save Coordinates";
+    case HOTKEY_LOAD_COORDINATES:  return "Load Coordinates";
     default:                       return "";
     }
 }

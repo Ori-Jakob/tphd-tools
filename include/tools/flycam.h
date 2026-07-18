@@ -15,6 +15,8 @@ bool IsEnabled();
 void SetEnabled(bool enabled);
 
 bool IsActive();   // currently flying
+void Stop();       // leave fly mode, releasing camera/freeze ownership
+void OnApplicationStart();
 
 // Called once per presented frame: reads the controller, runs the fly-cam
 // state machine, and drives the game camera.

@@ -39,6 +39,8 @@ void BeginFrame();                                  // consume stash; hotkey/cap
 bool HotkeyToggled();                               // did the open/close combo fire?
 bool GameResetHotkeyFired();                        // did the game-reset combo fire?
 bool SaveStateReloadHotkeyFired();                  // did the reload-last-state combo fire?
+bool SaveCoordinatesHotkeyFired();                  // did save-coordinates fire?
+bool LoadCoordinatesHotkeyFired();                  // did load-coordinates fire?
 void GetSnapshot(Snapshot* out);                    // latest combined neutral input
 void FeedMenu(ImGuiIO& io, float dispW, float dispH); // nav + touch -> ImGui
 
@@ -54,6 +56,8 @@ enum HotkeyId : int {
     HOTKEY_QUICK_TRANSFORM,
     HOTKEY_FLY_CAM,
     HOTKEY_MOON_JUMP,
+    HOTKEY_SAVE_COORDINATES,
+    HOTKEY_LOAD_COORDINATES,
     HOTKEY_COUNT
 };
 
@@ -86,5 +90,9 @@ bool QuickTransformFired();
 // When armed, ZL+ZR+Start is consumed by the input hooks and reported once on
 // its rising edge. The Save Loader decides whether a remembered state exists.
 void SetSaveStateReloadHotkeyArmed(bool armed);
+
+// --- coordinate save/load hotkey takeover ---
+// When armed, consume the configured combos and report their rising edges.
+void SetCoordinateHotkeysArmed(bool armed);
 
 } // namespace Input
