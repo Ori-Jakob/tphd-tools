@@ -222,19 +222,26 @@ static inline int dCam_getStyleIndex(void)
 #define PRO_BTN_L3   0x00020000u
 #define PRO_COMBO    0x00030084u   // ZL | ZR | L3 | R3
 
-// Camera target/eye pair. dCam_getXform() is the controller's desired cache,
-// which fly cam intentionally owns while the normal camera engine is disabled.
+// Camera target/eye pair. The desired cache is what a decoupled camera tool
+// intentionally owns while the normal camera engine is disabled.
 typedef struct CameraXform {
     cXyz at;    // 0x00  ("target")
     cXyz eye;   // 0x0C  ("pos")
 } CameraXform;
 
-static inline CameraXform* dCam_getXform(void)
+static inline CameraXform* dCam_getDesiredXform(void)
 {
     u32 p = *(volatile u32*)GAME_ADDR_cameraPtr;
     if (!p)
         return (CameraXform*)0;
     return (CameraXform*)(p + GAME_CAMERA_XFORM_OFF);
+}
+
+// Compatibility name for callers that have not yet chosen explicitly between
+// the desired controller cache and the final collision-adjusted view.
+static inline CameraXform* dCam_getXform(void)
+{
+    return dCam_getDesiredXform();
 }
 
 // Final collision-adjusted target/eye used by the normal camera. This is the

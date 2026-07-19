@@ -81,6 +81,7 @@ static uint32_t* hotkeyPtr(HotkeyId id)
     case HOTKEY_MOON_JUMP:         return &g_settings.moonJumpCombo;
     case HOTKEY_SAVE_COORDINATES:  return &g_settings.saveCoordinatesCombo;
     case HOTKEY_LOAD_COORDINATES:  return &g_settings.loadCoordinatesCombo;
+    case HOTKEY_REMOTE_BOMBS:      return &g_settings.remoteBombsCombo;
     default:                       return nullptr;
     }
 }
@@ -650,6 +651,7 @@ const char* HotkeyName(HotkeyId id)
     case HOTKEY_MOON_JUMP:         return "Moon Jump";
     case HOTKEY_SAVE_COORDINATES:  return "Save Coordinates";
     case HOTKEY_LOAD_COORDINATES:  return "Load Coordinates";
+    case HOTKEY_REMOTE_BOMBS:      return "Remote Bombs";
     default:                       return "";
     }
 }

@@ -61,6 +61,7 @@ struct Snap {
     uint32_t moonJumpCombo;
     uint32_t saveCoordinatesCombo;
     uint32_t loadCoordinatesCombo;
+    uint32_t remoteBombsCombo;
     int controllerPref;
     int renderTarget;
     float overlayOpacity;
@@ -134,6 +135,7 @@ static Snap gather()
     s.moonJumpCombo = g_settings.moonJumpCombo;
     s.saveCoordinatesCombo = g_settings.saveCoordinatesCombo;
     s.loadCoordinatesCombo = g_settings.loadCoordinatesCombo;
+    s.remoteBombsCombo = g_settings.remoteBombsCombo;
     s.controllerPref = g_settings.controllerPref;
     s.renderTarget = g_settings.renderTarget;
     s.overlayOpacity = g_settings.overlayOpacity;
@@ -221,6 +223,7 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.moonJumpCombo == b.moonJumpCombo &&
            a.saveCoordinatesCombo == b.saveCoordinatesCombo &&
            a.loadCoordinatesCombo == b.loadCoordinatesCombo &&
+           a.remoteBombsCombo == b.remoteBombsCombo &&
            a.controllerPref == b.controllerPref && a.renderTarget == b.renderTarget &&
            a.overlayOpacity == b.overlayOpacity &&
            a.boldLetters == b.boldLetters &&
@@ -293,6 +296,8 @@ static char* serialize()
                             (double)g_settings.saveCoordinatesCombo);
     cJSON_AddNumberToObject(root, "loadCoordinatesCombo",
                             (double)g_settings.loadCoordinatesCombo);
+    cJSON_AddNumberToObject(root, "remoteBombsCombo",
+                            (double)g_settings.remoteBombsCombo);
     cJSON_AddNumberToObject(root, "controllerPref", g_settings.controllerPref);
     cJSON_AddNumberToObject(root, "renderTarget", g_settings.renderTarget);
     cJSON_AddNumberToObject(root, "overlayOpacity", g_settings.overlayOpacity);
@@ -440,6 +445,11 @@ static void apply(const char* text)
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "loadCoordinatesCombo")) &&
         cJSON_IsNumber(it))
         g_settings.loadCoordinatesCombo = (uint32_t)it->valuedouble;
+    else
+        s_forceSync = true;
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "remoteBombsCombo")) &&
+        cJSON_IsNumber(it))
+        g_settings.remoteBombsCombo = (uint32_t)it->valuedouble;
     else
         s_forceSync = true;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "controllerPref")) && cJSON_IsNumber(it))
@@ -728,7 +738,15 @@ static void apply(const char* text)
         s_forceSync = true;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "cheats")) && cJSON_IsObject(it)) {
         for (int i = 0; i < Cheats::Count(); ++i) {
-            cJSON* c = cJSON_GetObjectItemCaseSensitive(it, Cheats::Name(i));
+            const char* name = Cheats::Name(i);
+            cJSON* c = cJSON_GetObjectItemCaseSensitive(it, name);
+            // Preserve the setting across the terminology correction: this
+            // modifier removes the active-bomb cap; it never granted ammo.
+            if (!c && strcmp(name, "Unrestricted Bombs") == 0) {
+                c = cJSON_GetObjectItemCaseSensitive(it, "Infinite Bombs");
+                if (c)
+                    s_forceSync = true;
+            }
             if (c && cJSON_IsBool(c))
                 Cheats::SetEnabled(i, cJSON_IsTrue(c));
         }

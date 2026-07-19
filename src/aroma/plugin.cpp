@@ -62,6 +62,7 @@
 #include "tools/modern_camera.h"
 #include "tools/flycam.h"
 #include "debug/debug_save.h"
+#include "cheats/cheats.h"
 
 
 // WUPS plugin metadata (shown in the Aroma plugin config menu).
@@ -268,6 +269,7 @@ static void deactivate(const char* reason)
     // Never dereference a Zelda.rpx address from a Wii U Menu lifecycle call,
     // even if stale plugin state somehow survives a process transition.
     if (wasActive && upid == kGameUPID) {
+        Cheats::OnApplicationEnd();
         restoreScenePhase1Hook();
         restoreRoomZonePhaseHook();
     } else if (upid != kGameUPID) {
@@ -454,6 +456,7 @@ ON_APPLICATION_START()
     Debug::DebugSave::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
     Tools::FlyCam::OnApplicationStart();
+    Cheats::OnApplicationStart();
 
     uint64_t tid = OSGetTitleID();
     s_active = isTphd(tid);

@@ -33,17 +33,19 @@ static const float kCosPitchLim = 0.199f;   // sqrt(1 - 0.98^2)
 // ---- state ------------------------------------------------------------------
 static bool  s_enabled = false;     // feature on/off (checkbox)
 static bool  s_active  = false;     // currently flying
-static bool  s_initialized = false; // direction state seeded
 static u32   s_prevButtons = 0;
 static u32   s_inputLock = 0;       // activation buttons ignored until released
 static float s_speed = kSpeedInit;
 static float s_hcosYaw = 0, s_hsinYaw = 0, s_sinPitch = 0, s_cosPitch = 0;
-static cXyz  s_savedAt = {}, s_savedEye = {};
-static void deactivate();
+static CameraXform s_savedView = {};
+static CameraXform s_flyView = {};
+static void deactivate(const CameraXform* handoffView);
 
 void DrawMenuItem()
 {
-    ImGui::Checkbox("Fly Cam", &s_enabled);
+    bool enabled = s_enabled;
+    if (ImGui::Checkbox("Fly Cam", &enabled))
+        SetEnabled(enabled);
 }
 bool IsEnabled()        { return s_enabled; }
 void SetEnabled(bool e) { s_enabled = e; }
@@ -51,14 +53,13 @@ bool IsActive()         { return s_active; }
 void Stop()
 {
     if (s_active)
-        deactivate();
+        deactivate(&s_flyView);
 }
 
 void OnApplicationStart()
 {
     // Aroma plugin statics survive process changes; game-owned flags do not.
     s_active = false;
-    s_initialized = false;
     s_prevButtons = 0;
     s_inputLock = 0;
     s_speed = kSpeedInit;
@@ -70,51 +71,25 @@ static u32 activationCombo()
     return (u32)ov::MenuButtonsToPro(ov::g_settings.flyCamCombo);
 }
 
-// GamePad -> Pro button normalization (so the logic is device-neutral), matching
-// fc_normalize_buttons in the cheat. Pro input is already in the target codes.
-static u32 normalizeButtons(u32 g, u8 type)
+// End decoupled ownership only after synchronizing the chosen handoff view
+// through dCamera_c::Reset(). This prevents the normal camera from resuming
+// with a stale current view, desired cache, direction, or HD transition state.
+static void deactivate(const CameraXform* handoffView)
 {
-    if (type == 1)
-        return g;
-    u32 p = 0;
-    if (g & 0x00008000) p |= 0x00000010;  // A
-    if (g & 0x00004000) p |= 0x00000040;  // B
-    if (g & 0x00002000) p |= 0x00000008;  // X
-    if (g & 0x00001000) p |= 0x00000020;  // Y
-    if (g & 0x00000008) p |= 0x00000400;  // +
-    if (g & 0x00000004) p |= 0x00001000;  // -
-    if (g & 0x00040000) p |= 0x00020000;  // L3
-    if (g & 0x00020000) p |= 0x00010000;  // R3
-    if (g & 0x00000020) p |= 0x00002000;  // L
-    if (g & 0x00000080) p |= 0x00000080;  // ZL
-    if (g & 0x00000010) p |= 0x00000200;  // R
-    if (g & 0x00000040) p |= 0x00000004;  // ZR
-    if (g & 0x00000200) p |= 0x00000001;  // D-Up
-    if (g & 0x00000100) p |= 0x00004000;  // D-Down
-    if (g & 0x00000800) p |= 0x00000002;  // D-Left
-    if (g & 0x00000400) p |= 0x00008000;  // D-Right
-    return p;
-}
-
-static void deactivate()
-{
+    if (handoffView)
+        dCam_snapXform(&handoffView->at, &handoffView->eye);
     s_active = false;
-    s_initialized = false;
     s_inputLock = 0;
     dCam_setFreeze(false);
     dCam_setDecouple(false);
 }
 
-// Seed yaw/pitch direction state from the camera's current at - eye.
-static void initDirection()
+// Seed yaw/pitch direction state from a coherent target/eye pair.
+static void initDirection(const CameraXform& view)
 {
-    dCam_setDecouple(true);
-    CameraXform* cam = dCam_getXform();
-    if (!cam)
-        return;
-    float dx = cam->at.x - cam->eye.x;
-    float dy = cam->at.y - cam->eye.y;
-    float dz = cam->at.z - cam->eye.z;
+    float dx = view.at.x - view.eye.x;
+    float dy = view.at.y - view.eye.y;
+    float dz = view.at.z - view.eye.z;
     float len = sqrtf(dx * dx + dy * dy + dz * dz);
     if (len > 0.0f) { dx /= len; dy /= len; dz /= len; }
 
@@ -123,7 +98,41 @@ static void initDirection()
     s_cosPitch = cp;
     if (cp != 0.0f) { s_hcosYaw = dx / cp; s_hsinYaw = dz / cp; }
     else            { s_hcosYaw = 1.0f;    s_hsinYaw = 0.0f; }
-    s_initialized = true;
+}
+
+// While decoupled, the game still commits mViewCache to the final/rendered
+// camera each frame. Fly Cam therefore owns only that desired cache while it
+// is active; native Reset() is reserved for activation and handoff boundaries.
+static bool publishFlyView()
+{
+    CameraXform* desired = dCam_getDesiredXform();
+    if (!desired)
+        return false;
+    *desired = s_flyView;
+    return true;
+}
+
+static bool activate(u32 combo)
+{
+    CameraXform* current = dCam_getCurrentXform();
+    if (!current)
+        return false;
+
+    s_savedView = *current;
+    s_flyView = *current;
+    initDirection(s_flyView);
+
+    dCam_setFreeze(true);
+    dCam_setDecouple(true);
+    if (!dCam_snapXform(&s_flyView.at, &s_flyView.eye)) {
+        dCam_setDecouple(false);
+        dCam_setFreeze(false);
+        return false;
+    }
+
+    s_inputLock = combo;   // wait for release before in-mode buttons act
+    s_active = true;
+    return true;
 }
 
 static void move(u32 buttons, const GameInput& in)
@@ -147,13 +156,14 @@ static void move(u32 buttons, const GameInput& in)
     float dy = ly * s_sinPitch + vert;
     dx *= spd; dy *= spd; dz *= spd;
 
-    CameraXform* cam = dCam_getXform();
-    if (!cam)
-        return;
-    cam->eye.x += dx; cam->eye.y += dy; cam->eye.z += dz;
-    cam->at.x = cam->eye.x + s_hcosYaw * s_cosPitch * kTargetDist;
-    cam->at.y = cam->eye.y + s_sinPitch * kTargetDist;
-    cam->at.z = cam->eye.z + s_hsinYaw * s_cosPitch * kTargetDist;
+    s_flyView.eye.x += dx;
+    s_flyView.eye.y += dy;
+    s_flyView.eye.z += dz;
+    s_flyView.at.x =
+        s_flyView.eye.x + s_hcosYaw * s_cosPitch * kTargetDist;
+    s_flyView.at.y = s_flyView.eye.y + s_sinPitch * kTargetDist;
+    s_flyView.at.z =
+        s_flyView.eye.z + s_hsinYaw * s_cosPitch * kTargetDist;
 
     // Yaw from right stick X.
     float dyaw = rx * kRotSpeed;
@@ -173,20 +183,30 @@ static void move(u32 buttons, const GameInput& in)
     else if (nsp < -kPitchClamp) { nsp = -kPitchClamp; ncp = kCosPitchLim; }
 
     s_hcosYaw = nhc; s_hsinYaw = nhs; s_sinPitch = nsp; s_cosPitch = ncp;
+    publishFlyView();
 }
 
 void Tick()
 {
     if (!s_enabled) {
         if (s_active)
-            deactivate();
+            deactivate(&s_flyView);
         return;
+    }
+
+    // These flags are shared game state, so reassert ownership before reading
+    // input. A transient controller-read failure must not let the engine run a
+    // normal-camera frame through the middle of a flight.
+    if (s_active) {
+        dCam_setFreeze(true);
+        dCam_setDecouple(true);
+        publishFlyView();
     }
 
     GameInput in;
     if (!dCam_getInput(&in))
         return;
-    u32 buttons = normalizeButtons(in.buttons, in.type);
+    u32 buttons = dCam_normalizeButtons(in.buttons, in.type);
 
     // Ignore activation buttons until each is released.
     s_inputLock &= buttons;
@@ -199,33 +219,21 @@ void Tick()
         // Activate on the rebindable combo with at least one fresh press.
         u32 combo = activationCombo();
         if (combo != 0 && (buttons & combo) == combo && (newly & combo) != 0) {
-            CameraXform* cam = dCam_getXform();
-            if (!cam)
-                return;
-            s_savedAt  = cam->at;
-            s_savedEye = cam->eye;
-            s_inputLock = combo;   // wait for release before in-mode buttons act
-            s_active = true;
-            s_initialized = false;
+            activate(combo);
         }
         return;
     }
 
     // --- active ---
-    dCam_setFreeze(true);   // re-assert each frame
-
     if (newly & PRO_BTN_L3) {           // exit: restore the original camera
-        CameraXform* cam = dCam_getXform();
-        if (cam) { cam->at = s_savedAt; cam->eye = s_savedEye; }
-        deactivate();
+        deactivate(&s_savedView);
         return;
     }
     if (newly & PRO_BTN_R3) {           // exit: teleport Link to the camera
-        CameraXform* cam = dCam_getXform();
         cXyz* link = dCam_getLinkPos();
-        if (cam && link)
-            *link = cam->eye;
-        deactivate();
+        if (link)
+            *link = s_flyView.eye;
+        deactivate(&s_flyView);
         return;
     }
     if (newly & PRO_BTN_R) {            // speed up
@@ -237,8 +245,6 @@ void Tick()
         if (s_speed < kSpeedMin) s_speed = kSpeedMin;
     }
 
-    if (!s_initialized)
-        initDirection();
     move(buttons, in);
 }
 

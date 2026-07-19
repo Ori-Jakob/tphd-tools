@@ -76,12 +76,26 @@ typedef struct dSv_itemMax_c {
 #define DSV_MAX_WATER_BOMB   2
 #define DSV_MAX_POKE_BOMB    6
 
+// Item-wheel bomb bag slots and the three bomb item ids stored in them.
+// A bag's count is positional (mBombNum[bag]); its capacity is selected by the
+// item id currently occupying the corresponding wheel slot.
+#define DSV_BOMB_SLOT_FIRST   15
+#define DSV_ITEM_NORMAL_BOMB  0x70u
+#define DSV_ITEM_WATER_BOMB   0x71u
+#define DSV_ITEM_POKE_BOMB    0x72u
+#define DSV_MAX_PACHINKO      50u
+
 // Typed views onto the live save block.
 #define g_svStatusA    ((volatile dSv_status_a_c*) (DSV_INFO + DSV_INFO_STATUS_A_OFF))
 #define g_svItem       ((volatile dSv_item_c*)     (DSV_INFO + DSV_INFO_ITEM_OFF))
 #define g_svGetItem    ((volatile dSv_getItem_c*)  (DSV_INFO + DSV_INFO_GET_ITEM_OFF))
 #define g_svItemRecord ((volatile dSv_itemRecord_c*)(DSV_INFO + DSV_INFO_ITEM_RECORD_OFF))
 #define g_svItemMax    ((volatile dSv_itemMax_c*)  (DSV_INFO + DSV_INFO_ITEM_MAX_OFF))
+
+// dSv_player_status_a_c::getRupeeMax: indexes the four-entry u16 table at
+// 0x1009F6EC with mWalletSize (500 / 1000 / 2000 / 9999 in TPHD).
+typedef u16 (*dSv_getRupeeMax_t)(const dSv_status_a_c* status);
+#define dSv_getRupeeMax ((dSv_getRupeeMax_t)0x02AA55BCu)
 
 // ---- item wheel get/set ------------------------------------------------------
 static inline u8 dInv_getItem(int slot) { return g_svItem->mItems[slot]; }

@@ -66,7 +66,7 @@ struct Settings {
     bool     gameResetHotkey = true;       // game-reset combo writes the engine reset flag
     // Rebindable feature hotkeys (MenuButton bits). Defaults match the original
     // hard-coded combos (Start+X+B, ZL+ZR+Start, ZR+Y, ZL+ZR+L3+R3,
-    // ZR+A, ZR+D-Left, ZR+D-Right).
+    // ZR+A, ZR+D-Left, ZR+D-Right, ZR+L3).
     uint32_t gameResetCombo        = MB_PLUS | MB_X | MB_B;
     uint32_t saveStateReloadCombo  = MB_ZL | MB_ZR | MB_PLUS;
     uint32_t quickTransformCombo   = MB_ZR | MB_Y;
@@ -74,6 +74,7 @@ struct Settings {
     uint32_t moonJumpCombo         = MB_ZR | MB_A;
     uint32_t saveCoordinatesCombo  = MB_ZR | MB_LEFT;
     uint32_t loadCoordinatesCombo  = MB_ZR | MB_RIGHT;
+    uint32_t remoteBombsCombo      = MB_ZR | MB_LSTICK;
     int      controllerPref  = CTRL_AUTO;  // controller to select for title-screen loads
     // Draw on both screens by default: a console player may only be looking at
     // the GamePad, and with a TV-only default they'd get the input block with

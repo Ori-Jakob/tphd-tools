@@ -7,6 +7,7 @@
 // `tick` runs every frame while the cheat's checkbox is on. Leave `tick` null
 // for cheats that only need a one-shot button (draw that in DrawMenu directly).
 #include "cheats/cheats.h"
+#include "cheats/equipment_modifiers.h"
 #include "cheats/inventory_editor.h"
 #include "input.h"
 #include "overlay.h"
@@ -53,10 +54,14 @@ static void cheat_infiniteHearts()
         g_meterInfo->mLife = (u16)((g_meterInfo->mMaxLife / 5) * 4);
 }
 
-// Infinite Rupees: keep the live rupee count topped up.
+// Infinite Rupees: keep the live rupee count at the equipped wallet's native
+// limit. dSv_player_status_a_c::getRupeeMax selects 500/1000/2000/9999 from
+// the TPHD table at 0x1009F6EC.
 static void cheat_infiniteRupees()
 {
-    g_meterInfo->mRupee = 999;
+    const u16 max = dSv_getRupeeMax((const dSv_status_a_c*)g_svStatusA);
+    if (max != 0)
+        g_meterInfo->mRupee = max;
 }
 
 // Infinite Air: keep Link's oxygen full while underwater.
@@ -92,18 +97,28 @@ static void cheat_quickTransform()
 // Infinite Ammo: keep arrows / bombs / slingshot seeds / lantern oil topped up.
 // These are the live counts in the save block's item record (arrows @ info+0xEC,
 // bombs[3] @ +0xED.., seeds @ +0xF4 -- all user-confirmed), refilled to each
-// item's capacity (mItemMax, which is 0 when you don't own the item, so nothing
-// phantom is added). Seeds have no max field -> the slingshot's fixed 50. Lantern
-// oil is in the status block (mOil @ info+0x0A) -> refilled to mMaxOil.
+// item's capacity. Bomb counts are bag-position based, so each bag must map its
+// current item id to the matching mItemMax entry. Empty/non-bomb bags are left
+// alone. Seeds have no max field -> the slingshot's fixed 50. Lantern oil is in
+// the status block (mOil @ info+0x0A) -> refilled to mMaxOil.
 static void cheat_infiniteAmmo()
 {
     volatile dSv_itemRecord_c* r = g_svItemRecord;
     volatile dSv_itemMax_c*    m = g_svItemMax;
-    r->mArrowNum    = m->mItemMax[DSV_MAX_ARROW];
-    r->mBombNum[0]  = m->mItemMax[DSV_MAX_NORMAL_BOMB];
-    r->mBombNum[1]  = m->mItemMax[DSV_MAX_WATER_BOMB];
-    r->mBombNum[2]  = m->mItemMax[DSV_MAX_POKE_BOMB];
-    r->mPachinkoNum = 50;
+    r->mArrowNum = m->mItemMax[DSV_MAX_ARROW];
+    for (int bag = 0; bag < 3; ++bag) {
+        const u8 item = g_svItem->mItems[DSV_BOMB_SLOT_FIRST + bag];
+        int maxIndex = -1;
+        if (item == DSV_ITEM_NORMAL_BOMB)
+            maxIndex = DSV_MAX_NORMAL_BOMB;
+        else if (item == DSV_ITEM_WATER_BOMB)
+            maxIndex = DSV_MAX_WATER_BOMB;
+        else if (item == DSV_ITEM_POKE_BOMB)
+            maxIndex = DSV_MAX_POKE_BOMB;
+        if (maxIndex >= 0)
+            r->mBombNum[bag] = m->mItemMax[maxIndex];
+    }
+    r->mPachinkoNum = DSV_MAX_PACHINKO;
     g_svStatusA->mOil = g_svStatusA->mMaxOil;   // lantern oil
 }
 
@@ -175,19 +190,41 @@ static Cheat s_cheats[] = {
     //{ "Unrestricted Items", "Use any item anywhere (no area limits)", false, cheat_unrestrictedItems },
 };
 
-static const int kCount = (int)(sizeof(s_cheats) / sizeof(s_cheats[0]));
+static const int kBaseCount = (int)(sizeof(s_cheats) / sizeof(s_cheats[0]));
 
 // --- persistence API (see cheats.h): name-addressed enable state for the config.
 // "Unrestricted Items" patches game code on its OFF edge via Cheats::Tick, so it
 // is safe to restore here too -- a restored-enabled cheat just starts ticking.
-int         Count()                  { return kCount; }
-const char* Name(int i)              { return (i >= 0 && i < kCount) ? s_cheats[i].name : ""; }
-bool        IsEnabled(int i)         { return i >= 0 && i < kCount && s_cheats[i].enabled; }
-void        SetEnabled(int i, bool on) { if (i >= 0 && i < kCount) s_cheats[i].enabled = on; }
+int Count()
+{
+    return kBaseCount + EquipmentModifiers::ConfigCount();
+}
+
+const char* Name(int i)
+{
+    if (i >= 0 && i < kBaseCount)
+        return s_cheats[i].name;
+    return EquipmentModifiers::ConfigName(i - kBaseCount);
+}
+
+bool IsEnabled(int i)
+{
+    if (i >= 0 && i < kBaseCount)
+        return s_cheats[i].enabled;
+    return EquipmentModifiers::ConfigEnabled(i - kBaseCount);
+}
+
+void SetEnabled(int i, bool on)
+{
+    if (i >= 0 && i < kBaseCount)
+        s_cheats[i].enabled = on;
+    else
+        EquipmentModifiers::SetConfigEnabled(i - kBaseCount, on);
+}
 
 void DrawMenu()
 {
-    for (int i = 0; i < kCount; ++i) {
+    for (int i = 0; i < kBaseCount; ++i) {
         ImGui::Checkbox(s_cheats[i].name, &s_cheats[i].enabled);
         if (s_cheats[i].tick == cheat_moonJump && ImGui::IsItemHovered()) {
             char hk[64];
@@ -201,6 +238,10 @@ void DrawMenu()
             ImGui::SetTooltip("%s", s_cheats[i].desc);
         }
     }
+    if (ImGui::BeginMenu("Equipment Modifiers")) {
+        EquipmentModifiers::DrawMenu();
+        ImGui::EndMenu();
+    }
     ImGui::Separator();
     InventoryEditor::DrawMenuButton();
 }
@@ -211,7 +252,7 @@ void Tick()
     // (the hook runs before the game reads input, so it must know every frame --
     // not just while the cheat's tick runs).
     bool qtOn = false;
-    for (int i = 0; i < kCount; ++i)
+    for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].tick == cheat_quickTransform)
             qtOn = s_cheats[i].enabled;
     Input::SetQuickTransformArmed(qtOn);
@@ -219,13 +260,27 @@ void Tick()
     // Unrestricted Items patches game code, so the OFF state must be applied
     // actively -- the per-frame tick below only runs while a cheat is enabled.
     // The enabled tick re-applies (idempotent); here we remove it when cleared.
-    for (int i = 0; i < kCount; ++i)
+    for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].tick == cheat_unrestrictedItems && !s_cheats[i].enabled)
             setUnrestrictedItems(false);
 
-    for (int i = 0; i < kCount; ++i)
+    for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].enabled && s_cheats[i].tick)
             s_cheats[i].tick();
+
+    EquipmentModifiers::Tick();
+}
+
+void OnApplicationStart()
+{
+    s_unrestrictedPatched = false;
+    EquipmentModifiers::OnApplicationStart();
+}
+
+void OnApplicationEnd()
+{
+    setUnrestrictedItems(false);
+    EquipmentModifiers::OnApplicationEnd();
 }
 
 } // namespace Cheats

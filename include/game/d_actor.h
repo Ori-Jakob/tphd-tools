@@ -52,6 +52,7 @@ typedef u32 (*fpcSCtRq_Request_t)(void* layer, int procName, void* a, void* b,
 #define FPCNM_TITLE          0x02E2  // d_a_title
 #define FPCNM_E_DT           0x0201  // d_a_e_dt (Deku Toad)
 #define FPCNM_OBJ_AMISHUTTER 0x0048  // d_a_obj_amiShutter (Deku Toad grate)
+#define FPCNM_NBOMB          0x0222  // d_a_nbomb (normal/water/bombling actor)
 // Link (d_a_player/d_a_alink) is NOT a name-loaded profile, so it has no entry
 // in that table. This value is a placeholder; prefer guarding Link by pointer
 // identity (compare against dComIfGp_getPlayer()) rather than by proc id.
