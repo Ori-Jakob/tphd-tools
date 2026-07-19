@@ -12,8 +12,6 @@
 #include "input.h"
 #include "overlay.h"
 
-#include <coreinit/cache.h>   // DCFlushRange / ICInvalidateRange (code-patch cheats)
-
 #include "imgui.h"
 #include "game/game.h"
 
@@ -135,43 +133,18 @@ static void cheat_invincibility()
     *(volatile u16*)((u8*)link + DPLAYER_OFF_IFRAME) = 2;
 }
 
-// Unrestricted Items: tpgz hooks `daAlink_c::checkCastleTownUseItem(u16)` so it
-// always returns 1 ("item is usable here") -- letting you use any item in areas
-// that normally restrict them (Castle Town, boss rooms, etc.). That's a function
-// RETURN override, not a memory value, so unlike the other cheats we don't poke a
-// field each frame: we patch the function's entry to `li r3,1; blr` while the
-// cheat is on and restore the original two instructions when off.
-// Function = FUN_0201b24c (Ghidra-confirmed: KANTERA 0x48 / COPY_ROD 0x46 +
-// "R_SP128" / HVY_BOOTS 0x45, returns 1=usable / 0=restricted). The patch is
-// applied/removed on the checkbox edge (see Cheats::Tick), not per frame.
-#define ADDR_checkCastleTownUseItem 0x0201b24cu
-
-static bool s_unrestrictedPatched = false;
-static u32  s_unrestrictedOrig[2] = { 0, 0 };
-
+// tpgz's Unrestricted Items hook returns 1 whenever its cheat is enabled and
+// otherwise calls daAlink_c::checkCastleTownUseItem normally. TPHD's equivalent
+// is FUN_0201b24c (Ghidra-confirmed KANTERA/COPY_ROD/HVY_BOOTS checks). The
+// equipment backend installs a permanent failure-return hook before Cemu JITs
+// this function; this top-level cheat changes only the hook's data flag.
 static void setUnrestrictedItems(bool on)
 {
-    if (on == s_unrestrictedPatched)
-        return;   // idempotent: only write on a real on<->off transition
-    volatile u32* fn = (volatile u32*)ADDR_checkCastleTownUseItem;
-    if (on) {
-        s_unrestrictedOrig[0] = fn[0];   // stash the real prologue for restore
-        s_unrestrictedOrig[1] = fn[1];
-        fn[0] = 0x38600001;   // li   r3, 1
-        fn[1] = 0x4E800020;   // blr
-    } else {
-        fn[0] = s_unrestrictedOrig[0];
-        fn[1] = s_unrestrictedOrig[1];
-    }
-    // Make the CPU (and Cemu's recompiler) see the rewritten instructions.
-    DCFlushRange((void*)fn, 8);
-    ICInvalidateRange((void*)fn, 8);
-    s_unrestrictedPatched = on;
+    EquipmentModifiers::SetUnrestrictedItemsEnabled(on);
 }
 
-// Tick marker for the registry: applies the patch while the checkbox is on. The
-// OFF transition (restore) is handled in Cheats::Tick, since a cheat's tick only
-// runs while it's enabled and a code patch must be actively removed.
+// Tick marker for the registry. The OFF state is also published in Cheats::Tick
+// because disabled registry callbacks are not otherwise invoked.
 static void cheat_unrestrictedItems()
 {
     setUnrestrictedItems(true);
@@ -186,15 +159,14 @@ static Cheat s_cheats[] = {
     { "Infinite Air",     nullptr,              false, cheat_infiniteAir },
     { "Infinite Ammo",    "Keep arrows/bombs/seeds/oil topped up",   false, cheat_infiniteAmmo },
     { "Invincibility",    nullptr,              false, cheat_invincibility },
-    { "Quick Transform",  nullptr,              false, cheat_quickTransform }
-    //{ "Unrestricted Items", "Use any item anywhere (no area limits)", false, cheat_unrestrictedItems },
+    { "Quick Transform",  nullptr,              false, cheat_quickTransform },
+    { "Unrestricted Items", "Use swords and items in normally restricted areas", false, cheat_unrestrictedItems },
 };
 
 static const int kBaseCount = (int)(sizeof(s_cheats) / sizeof(s_cheats[0]));
 
 // --- persistence API (see cheats.h): name-addressed enable state for the config.
-// "Unrestricted Items" patches game code on its OFF edge via Cheats::Tick, so it
-// is safe to restore here too -- a restored-enabled cheat just starts ticking.
+// A restored-enabled cheat starts ticking in the same frame Config::Load runs.
 int Count()
 {
     return kBaseCount + EquipmentModifiers::ConfigCount();
@@ -225,7 +197,10 @@ void SetEnabled(int i, bool on)
 void DrawMenu()
 {
     for (int i = 0; i < kBaseCount; ++i) {
-        ImGui::Checkbox(s_cheats[i].name, &s_cheats[i].enabled);
+        const bool changed = ImGui::Checkbox(s_cheats[i].name,
+                                             &s_cheats[i].enabled);
+        if (changed && s_cheats[i].tick == cheat_unrestrictedItems)
+            setUnrestrictedItems(s_cheats[i].enabled);
         if (s_cheats[i].tick == cheat_moonJump && ImGui::IsItemHovered()) {
             char hk[64];
             Input::HotkeyToString(ov::g_settings.moonJumpCombo, hk, sizeof(hk));
@@ -257,9 +232,8 @@ void Tick()
             qtOn = s_cheats[i].enabled;
     Input::SetQuickTransformArmed(qtOn);
 
-    // Unrestricted Items patches game code, so the OFF state must be applied
-    // actively -- the per-frame tick below only runs while a cheat is enabled.
-    // The enabled tick re-applies (idempotent); here we remove it when cleared.
+    // Publish Unrestricted Items' OFF state too; registry callbacks below only
+    // run while enabled. The permanent hook itself stays installed.
     for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].tick == cheat_unrestrictedItems && !s_cheats[i].enabled)
             setUnrestrictedItems(false);
@@ -273,8 +247,10 @@ void Tick()
 
 void OnApplicationStart()
 {
-    s_unrestrictedPatched = false;
     EquipmentModifiers::OnApplicationStart();
+    for (int i = 0; i < kBaseCount; ++i)
+        if (s_cheats[i].tick == cheat_unrestrictedItems)
+            setUnrestrictedItems(s_cheats[i].enabled);
 }
 
 void OnApplicationEnd()

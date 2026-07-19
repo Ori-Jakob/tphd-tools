@@ -13,6 +13,10 @@ void Tick();
 void OnApplicationStart();
 void OnApplicationEnd();
 
+// Shared permanent-hook backend for the top-level Unrestricted Items cheat.
+// Its UI/config entry remains in cheats.cpp rather than Equipment Modifiers.
+void SetUnrestrictedItemsEnabled(bool on);
+
 // Boolean, name-addressed settings exposed through Cheats' existing config
 // registry.  Spinner speed uses two hidden bits to persist its three choices.
 int         ConfigCount();

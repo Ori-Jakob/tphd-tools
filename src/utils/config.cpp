@@ -740,15 +740,23 @@ static void apply(const char* text)
         for (int i = 0; i < Cheats::Count(); ++i) {
             const char* name = Cheats::Name(i);
             cJSON* c = cJSON_GetObjectItemCaseSensitive(it, name);
-            // Preserve the setting across the terminology correction: this
-            // modifier removes the active-bomb cap; it never granted ammo.
-            if (!c && strcmp(name, "Unrestricted Bombs") == 0) {
-                c = cJSON_GetObjectItemCaseSensitive(it, "Infinite Bombs");
+            // Preserve this setting across both terminology corrections: the
+            // modifier removes the active-bomb cap; it never grants ammo.
+            if (!c && strcmp(name, "No Bomb Limit") == 0) {
+                const char* oldNames[] = {
+                    "Unrestricted Bombs",
+                    "Infinite Bombs",
+                };
+                for (unsigned j = 0;
+                     !c && j < sizeof(oldNames) / sizeof(oldNames[0]); ++j)
+                    c = cJSON_GetObjectItemCaseSensitive(it, oldNames[j]);
                 if (c)
                     s_forceSync = true;
             }
             if (c && cJSON_IsBool(c))
                 Cheats::SetEnabled(i, cJSON_IsTrue(c));
+            else
+                s_forceSync = true;
         }
     }
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "imguiIni")) && cJSON_IsString(it) &&

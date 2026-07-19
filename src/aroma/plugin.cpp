@@ -456,13 +456,16 @@ ON_APPLICATION_START()
     Debug::DebugSave::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
     Tools::FlyCam::OnApplicationStart();
-    Cheats::OnApplicationStart();
 
     uint64_t tid = OSGetTitleID();
     s_active = isTphd(tid);
     s_tphdApplication = s_active;
     OSMemoryBarrier();
     if (s_active) {
+        // Equipment code redirects must be present before their Zelda.rpx
+        // functions can be translated/executed. This is safe only after the
+        // title-ID gate because the redirect addresses are TPHD-specific.
+        Cheats::OnApplicationStart();
         // Retry the overlay-context allocation if INITIALIZE_PLUGIN failed
         // (e.g. the mapped-memory module was briefly out of space). Without a
         // context the overlay can never draw.

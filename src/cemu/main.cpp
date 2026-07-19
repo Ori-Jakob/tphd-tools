@@ -23,6 +23,7 @@
 #include "overlay.h"
 #include "input.h"
 #include "logger.h"
+#include "cheats/cheats.h"
 #include "tools/save_state.h"
 
 static int Present(void* tvColorBuffer, void* drcColorBuffer)
@@ -38,6 +39,9 @@ static int Present(void* tvColorBuffer, void* drcColorBuffer)
         s_logStarted = true;
         Logger::StartNewLog();
         Logger::Log("[tphd_tools.rpl] first present -- RPL is live in the game process!");
+        // Install stable Zelda.rpx redirects before any equipment behavior can
+        // be translated by Cemu. Later checkbox changes touch data only.
+        Cheats::OnApplicationStart();
     }
 
     (void)drcColorBuffer;
