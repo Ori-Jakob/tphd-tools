@@ -5,6 +5,7 @@
 #include "imgui.h"
 #include "input.h"
 #include "logger.h"
+#include "notifications.h"
 #include "overlay.h"
 #include "ui_hotkey.h"
 #include "tools/flycam.h"
@@ -208,6 +209,7 @@ static bool saveCoordinates()
                 s_saved.linkPos.z, (int)s_saved.linkAngle, s_saved.camAt.x,
                 s_saved.camAt.y, s_saved.camAt.z, s_saved.camEye.x,
                 s_saved.camEye.y, s_saved.camEye.z);
+    Notifications::Show("Coordinates saved");
     return true;
 }
 
@@ -249,8 +251,12 @@ static bool loadCoordinates()
 
     const s8 stayRoom = dStage_getStayRoomNo();
     if (stayRoom != s_saved.room ||
-        !dStage_isRoomBackgroundReady(s_saved.room))
-        return beginRoomLoad();
+        !dStage_isRoomBackgroundReady(s_saved.room)) {
+        const bool started = beginRoomLoad();
+        if (started)
+            Notifications::Show("Loading saved coordinates");
+        return started;
+    }
 
     if (!applySavedTransform()) {
         snprintf(s_status, sizeof(s_status),
@@ -263,6 +269,7 @@ static bool loadCoordinates()
                 "spawn=%d layer=%d action=%u; room re-stamp armed",
                 s_saved.stage, (int)s_saved.room, (int)s_saved.spawn,
                 (int)s_saved.layer, (unsigned)DAALINK_ACTION_WAIT);
+    Notifications::Show("Coordinates loaded");
     return true;
 }
 

@@ -17,6 +17,7 @@
 #include "imgui.h"
 #include "overlay.h"            // ov::g_settings.controllerPref
 #include "input.h"
+#include "notifications.h"
 #include "ui_hotkey.h"
 #include "game/game.h"
 #include "storage.h"
@@ -1161,9 +1162,10 @@ static void requestLoad(const char* folder, const char* name)
     char location[132];
     snprintf(location, sizeof(location), "%s%s%s",
              job->folder[0] ? job->folder : "", job->folder[0] ? "/" : "", name);
-    if (postJob(job))
+    if (postJob(job)) {
         snprintf(s_status, sizeof(s_status), "Loading %.82s ...", location);
-    else {
+        Notifications::Showf("Loading save state: %.120s", location);
+    } else {
         s_loadBusy = false;
         snprintf(s_status, sizeof(s_status), "Unable to queue state load.");
     }

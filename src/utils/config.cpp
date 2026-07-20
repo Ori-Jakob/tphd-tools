@@ -55,6 +55,7 @@ struct Snap {
     int mode;
     uint32_t hotkey;
     bool freeze;
+    bool actionNotifications;
     bool gameResetHotkey;
     uint32_t gameResetCombo;
     uint32_t saveStateReloadCombo;
@@ -139,6 +140,7 @@ static Snap gather()
     s.mode   = g_settings.blockMode;
     s.hotkey = g_settings.hotkey;
     s.freeze = g_settings.freezeOnMenu;
+    s.actionNotifications = g_settings.actionNotifications;
     s.gameResetHotkey = g_settings.gameResetHotkey;
     s.gameResetCombo = g_settings.gameResetCombo;
     s.saveStateReloadCombo = g_settings.saveStateReloadCombo;
@@ -239,7 +241,9 @@ static bool snapEqual(const Snap& a, const Snap& b)
     }
 
     return a.block == b.block && a.mode == b.mode && a.hotkey == b.hotkey &&
-           a.freeze == b.freeze && a.gameResetHotkey == b.gameResetHotkey &&
+           a.freeze == b.freeze &&
+           a.actionNotifications == b.actionNotifications &&
+           a.gameResetHotkey == b.gameResetHotkey &&
            a.gameResetCombo == b.gameResetCombo &&
            a.saveStateReloadCombo == b.saveStateReloadCombo &&
            a.quickTransformCombo == b.quickTransformCombo &&
@@ -318,6 +322,8 @@ static char* serialize()
     cJSON_AddNumberToObject(root, "blockMode", g_settings.blockMode);
     cJSON_AddNumberToObject(root, "hotkey", (double)g_settings.hotkey);
     cJSON_AddBoolToObject(root, "freezeOnMenu", g_settings.freezeOnMenu);
+    cJSON_AddBoolToObject(root, "actionNotifications",
+                          g_settings.actionNotifications);
     cJSON_AddBoolToObject(root, "gameResetHotkey", g_settings.gameResetHotkey);
     cJSON_AddNumberToObject(root, "gameResetCombo", (double)g_settings.gameResetCombo);
     cJSON_AddNumberToObject(root, "saveStateReloadCombo",
@@ -475,6 +481,13 @@ static void apply(const char* text)
         g_settings.hotkey = (uint32_t)it->valuedouble;
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "freezeOnMenu")) && cJSON_IsBool(it))
         g_settings.freezeOnMenu = cJSON_IsTrue(it);
+    if ((it = cJSON_GetObjectItemCaseSensitive(root, "actionNotifications")) &&
+        cJSON_IsBool(it)) {
+        g_settings.actionNotifications = cJSON_IsTrue(it);
+    } else {
+        g_settings.actionNotifications = true;
+        s_forceSync = true;
+    }
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "gameResetHotkey")) && cJSON_IsBool(it))
         g_settings.gameResetHotkey = cJSON_IsTrue(it);
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "gameResetCombo")) && cJSON_IsNumber(it))

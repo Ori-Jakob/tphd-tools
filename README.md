@@ -79,6 +79,8 @@ in-game **Experimental** menu:
 - GamePad touchscreen and Cemu mouse input
 - Optional game-input blocking while the menu is open
 - Optional game freeze while the menu is open
+- Optional action notifications for save-state loads, game resets, and
+  coordinate saves/loads (enabled by default)
 - Selectable overlay output: TV, GamePad, or both
 - Rebindable menu hotkey and configurable controller preference
 - Persistent settings, window positions, tool state, and cheat state

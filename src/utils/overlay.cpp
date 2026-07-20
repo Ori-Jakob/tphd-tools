@@ -18,6 +18,7 @@
 #include "input.h"
 #include "logger.h"
 #include "menu.h"
+#include "notifications.h"
 #include "config.h"
 #include "swkbd.h"
 #include "tools/save_state.h"
@@ -101,8 +102,10 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
 
     // Consume this frame's stashed controller input, then act on the hotkey.
     Input::BeginFrame();
-    if (Input::GameResetHotkeyFired())
+    if (Input::GameResetHotkeyFired()) {
+        Notifications::Show("Game reset");
         dComIfG_requestGameReset();
+    }
     if (Input::HotkeyToggled())
         Menu::Toggle();
 
@@ -176,6 +179,7 @@ bool WantsGamePadDraw()
 void OnApplicationStart()
 {
     s_frameReady = false;
+    Notifications::Clear();
     Renderer::ResetDeviceObjects();
 }
 

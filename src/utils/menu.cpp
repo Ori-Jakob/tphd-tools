@@ -12,6 +12,7 @@
 #include "overlay.h"
 #include "version.h"
 #include "input.h"
+#include "notifications.h"
 #include "ui_hotkey.h"
 #include "link_position.h"
 #include "debug_save.h"
@@ -141,6 +142,7 @@ static void DrawSettingsMenu()
     }
 
     ImGui::Checkbox("Freeze game while menu open", &g_settings.freezeOnMenu);
+    ImGui::Checkbox("Action notifications", &g_settings.actionNotifications);
     ImGui::Checkbox("Game reset hotkey", &g_settings.gameResetHotkey);
     if (g_settings.gameResetHotkey) {
         ImGui::Indent();
@@ -384,7 +386,7 @@ static void DrawExperimentalMenu()
 #endif
 
 // A top-level tool window we manage (move/resize/clamp)? Skips child windows,
-// popups/tooltips, the menu bar, and our non-interactive toast.
+// popups/tooltips, the menu bar, and our non-interactive toasts.
 static bool isManageableWindow(ImGuiWindow* w)
 {
     if (!w || !w->Active || w->Hidden)
@@ -395,6 +397,7 @@ static bool isManageableWindow(ImGuiWindow* w)
     if (w->Name) {
         if (strcmp(w->Name, "##MainMenuBar") == 0) return false;
         if (strcmp(w->Name, "##tphd_toast") == 0)  return false;
+        if (strcmp(w->Name, "##tphd_action_toast") == 0) return false;
     }
     return true;
 }
@@ -492,6 +495,7 @@ static void CycleWindow()
             continue;
         if (w->Name && (strcmp(w->Name, "##MainMenuBar") == 0 ||
                         strcmp(w->Name, "##tphd_toast") == 0 ||
+                        strcmp(w->Name, "##tphd_action_toast") == 0 ||
                         strcmp(w->Name, "###NavWindowingList") == 0))
             continue;
         list[n++] = w;
@@ -653,6 +657,10 @@ void Draw(ImGuiIO& io)
     CycleTabs();
     AdjustFocusedWindow(io);
     ClampWindowsToViewport(io);
+
+    // Action notifications are drawn last so tool windows cannot cover them.
+    // They are separate from the centered initialization toast above.
+    Notifications::Draw(io);
 }
 
 } // namespace Menu

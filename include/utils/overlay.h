@@ -63,6 +63,7 @@ struct Settings {
     int      blockMode    = BLOCK_ALL;     // OverlayBlockMode
     uint32_t hotkey       = MB_ZR | MB_DOWN;  // open/close combo (MenuButton bits)
     bool     freezeOnMenu = false;         // halt the game (freeze bit) while the menu is open
+    bool     actionNotifications = true;   // show short toasts for practice actions
     bool     gameResetHotkey = true;       // game-reset combo writes the engine reset flag
     // Rebindable feature hotkeys (MenuButton bits). Defaults match the original
     // hard-coded combos (Start+X+B, ZL+ZR+Start, ZR+Y, ZL+ZR+L3+R3,
