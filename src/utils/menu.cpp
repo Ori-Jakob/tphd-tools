@@ -12,6 +12,7 @@
 #include "overlay.h"
 #include "version.h"
 #include "input.h"
+#include "ui_hotkey.h"
 #include "link_position.h"
 #include "debug_save.h"
 #include "tools/warp.h"
@@ -77,8 +78,8 @@ static void DrawToast(ImGuiIO& io)
     char hk[64];
     Input::HotkeyToString(g_settings.hotkey, hk, sizeof(hk));
 
-    // Colors: name in the input viewer's held-button green, version + hotkey in its
-    // pressed-button gold.
+    // Colors: name and hotkey buttons use the input viewer's held-button green;
+    // the version retains its pressed-button gold.
     const ImVec4 kGreen(64.0f / 255.0f, 207.0f / 255.0f, 142.0f / 255.0f, 1.0f);
     const ImVec4 kGold (255.0f / 255.0f, 214.0f / 255.0f, 92.0f / 255.0f, 1.0f);
     const char* name     = "TPHD Tools";
@@ -115,14 +116,10 @@ static void DrawToast(ImGuiIO& io)
         ImGui::SameLine(0.0f, wSpace);
         ImGui::TextColored(kGold, "%s", TPHD_TOOLS_VERSION);
 
-        // Hint line: combo highlighted in the same gold, centered.
+        // Hint line: button labels are green while combo separators stay normal.
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
                              (ImGui::GetContentRegionAvail().x - hintW) * 0.5f);
-        ImGui::TextUnformatted(hintPre);
-        ImGui::SameLine(0.0f, 0.0f);
-        ImGui::TextColored(kGold, "%s", hk);
-        ImGui::SameLine(0.0f, 0.0f);
-        ImGui::TextUnformatted(hintPost);
+        UiHotkey::DrawText(g_settings.hotkey, hintPre, hintPost);
     }
     ImGui::End();
     ImGui::PopStyleVar();
@@ -146,10 +143,8 @@ static void DrawSettingsMenu()
     ImGui::Checkbox("Freeze game while menu open", &g_settings.freezeOnMenu);
     ImGui::Checkbox("Game reset hotkey", &g_settings.gameResetHotkey);
     if (g_settings.gameResetHotkey) {
-        char gr[64];
-        Input::HotkeyToString(g_settings.gameResetCombo, gr, sizeof(gr));
         ImGui::Indent();
-        ImGui::TextDisabled("%s", gr);
+        UiHotkey::Draw(g_settings.gameResetCombo, true);
         ImGui::Unindent();
     }
 
@@ -208,11 +203,7 @@ static void DrawSettingsMenu()
 
     ImGui::SeparatorText("Hotkeys");
 
-    {
-        char hk[64];
-        Input::HotkeyToString(g_settings.hotkey, hk, sizeof(hk));
-        ImGui::Text("Menu hotkey: %s", hk);
-    }
+    UiHotkey::DrawText(g_settings.hotkey, "Menu hotkey: ");
     if (ImGui::Button("Rebind Hotkeys"))
         s_hotkeysWindow = true;
 }
@@ -283,9 +274,7 @@ static void DrawHotkeysWindow()
                 if (capturingThis) {
                     ImGui::TextDisabled("press buttons, release to set");
                 } else {
-                    char hk[64];
-                    Input::HotkeyToString(Input::GetHotkey(id), hk, sizeof(hk));
-                    ImGui::TextUnformatted(hk);
+                    UiHotkey::Draw(Input::GetHotkey(id));
                 }
 
                 ImGui::TableNextColumn();
@@ -318,10 +307,9 @@ static void DrawHotkeysWindow()
         if (ImGui::BeginPopupModal("Hotkey conflict", nullptr,
                                    ImGuiWindowFlags_AlwaysAutoResize)) {
             char names[128];
-            char maskStr[64];
             Input::HotkeyConflictNames(names, sizeof(names));
-            Input::HotkeyToString(Input::PendingHotkeyMask(), maskStr, sizeof(maskStr));
-            ImGui::Text("\"%s\" is already assigned to:", maskStr);
+            UiHotkey::DrawText(Input::PendingHotkeyMask(), "\"",
+                               "\" is already assigned to:");
             ImGui::TextWrapped("%s", names);
             ImGui::Spacing();
             ImGui::TextUnformatted("Overwrite? The other feature(s) will be cleared.");
@@ -365,11 +353,8 @@ static void DrawCameraHudMenu()
     ImGui::SeparatorText("Camera");
     Tools::FlyCam::DrawMenuItem();
     if (Tools::FlyCam::IsEnabled()) {
-        char hotkey[64];
-        Input::HotkeyToString(g_settings.flyCamCombo,
-                              hotkey, sizeof(hotkey));
         ImGui::Indent();
-        ImGui::TextDisabled("%s to fly", hotkey);
+        UiHotkey::DrawText(g_settings.flyCamCombo, nullptr, " to fly", true);
         ImGui::Unindent();
     }
 

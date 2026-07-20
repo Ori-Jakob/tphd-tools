@@ -17,6 +17,7 @@
 #include "imgui.h"
 #include "overlay.h"            // ov::g_settings.controllerPref
 #include "input.h"
+#include "ui_hotkey.h"
 #include "game/game.h"
 #include "storage.h"
 #include "logger.h"
@@ -3259,11 +3260,9 @@ void DrawWindow(bool menuActive)
         if (!s_overridePosition)
             ImGui::TextDisabled("Uses the saved stage, room, layer, and spawn point.");
         {
-            char hk[64];
-            Input::HotkeyToString(ov::g_settings.saveStateReloadCombo, hk, sizeof(hk));
-            char label[96];
-            snprintf(label, sizeof(label), "Reload last state hotkey (%s)", hk);
-            ImGui::Checkbox(label, &s_reloadLastHotkey);
+            ImGui::Checkbox("Reload last state hotkey", &s_reloadLastHotkey);
+            ImGui::SameLine(0.0f, 0.0f);
+            UiHotkey::DrawText(ov::g_settings.saveStateReloadCombo, " (", ")");
         }
         if (s_lastLoadedName[0]) {
             ImGui::TextDisabled("Last loaded: %s%s%s",

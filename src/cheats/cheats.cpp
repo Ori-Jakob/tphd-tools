@@ -13,6 +13,7 @@
 #include "cheats/inventory_editor.h"
 #include "input.h"
 #include "overlay.h"
+#include "ui_hotkey.h"
 
 #include "imgui.h"
 #include "game/game.h"
@@ -230,15 +231,14 @@ static void drawBaseCheat(BaseCheatId id)
         setUnrestrictedItems(cheat.enabled);
 
     if (cheat.tick == cheat_moonJump && ImGui::IsItemHovered()) {
-        char hotkey[64];
-        Input::HotkeyToString(ov::g_settings.moonJumpCombo,
-                              hotkey, sizeof(hotkey));
-        ImGui::SetTooltip("Hold %s", hotkey);
+        ImGui::BeginTooltip();
+        UiHotkey::DrawText(ov::g_settings.moonJumpCombo, "Hold ");
+        ImGui::EndTooltip();
     } else if (cheat.tick == cheat_quickTransform && ImGui::IsItemHovered()) {
-        char hotkey[64];
-        Input::HotkeyToString(ov::g_settings.quickTransformCombo,
-                              hotkey, sizeof(hotkey));
-        ImGui::SetTooltip("Press %s to switch human/wolf", hotkey);
+        ImGui::BeginTooltip();
+        UiHotkey::DrawText(ov::g_settings.quickTransformCombo, "Press ",
+                           " to switch human/wolf");
+        ImGui::EndTooltip();
     } else if (cheat.desc && ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%s", cheat.desc);
     }

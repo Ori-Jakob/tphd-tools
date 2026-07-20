@@ -78,6 +78,15 @@ uint32_t PendingHotkeyMask();
 void HotkeyConflictNames(char* out, int outSize);
 void ConfirmHotkeyConflict();                       // assign pending; clear colliding slots
 void CancelHotkeyConflict();
+
+// Ordered button labels shared by plain-text and colored hotkey renderers. A
+// physical Plus button deliberately keeps the "+" label; callers can distinguish
+// it from the separators because each entry also carries its input bit.
+struct HotkeyButtonLabel {
+    uint32_t bit;
+    const char* name;
+};
+const HotkeyButtonLabel* GetHotkeyButtonLabels(int* count);
 void HotkeyToString(uint32_t mask, char* out, int outSize);
 
 // --- quick-transform input takeover (Cheats) ---

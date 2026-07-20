@@ -6,6 +6,7 @@
 #include "input.h"
 #include "logger.h"
 #include "overlay.h"
+#include "ui_hotkey.h"
 #include "tools/flycam.h"
 
 #include <stdio.h>
@@ -273,16 +274,9 @@ void DrawMenuItem()
     if (!s_enabled)
         return;
 
-    char saveHotkey[64];
-    char loadHotkey[64];
-    Input::HotkeyToString(ov::g_settings.saveCoordinatesCombo,
-                          saveHotkey, sizeof(saveHotkey));
-    Input::HotkeyToString(ov::g_settings.loadCoordinatesCombo,
-                          loadHotkey, sizeof(loadHotkey));
-
     ImGui::Indent();
-    ImGui::TextDisabled("Save: %s", saveHotkey);
-    ImGui::TextDisabled("Load: %s", loadHotkey);
+    UiHotkey::DrawText(ov::g_settings.saveCoordinatesCombo, "Save: ", nullptr, true);
+    UiHotkey::DrawText(ov::g_settings.loadCoordinatesCombo, "Load: ", nullptr, true);
     if (ImGui::Button("Save coordinates"))
         saveCoordinates();
     ImGui::SameLine();

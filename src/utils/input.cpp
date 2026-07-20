@@ -765,20 +765,30 @@ void CancelHotkeyConflict()
     s_pendingMask     = 0;
 }
 
-void HotkeyToString(uint32_t mask, char* out, int outSize)
+const HotkeyButtonLabel* GetHotkeyButtonLabels(int* count)
 {
-    static const struct { uint32_t bit; const char* name; } kNames[] = {
+    static const HotkeyButtonLabel kLabels[] = {
         { MB_L, "L" }, { MB_R, "R" }, { MB_ZL, "ZL" }, { MB_ZR, "ZR" },
         { MB_PLUS, "+" }, { MB_MINUS, "-" }, { MB_LSTICK, "L3" }, { MB_RSTICK, "R3" },
         { MB_A, "A" }, { MB_B, "B" }, { MB_X, "X" }, { MB_Y, "Y" },
         { MB_UP, "Up" }, { MB_DOWN, "Down" }, { MB_LEFT, "Left" }, { MB_RIGHT, "Right" },
     };
+    if (count)
+        *count = (int)(sizeof(kLabels) / sizeof(kLabels[0]));
+    return kLabels;
+}
+
+void HotkeyToString(uint32_t mask, char* out, int outSize)
+{
     if (outSize <= 0)
         return;
     out[0] = '\0';
     int len = 0;
     bool first = true;
-    for (auto& e : kNames) {
+    int labelCount = 0;
+    const HotkeyButtonLabel* labels = GetHotkeyButtonLabels(&labelCount);
+    for (int i = 0; i < labelCount; ++i) {
+        const HotkeyButtonLabel& e = labels[i];
         if (!(mask & e.bit))
             continue;
         const char* sep = first ? "" : "+";

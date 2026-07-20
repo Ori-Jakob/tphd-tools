@@ -18,6 +18,7 @@
 #include "input.h"
 #include "logger.h"
 #include "overlay.h"
+#include "ui_hotkey.h"
 #include "game/game.h"
 
 // Read directly by the small PowerPC thunks in equipment_modifiers_hooks.s.
@@ -505,11 +506,10 @@ void DrawMenu()
     changed |= ImGui::Checkbox("Remote Bombs",
                                &s_config[CONFIG_REMOTE_BOMBS]);
     if (ImGui::IsItemHovered()) {
-        char hotkey[64];
-        Input::HotkeyToString(ov::g_settings.remoteBombsCombo,
-                              hotkey, sizeof(hotkey));
-        ImGui::SetTooltip("Press %s to detonate player-created bombs; timed fuses stay frozen",
-                          hotkey);
+        ImGui::BeginTooltip();
+        UiHotkey::DrawText(ov::g_settings.remoteBombsCombo, "Press ",
+                           " to detonate player-created bombs; timed fuses stay frozen");
+        ImGui::EndTooltip();
     }
 
     changed |= ImGui::Checkbox("No Bomb Limit",
