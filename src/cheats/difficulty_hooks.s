@@ -50,18 +50,36 @@ tphdDamageReceivedHook:
 tphdDamageGivenHook:
     # Native: r8 = r8 - r7, where r8 is the target's signed health at +0x566
     # and r7 is attack power. A quarter-scale integer keeps the UI's 0.25 steps
-    # exact; round upward so a nonzero hit never becomes zero damage.
+    # exact; round upward so a nonzero hit never becomes zero damage. Preserve
+    # every scratch register and CR field the replaced `subf r8,r7,r8` left
+    # untouched. In particular, `addi r0,r0,N` cannot be used as an accumulator:
+    # PowerPC treats r0 as a literal-zero base for addi.
+    stwu 1, -0x20(1)
+    stw 0, 8(1)
+    stw 12, 12(1)
+    mfcr 0
+    stw 0, 16(1)
     lis 12, g_tphdInfiniteEnemyHealthEnabled@ha
     lbz 12, g_tphdInfiniteEnemyHealthEnabled@l(12)
     cmpwi 12, 0
     bne .Ldamage_given_done
     lis 12, g_tphdDamageGivenQuarterScale@ha
     lwz 12, g_tphdDamageGivenQuarterScale@l(12)
-    mullw 0, 7, 12
-    addi 0, 0, 3
-    srwi 0, 0, 2
-    sub 8, 8, 0
+    cmpwi 12, 4
+    beq .Ldamage_given_native
+    mullw 12, 7, 12
+    addi 12, 12, 3
+    srwi 12, 12, 2
+    subf 8, 12, 8
+    b .Ldamage_given_done
+.Ldamage_given_native:
+    subf 8, 7, 8
 .Ldamage_given_done:
+    lwz 0, 16(1)
+    mtcrf 0xff, 0
+    lwz 12, 12(1)
+    lwz 0, 8(1)
+    addi 1, 1, 0x20
     blr
 .size tphdDamageGivenHook, .-tphdDamageGivenHook
 
