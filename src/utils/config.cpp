@@ -19,6 +19,7 @@
 #include "tools/modern_camera.h"
 #include "cheats/cheats.h"
 #include "cheats/difficulty.h"
+#include "cheats/qol.h"
 #include "game/d_stage.h"
 #include "storage.h"
 #include "logger.h"
@@ -111,6 +112,12 @@ struct Snap {
     float damageGivenMultiplier;
     int rupeeMultiplier;
     int rupeeMode;
+    float climbingSpeedMultiplier;
+    float climbHeightMultiplier;
+    float blockPushSpeedMultiplier;
+    float crawlSpeedMultiplier;
+    float rollSpeedMultiplier;
+    float timeSpeedMultiplier;
     uint32_t cheatsMask;   // bit i = cheat i enabled (for change detection)
 };
 static Snap s_lastSaved;
@@ -195,6 +202,12 @@ static Snap gather()
         Cheats::Difficulty::GetDamageGivenMultiplier();
     s.rupeeMultiplier = Cheats::Difficulty::GetRupeeMultiplier();
     s.rupeeMode = Cheats::Difficulty::GetRupeeMode();
+    s.climbingSpeedMultiplier = Cheats::QoL::GetClimbingSpeedMultiplier();
+    s.climbHeightMultiplier = Cheats::QoL::GetClimbHeightMultiplier();
+    s.blockPushSpeedMultiplier = Cheats::QoL::GetBlockPushSpeedMultiplier();
+    s.crawlSpeedMultiplier = Cheats::QoL::GetCrawlSpeedMultiplier();
+    s.rollSpeedMultiplier = Cheats::QoL::GetRollSpeedMultiplier();
+    s.timeSpeedMultiplier = Cheats::QoL::GetTimeSpeedMultiplier();
     s.cheatsMask = 0;
     for (int i = 0; i < Cheats::Count() && i < 32; ++i)
         if (Cheats::IsEnabled(i))
@@ -274,6 +287,12 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.damageGivenMultiplier == b.damageGivenMultiplier &&
            a.rupeeMultiplier == b.rupeeMultiplier &&
            a.rupeeMode == b.rupeeMode &&
+           a.climbingSpeedMultiplier == b.climbingSpeedMultiplier &&
+           a.climbHeightMultiplier == b.climbHeightMultiplier &&
+           a.blockPushSpeedMultiplier == b.blockPushSpeedMultiplier &&
+           a.crawlSpeedMultiplier == b.crawlSpeedMultiplier &&
+           a.rollSpeedMultiplier == b.rollSpeedMultiplier &&
+           a.timeSpeedMultiplier == b.timeSpeedMultiplier &&
            a.cheatsMask == b.cheatsMask;
 }
 
@@ -411,6 +430,21 @@ static char* serialize()
                                 Cheats::Difficulty::GetRupeeMultiplier());
         cJSON_AddNumberToObject(difficulty, "rupeeMode",
                                 Cheats::Difficulty::GetRupeeMode());
+    }
+    cJSON* qol = cJSON_AddObjectToObject(root, "qualityOfLife");
+    if (qol) {
+        cJSON_AddNumberToObject(qol, "climbingSpeedMultiplier",
+                                Cheats::QoL::GetClimbingSpeedMultiplier());
+        cJSON_AddNumberToObject(qol, "climbHeightMultiplier",
+                                Cheats::QoL::GetClimbHeightMultiplier());
+        cJSON_AddNumberToObject(qol, "blockPushSpeedMultiplier",
+                                Cheats::QoL::GetBlockPushSpeedMultiplier());
+        cJSON_AddNumberToObject(qol, "crawlSpeedMultiplier",
+                                Cheats::QoL::GetCrawlSpeedMultiplier());
+        cJSON_AddNumberToObject(qol, "rollSpeedMultiplier",
+                                Cheats::QoL::GetRollSpeedMultiplier());
+        cJSON_AddNumberToObject(qol, "timeSpeedMultiplier",
+                                Cheats::QoL::GetTimeSpeedMultiplier());
     }
     // Enabled cheats, keyed by name so the file survives registry reordering.
     cJSON* cheats = cJSON_AddObjectToObject(root, "cheats");
@@ -795,6 +829,61 @@ static void apply(const char* text)
                 difficulty, "rupeeMode");
             if (setting && cJSON_IsNumber(setting))
                 Cheats::Difficulty::SetRupeeMode(setting->valueint);
+            else
+                s_forceSync = true;
+        } else {
+            s_forceSync = true;
+        }
+    }
+    {
+        cJSON* qol =
+            cJSON_GetObjectItemCaseSensitive(root, "qualityOfLife");
+        if (qol && cJSON_IsObject(qol)) {
+            cJSON* setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "climbingSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetClimbingSpeedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "climbHeightMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetClimbHeightMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "blockPushSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetBlockPushSpeedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "crawlSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetCrawlSpeedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "rollSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetRollSpeedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "timeSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetTimeSpeedMultiplier(
+                    (float)setting->valuedouble);
             else
                 s_forceSync = true;
         } else {

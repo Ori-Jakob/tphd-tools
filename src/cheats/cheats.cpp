@@ -9,6 +9,7 @@
 #include "cheats/cheats.h"
 #include "cheats/equipment_modifiers.h"
 #include "cheats/difficulty.h"
+#include "cheats/qol.h"
 #include "cheats/inventory_editor.h"
 #include "input.h"
 #include "overlay.h"
@@ -237,6 +238,10 @@ void DrawMenu()
         Difficulty::DrawMenu();
         ImGui::EndMenu();
     }
+    if (ImGui::BeginMenu("Quality of Life")) {
+        QoL::DrawMenu();
+        ImGui::EndMenu();
+    }
     ImGui::Separator();
     InventoryEditor::DrawMenuButton();
 }
@@ -264,12 +269,14 @@ void Tick()
 
     EquipmentModifiers::Tick();
     Difficulty::Tick();
+    QoL::Tick();
 }
 
 void OnApplicationStart()
 {
     EquipmentModifiers::OnApplicationStart();
     Difficulty::OnApplicationStart();
+    QoL::OnApplicationStart();
     for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].tick == cheat_unrestrictedItems)
             setUnrestrictedItems(s_cheats[i].enabled);
@@ -278,6 +285,7 @@ void OnApplicationStart()
 void OnApplicationEnd()
 {
     setUnrestrictedItems(false);
+    QoL::OnApplicationEnd();
     Difficulty::OnApplicationEnd();
     EquipmentModifiers::OnApplicationEnd();
 }

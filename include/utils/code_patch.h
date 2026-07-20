@@ -28,9 +28,17 @@ uint32_t MakeLfs(unsigned floatReg, unsigned baseReg, const void* value);
 bool MakeBranchLink(uint32_t source, const void* target,
                     uint32_t* instruction);
 
+// Encode a relative PPC `b`. This preserves LR and is therefore the correct
+// redirect for replacing a native tail branch or `blr` return.
+bool MakeBranch(uint32_t source, const void* target, uint32_t* instruction);
+
 // MakeBranchLink with one-time, owner-scoped range diagnostics.
 bool MakeHookBranch(const char* name, Owner& owner, uint32_t source,
                     const void* target, uint32_t* instruction);
+
+// MakeBranch with the same one-time, owner-scoped range diagnostics.
+bool MakeHookJump(const char* name, Owner& owner, uint32_t source,
+                  const void* target, uint32_t* instruction);
 
 // Build the common one-word form: replace a guarded native instruction with a
 // relative call to `hook`.

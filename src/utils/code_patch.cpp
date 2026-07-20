@@ -58,6 +58,18 @@ bool MakeBranchLink(uint32_t source, const void* target,
     return true;
 }
 
+bool MakeBranch(uint32_t source, const void* target, uint32_t* instruction)
+{
+    if (!instruction)
+        return false;
+    const int64_t delta = (int64_t)(uint32_t)(uintptr_t)target -
+                          (int64_t)source;
+    if ((delta & 3) != 0 || delta < -0x02000000 || delta > 0x01FFFFFC)
+        return false;
+    *instruction = 0x48000000u | ((uint32_t)delta & 0x03FFFFFCu);
+    return true;
+}
+
 bool MakeHookBranch(const char* name, Owner& owner, uint32_t source,
                     const void* target, uint32_t* instruction)
 {
@@ -66,6 +78,20 @@ bool MakeHookBranch(const char* name, Owner& owner, uint32_t source,
     if (!owner.conflictReported) {
         Logger::LogWarn(
             "[tphd_tools][patch] %s hook out of branch range: %08X -> %08X",
+            name, (unsigned)source, (unsigned)(uintptr_t)target);
+        owner.conflictReported = true;
+    }
+    return false;
+}
+
+bool MakeHookJump(const char* name, Owner& owner, uint32_t source,
+                  const void* target, uint32_t* instruction)
+{
+    if (MakeBranch(source, target, instruction))
+        return true;
+    if (!owner.conflictReported) {
+        Logger::LogWarn(
+            "[tphd_tools][patch] %s jump out of branch range: %08X -> %08X",
             name, (unsigned)source, (unsigned)(uintptr_t)target);
         owner.conflictReported = true;
     }
