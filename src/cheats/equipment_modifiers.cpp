@@ -28,12 +28,18 @@ volatile uint8_t g_tphdInfiniteSpinnerTimeEnabled = 0;
 volatile uint8_t g_tphdRemoteBombsEnabled = 0;
 volatile uint8_t g_tphdUnrestrictedBombsEnabled = 0;
 volatile uint8_t g_tphdUnrestrictedItemsEnabled = 0;
+volatile uint8_t g_tphdFastIronBootsEnabled = 0;
+float g_tphdFastIronBootsMultiplier = 1.0f;
 
 void tphdSuperClawshotFailureHook();
 void tphdInfiniteSpinnerTimeHook();
 void tphdRemoteBombFuseHook();
 void tphdUnrestrictedBombsHook();
 void tphdUnrestrictedItemsHook();
+void tphdUnrestrictedSwordHook();
+void tphdFastIronBootsAnimeHook();
+void tphdFastIronBootsStoreF13Hook();
+void tphdFastIronBootsStoreF30Hook();
 }
 
 namespace Cheats {
@@ -51,6 +57,7 @@ enum ConfigItem {
     CONFIG_SPINNER_SPEED_ULTRA,
     CONFIG_REMOTE_BOMBS,
     CONFIG_UNRESTRICTED_BOMBS,
+    CONFIG_FAST_IRON_BOOTS,
     CONFIG_COUNT,
 };
 
@@ -61,6 +68,7 @@ static const char* const kConfigNames[CONFIG_COUNT] = {
     "Spinner Speed: Ultra",
     "Remote Bombs",
     "No Bomb Limit",
+    "Fast Iron Boots",
 };
 
 static bool s_config[CONFIG_COUNT] = {};
@@ -71,6 +79,9 @@ static PatchOwner s_spinnerSpeedPatch = {};
 static PatchOwner s_remoteBombFusePatch = {};
 static PatchOwner s_unrestrictedBombsPatch = {};
 static PatchOwner s_unrestrictedItemsPatch = {};
+static PatchOwner s_unrestrictedSwordPatch = {};
+static PatchOwner s_fastIronBootsAnimePatch = {};
+static PatchOwner s_fastIronBootsSpeedPatch = {};
 
 // These are deliberately RPL/WPS-owned values. Permanently redirected native
 // load sites read them directly, avoiding TPHD's heavily deduplicated constant
@@ -169,6 +180,66 @@ static bool buildUnrestrictedItemsPatch(PatchWord* words, int* count)
     return true;
 }
 
+static bool buildFastIronBootsAnimePatch(PatchWord* words, int* count)
+{
+    const struct Site {
+        u32 address;
+        u32 expected;
+    } sites[] = {
+        // setBlendMoveAnime: heavy forward-movement animation checks.
+        { 0x02023648u, 0x4BFFF591u },
+        { 0x02023884u, 0x4BFFF355u },
+        // setBlendAtnBackMoveAnime: heavy target/back-walk animation check.
+        { 0x0202BDDCu, 0x4BFF6DFDu },
+    };
+
+    *count = (int)(sizeof(sites) / sizeof(sites[0]));
+    for (int i = 0; i < *count; ++i) {
+        u32 branch = 0;
+        if (!CodePatch::MakeHookBranch(
+                "Fast Iron Boots animation", s_fastIronBootsAnimePatch,
+                sites[i].address, (const void*)tphdFastIronBootsAnimeHook,
+                &branch))
+            return false;
+        words[i] = { sites[i].address, sites[i].expected, branch };
+    }
+    return true;
+}
+
+static bool buildFastIronBootsSpeedPatch(PatchWord* words, int* count)
+{
+    const struct Site {
+        u32 address;
+        u32 expected;
+        const void* hook;
+    } sites[] = {
+        // daAlink_c's input handler assigns mHeavySpeedMultiplier from several
+        // grounded/underwater/heavy-state paths. Redirect every assignment so
+        // the setting cannot be overwritten later in the same update.
+        { 0x020639D8u, 0xD1BE34F4u,
+          (const void*)tphdFastIronBootsStoreF13Hook },
+        { 0x020639F0u, 0xD1BE34F4u,
+          (const void*)tphdFastIronBootsStoreF13Hook },
+        { 0x02063A34u, 0xD1BE34F4u,
+          (const void*)tphdFastIronBootsStoreF13Hook },
+        { 0x02063A44u, 0xD3DE34F4u,
+          (const void*)tphdFastIronBootsStoreF30Hook },
+        // 0x02063A98 is the separate wolf-underwater slowdown. Dusklight does
+        // not include that state in Fast Iron Boots, so leave it native.
+    };
+
+    *count = (int)(sizeof(sites) / sizeof(sites[0]));
+    for (int i = 0; i < *count; ++i) {
+        u32 branch = 0;
+        if (!CodePatch::MakeHookBranch(
+                "Fast Iron Boots speed", s_fastIronBootsSpeedPatch,
+                sites[i].address, sites[i].hook, &branch))
+            return false;
+        words[i] = { sites[i].address, sites[i].expected, branch };
+    }
+    return true;
+}
+
 static void installPermanentHooks()
 {
     PatchWord clawshot[21];
@@ -214,6 +285,32 @@ static void installPermanentHooks()
                                     &unrestrictedItemsCount))
         CodePatch::Apply("Unrestricted Items hook", s_unrestrictedItemsPatch,
                          unrestrictedItems, unrestrictedItemsCount);
+
+    // Sword drawing has an additional checkNotBattleStage call that the item
+    // restriction function never sees. Hook only this call site; other users
+    // of checkNotBattleStage retain their native behavior.
+    if (CodePatch::BuildSingleHook(
+            "Unrestricted Items sword", s_unrestrictedSwordPatch,
+            0x02050EB0u, 0x4BFCA355u,
+            (const void*)tphdUnrestrictedSwordHook, &word))
+        CodePatch::Apply("Unrestricted Items sword hook",
+                         s_unrestrictedSwordPatch, &word, 1);
+
+    PatchWord fastBootsAnime[3];
+    int fastBootsAnimeCount = 0;
+    if (buildFastIronBootsAnimePatch(fastBootsAnime,
+                                     &fastBootsAnimeCount))
+        CodePatch::Apply("Fast Iron Boots animation hook",
+                         s_fastIronBootsAnimePatch, fastBootsAnime,
+                         fastBootsAnimeCount);
+
+    PatchWord fastBootsSpeed[4];
+    int fastBootsSpeedCount = 0;
+    if (buildFastIronBootsSpeedPatch(fastBootsSpeed,
+                                     &fastBootsSpeedCount))
+        CodePatch::Apply("Fast Iron Boots speed hook",
+                         s_fastIronBootsSpeedPatch, fastBootsSpeed,
+                         fastBootsSpeedCount);
 }
 
 static void removePermanentHooks()
@@ -259,6 +356,29 @@ static void removePermanentHooks()
                                     &unrestrictedItemsCount))
         CodePatch::Remove("Unrestricted Items hook", s_unrestrictedItemsPatch,
                           unrestrictedItems, unrestrictedItemsCount);
+
+    if (CodePatch::BuildSingleHook(
+            "Unrestricted Items sword", s_unrestrictedSwordPatch,
+            0x02050EB0u, 0x4BFCA355u,
+            (const void*)tphdUnrestrictedSwordHook, &word))
+        CodePatch::Remove("Unrestricted Items sword hook",
+                          s_unrestrictedSwordPatch, &word, 1);
+
+    PatchWord fastBootsAnime[3];
+    int fastBootsAnimeCount = 0;
+    if (buildFastIronBootsAnimePatch(fastBootsAnime,
+                                     &fastBootsAnimeCount))
+        CodePatch::Remove("Fast Iron Boots animation hook",
+                          s_fastIronBootsAnimePatch, fastBootsAnime,
+                          fastBootsAnimeCount);
+
+    PatchWord fastBootsSpeed[4];
+    int fastBootsSpeedCount = 0;
+    if (buildFastIronBootsSpeedPatch(fastBootsSpeed,
+                                     &fastBootsSpeedCount))
+        CodePatch::Remove("Fast Iron Boots speed hook",
+                          s_fastIronBootsSpeedPatch, fastBootsSpeed,
+                          fastBootsSpeedCount);
 }
 
 static bool setByteMode(volatile uint8_t* value, bool on)
@@ -394,6 +514,11 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Remove the three-active-bomb limit (use Infinite Ammo to refill bags)");
 
+    changed |= ImGui::Checkbox("Fast Iron Boots",
+                               &s_config[CONFIG_FAST_IRON_BOOTS]);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Use normal movement speed and animations while heavy");
+
     ImGui::Separator();
     if (ImGui::Button("Restore All Defaults")) {
         for (int i = 0; i < CONFIG_COUNT; ++i)
@@ -431,6 +556,11 @@ void Tick()
         Logger::Log("[tphd_tools][equipment] No Bomb Limit mode %s",
                     s_config[CONFIG_UNRESTRICTED_BOMBS] ? "enabled" :
                                                         "disabled");
+    if (setByteMode(&g_tphdFastIronBootsEnabled,
+                    s_config[CONFIG_FAST_IRON_BOOTS]))
+        Logger::Log("[tphd_tools][equipment] Fast Iron Boots mode %s",
+                    s_config[CONFIG_FAST_IRON_BOOTS] ? "enabled" :
+                                                     "disabled");
     tickRemoteBombs(s_config[CONFIG_REMOTE_BOMBS]);
 }
 
@@ -445,6 +575,9 @@ void OnApplicationStart()
     s_remoteBombFusePatch = {};
     s_unrestrictedBombsPatch = {};
     s_unrestrictedItemsPatch = {};
+    s_unrestrictedSwordPatch = {};
+    s_fastIronBootsAnimePatch = {};
+    s_fastIronBootsSpeedPatch = {};
     setSuperClawshotMode(s_config[CONFIG_SUPER_CLAWSHOT]);
     setByteMode(&g_tphdInfiniteSpinnerTimeEnabled,
                 s_config[CONFIG_INFINITE_SPINNER_TIME]);
@@ -453,6 +586,8 @@ void OnApplicationStart()
                 s_config[CONFIG_REMOTE_BOMBS]);
     setByteMode(&g_tphdUnrestrictedBombsEnabled,
                 s_config[CONFIG_UNRESTRICTED_BOMBS]);
+    setByteMode(&g_tphdFastIronBootsEnabled,
+                s_config[CONFIG_FAST_IRON_BOOTS]);
     installPermanentHooks();
 }
 
@@ -464,6 +599,7 @@ void OnApplicationEnd()
     setByteMode(&g_tphdRemoteBombsEnabled, false);
     setByteMode(&g_tphdUnrestrictedBombsEnabled, false);
     setByteMode(&g_tphdUnrestrictedItemsEnabled, false);
+    setByteMode(&g_tphdFastIronBootsEnabled, false);
     removePermanentHooks();
 }
 

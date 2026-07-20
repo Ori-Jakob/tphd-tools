@@ -18,6 +18,7 @@
 #endif
 #include "tools/modern_camera.h"
 #include "cheats/cheats.h"
+#include "cheats/difficulty.h"
 #include "game/d_stage.h"
 #include "storage.h"
 #include "logger.h"
@@ -106,6 +107,10 @@ struct Snap {
     bool modernCameraHorse;
     bool modernCameraInvertX;
     bool modernCameraInvertY;
+    float damageReceivedMultiplier;
+    float damageGivenMultiplier;
+    int rupeeMultiplier;
+    int rupeeMode;
     uint32_t cheatsMask;   // bit i = cheat i enabled (for change detection)
 };
 static Snap s_lastSaved;
@@ -184,6 +189,12 @@ static Snap gather()
     s.modernCameraHorse = Tools::ModernCamera::IsHorseEnabled();
     s.modernCameraInvertX = Tools::ModernCamera::IsInvertXEnabled();
     s.modernCameraInvertY = Tools::ModernCamera::IsInvertYEnabled();
+    s.damageReceivedMultiplier =
+        Cheats::Difficulty::GetDamageReceivedMultiplier();
+    s.damageGivenMultiplier =
+        Cheats::Difficulty::GetDamageGivenMultiplier();
+    s.rupeeMultiplier = Cheats::Difficulty::GetRupeeMultiplier();
+    s.rupeeMode = Cheats::Difficulty::GetRupeeMode();
     s.cheatsMask = 0;
     for (int i = 0; i < Cheats::Count() && i < 32; ++i)
         if (Cheats::IsEnabled(i))
@@ -259,6 +270,10 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.modernCameraHorse == b.modernCameraHorse &&
            a.modernCameraInvertX == b.modernCameraInvertX &&
            a.modernCameraInvertY == b.modernCameraInvertY &&
+           a.damageReceivedMultiplier == b.damageReceivedMultiplier &&
+           a.damageGivenMultiplier == b.damageGivenMultiplier &&
+           a.rupeeMultiplier == b.rupeeMultiplier &&
+           a.rupeeMode == b.rupeeMode &&
            a.cheatsMask == b.cheatsMask;
 }
 
@@ -384,6 +399,19 @@ static char* serialize()
                           Tools::ModernCamera::IsInvertXEnabled());
     cJSON_AddBoolToObject(root, "modernCameraInvertY",
                           Tools::ModernCamera::IsInvertYEnabled());
+    cJSON* difficulty = cJSON_AddObjectToObject(root, "difficulty");
+    if (difficulty) {
+        cJSON_AddNumberToObject(
+            difficulty, "damageReceivedMultiplier",
+            Cheats::Difficulty::GetDamageReceivedMultiplier());
+        cJSON_AddNumberToObject(
+            difficulty, "damageGivenMultiplier",
+            Cheats::Difficulty::GetDamageGivenMultiplier());
+        cJSON_AddNumberToObject(difficulty, "rupeeMultiplier",
+                                Cheats::Difficulty::GetRupeeMultiplier());
+        cJSON_AddNumberToObject(difficulty, "rupeeMode",
+                                Cheats::Difficulty::GetRupeeMode());
+    }
     // Enabled cheats, keyed by name so the file survives registry reordering.
     cJSON* cheats = cJSON_AddObjectToObject(root, "cheats");
     if (cheats)
@@ -736,6 +764,43 @@ static void apply(const char* text)
         Tools::ModernCamera::SetInvertYEnabled(cJSON_IsTrue(it));
     else
         s_forceSync = true;
+    {
+        cJSON* difficulty =
+            cJSON_GetObjectItemCaseSensitive(root, "difficulty");
+        if (difficulty && cJSON_IsObject(difficulty)) {
+            cJSON* setting = cJSON_GetObjectItemCaseSensitive(
+                difficulty, "damageReceivedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::Difficulty::SetDamageReceivedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                difficulty, "damageGivenMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::Difficulty::SetDamageGivenMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                difficulty, "rupeeMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::Difficulty::SetRupeeMultiplier(setting->valueint);
+            else
+                s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                difficulty, "rupeeMode");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::Difficulty::SetRupeeMode(setting->valueint);
+            else
+                s_forceSync = true;
+        } else {
+            s_forceSync = true;
+        }
+    }
     if ((it = cJSON_GetObjectItemCaseSensitive(root, "cheats")) && cJSON_IsObject(it)) {
         for (int i = 0; i < Cheats::Count(); ++i) {
             const char* name = Cheats::Name(i);

@@ -13,6 +13,8 @@
 .extern g_tphdRemoteBombsEnabled
 .extern g_tphdUnrestrictedBombsEnabled
 .extern g_tphdUnrestrictedItemsEnabled
+.extern g_tphdFastIronBootsEnabled
+.extern g_tphdFastIronBootsMultiplier
 
 .global tphdSuperClawshotFailureHook
 .type tphdSuperClawshotFailureHook, @function
@@ -26,11 +28,12 @@ tphdSuperClawshotFailureHook:
 .type tphdInfiniteSpinnerTimeHook, @function
 tphdInfiniteSpinnerTimeHook:
     # Native: r11 = r7 - 1. Enabled: r11 = r7.
-    # r0 is overwritten four instructions later at 0x0288D8C0.
-    lis 0, g_tphdInfiniteSpinnerTimeEnabled@ha
-    lbz 0, g_tphdInfiniteSpinnerTimeEnabled@l(0)
-    xori 0, 0, 1
-    sub 11, 7, 0
+    # Use the native destination as address scratch. D-form loads treat RA=0
+    # as a literal zero base, so r0 cannot address an RPL global here.
+    lis 11, g_tphdInfiniteSpinnerTimeEnabled@ha
+    lbz 11, g_tphdInfiniteSpinnerTimeEnabled@l(11)
+    xori 11, 11, 1
+    sub 11, 7, 11
     blr
 .size tphdInfiniteSpinnerTimeHook, .-tphdInfiniteSpinnerTimeHook
 
@@ -38,11 +41,14 @@ tphdInfiniteSpinnerTimeHook:
 .type tphdRemoteBombFuseHook, @function
 tphdRemoteBombFuseHook:
     # Native: r30 = r30 - 1. Enabled: preserve r30.
-    # r0 is dead on both continuations and is reloaded before its next use.
-    lis 0, g_tphdRemoteBombsEnabled@ha
-    lbz 0, g_tphdRemoteBombsEnabled@l(0)
-    xori 0, 0, 1
-    sub 30, 30, 0
+    # r0 is dead on both continuations. Save the old timer there, use r30 as
+    # the nonzero base/destination for the mode byte, then produce the native
+    # destination value. (RA=0 is not a usable load base on PowerPC.)
+    or 0, 30, 30
+    lis 30, g_tphdRemoteBombsEnabled@ha
+    lbz 30, g_tphdRemoteBombsEnabled@l(30)
+    xori 30, 30, 1
+    sub 30, 0, 30
     blr
 .size tphdRemoteBombFuseHook, .-tphdRemoteBombFuseHook
 
@@ -78,3 +84,103 @@ tphdUnrestrictedItemsHook:
     lbz 3, g_tphdUnrestrictedItemsEnabled@l(3)
     blr
 .size tphdUnrestrictedItemsHook, .-tphdUnrestrictedItemsHook
+
+.global tphdUnrestrictedSwordHook
+.type tphdUnrestrictedSwordHook, @function
+tphdUnrestrictedSwordHook:
+    # This replaces only checkItemChangeFromButton's sword-specific call to
+    # checkNotBattleStage. That function returns nonzero when sword drawing is
+    # prohibited, so the enabled result is zero. Disabled tail-calls the native
+    # function with the call site's LR still intact.
+    lis 12, g_tphdUnrestrictedItemsEnabled@ha
+    lbz 12, g_tphdUnrestrictedItemsEnabled@l(12)
+    cmpwi 12, 0
+    beq .Lunrestricted_sword_native
+    li 3, 0
+    blr
+.Lunrestricted_sword_native:
+    lis 12, 0x0201
+    ori 12, 12, 0xB204
+    mtctr 12
+    bctr
+.size tphdUnrestrictedSwordHook, .-tphdUnrestrictedSwordHook
+
+.global tphdFastIronBootsAnimeHook
+.type tphdFastIronBootsAnimeHook, @function
+tphdFastIronBootsAnimeHook:
+    # The three hooked sites call checkBootsMoveAnime. Returning false selects
+    # the ordinary movement animation paths used by Dusklight's fast-boots
+    # implementation. Disabled tail-calls the native check.
+    lis 12, g_tphdFastIronBootsEnabled@ha
+    lbz 12, g_tphdFastIronBootsEnabled@l(12)
+    cmpwi 12, 0
+    beq .Lfast_boots_anime_native
+    li 3, 0
+    blr
+.Lfast_boots_anime_native:
+    lis 12, 0x0202
+    ori 12, 12, 0x2BD8
+    mtctr 12
+    bctr
+.size tphdFastIronBootsAnimeHook, .-tphdFastIronBootsAnimeHook
+
+.global tphdFastIronBootsStoreF13Hook
+.type tphdFastIronBootsStoreF13Hook, @function
+tphdFastIronBootsStoreF13Hook:
+    # Native instruction: stfs f13,0x34F4(r30). The store itself clobbers no
+    # registers or CR fields, so preserve everything used to consult the flag.
+    stwu 1, -0x30(1)
+    stw 0, 8(1)
+    stw 12, 12(1)
+    mfcr 0
+    stw 0, 16(1)
+    stfd 0, 24(1)
+    lis 12, g_tphdFastIronBootsEnabled@ha
+    lbz 12, g_tphdFastIronBootsEnabled@l(12)
+    cmpwi 12, 0
+    beq .Lfast_boots_store_f13_native
+    lis 12, g_tphdFastIronBootsMultiplier@ha
+    lfs 0, g_tphdFastIronBootsMultiplier@l(12)
+    stfs 0, 0x34F4(30)
+    b .Lfast_boots_store_f13_done
+.Lfast_boots_store_f13_native:
+    stfs 13, 0x34F4(30)
+.Lfast_boots_store_f13_done:
+    lfd 0, 24(1)
+    lwz 12, 16(1)
+    mtcrf 0xff, 12
+    lwz 12, 12(1)
+    lwz 0, 8(1)
+    addi 1, 1, 0x30
+    blr
+.size tphdFastIronBootsStoreF13Hook, .-tphdFastIronBootsStoreF13Hook
+
+.global tphdFastIronBootsStoreF30Hook
+.type tphdFastIronBootsStoreF30Hook, @function
+tphdFastIronBootsStoreF30Hook:
+    # Same redirect for the one path whose native source is f30.
+    stwu 1, -0x30(1)
+    stw 0, 8(1)
+    stw 12, 12(1)
+    mfcr 0
+    stw 0, 16(1)
+    stfd 0, 24(1)
+    lis 12, g_tphdFastIronBootsEnabled@ha
+    lbz 12, g_tphdFastIronBootsEnabled@l(12)
+    cmpwi 12, 0
+    beq .Lfast_boots_store_f30_native
+    lis 12, g_tphdFastIronBootsMultiplier@ha
+    lfs 0, g_tphdFastIronBootsMultiplier@l(12)
+    stfs 0, 0x34F4(30)
+    b .Lfast_boots_store_f30_done
+.Lfast_boots_store_f30_native:
+    stfs 30, 0x34F4(30)
+.Lfast_boots_store_f30_done:
+    lfd 0, 24(1)
+    lwz 12, 16(1)
+    mtcrf 0xff, 12
+    lwz 12, 12(1)
+    lwz 0, 8(1)
+    addi 1, 1, 0x30
+    blr
+.size tphdFastIronBootsStoreF30Hook, .-tphdFastIronBootsStoreF30Hook

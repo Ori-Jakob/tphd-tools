@@ -8,6 +8,7 @@
 // for cheats that only need a one-shot button (draw that in DrawMenu directly).
 #include "cheats/cheats.h"
 #include "cheats/equipment_modifiers.h"
+#include "cheats/difficulty.h"
 #include "cheats/inventory_editor.h"
 #include "input.h"
 #include "overlay.h"
@@ -169,29 +170,44 @@ static const int kBaseCount = (int)(sizeof(s_cheats) / sizeof(s_cheats[0]));
 // A restored-enabled cheat starts ticking in the same frame Config::Load runs.
 int Count()
 {
-    return kBaseCount + EquipmentModifiers::ConfigCount();
+    return kBaseCount + EquipmentModifiers::ConfigCount() +
+           Difficulty::ConfigCount();
 }
 
 const char* Name(int i)
 {
     if (i >= 0 && i < kBaseCount)
         return s_cheats[i].name;
-    return EquipmentModifiers::ConfigName(i - kBaseCount);
+    i -= kBaseCount;
+    const int equipmentCount = EquipmentModifiers::ConfigCount();
+    if (i < equipmentCount)
+        return EquipmentModifiers::ConfigName(i);
+    return Difficulty::ConfigName(i - equipmentCount);
 }
 
 bool IsEnabled(int i)
 {
     if (i >= 0 && i < kBaseCount)
         return s_cheats[i].enabled;
-    return EquipmentModifiers::ConfigEnabled(i - kBaseCount);
+    i -= kBaseCount;
+    const int equipmentCount = EquipmentModifiers::ConfigCount();
+    if (i < equipmentCount)
+        return EquipmentModifiers::ConfigEnabled(i);
+    return Difficulty::ConfigEnabled(i - equipmentCount);
 }
 
 void SetEnabled(int i, bool on)
 {
     if (i >= 0 && i < kBaseCount)
         s_cheats[i].enabled = on;
-    else
-        EquipmentModifiers::SetConfigEnabled(i - kBaseCount, on);
+    else {
+        i -= kBaseCount;
+        const int equipmentCount = EquipmentModifiers::ConfigCount();
+        if (i < equipmentCount)
+            EquipmentModifiers::SetConfigEnabled(i, on);
+        else
+            Difficulty::SetConfigEnabled(i - equipmentCount, on);
+    }
 }
 
 void DrawMenu()
@@ -215,6 +231,10 @@ void DrawMenu()
     }
     if (ImGui::BeginMenu("Equipment Modifiers")) {
         EquipmentModifiers::DrawMenu();
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Difficulty")) {
+        Difficulty::DrawMenu();
         ImGui::EndMenu();
     }
     ImGui::Separator();
@@ -243,11 +263,13 @@ void Tick()
             s_cheats[i].tick();
 
     EquipmentModifiers::Tick();
+    Difficulty::Tick();
 }
 
 void OnApplicationStart()
 {
     EquipmentModifiers::OnApplicationStart();
+    Difficulty::OnApplicationStart();
     for (int i = 0; i < kBaseCount; ++i)
         if (s_cheats[i].tick == cheat_unrestrictedItems)
             setUnrestrictedItems(s_cheats[i].enabled);
@@ -256,6 +278,7 @@ void OnApplicationStart()
 void OnApplicationEnd()
 {
     setUnrestrictedItems(false);
+    Difficulty::OnApplicationEnd();
     EquipmentModifiers::OnApplicationEnd();
 }
 
