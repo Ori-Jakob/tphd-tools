@@ -17,8 +17,11 @@
 namespace Tools {
 namespace ModernCamera {
 
-// Checkbox (+ inline tuning) shown in the Tools menu.
-void DrawMenuItem();
+// Workflow-menu rendering is split so normal settings and diagnostics do not
+// clutter the same surface.
+void DrawToggle();
+void DrawSettingsMenu();
+void DrawDiagnosticsMenu();
 
 bool IsEnabled();
 void SetEnabled(bool enabled);

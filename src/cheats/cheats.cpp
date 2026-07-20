@@ -5,7 +5,7 @@
 //      game/ bindings; add new structs/addresses to include/game/ as needed).
 //   2. Add a row to s_cheats below: { "Name", "Tooltip", false, cheat_xxx }.
 // `tick` runs every frame while the cheat's checkbox is on. Leave `tick` null
-// for cheats that only need a one-shot button (draw that in DrawMenu directly).
+// for cheats that only need a one-shot button (draw that in the gameplay menu).
 #include "cheats/cheats.h"
 #include "cheats/equipment_modifiers.h"
 #include "cheats/difficulty.h"
@@ -152,8 +152,19 @@ static void cheat_unrestrictedItems()
     setUnrestrictedItems(true);
 }
 
+enum BaseCheatId {
+    BASE_MOON_JUMP = 0,
+    BASE_INFINITE_HEARTS,
+    BASE_INFINITE_RUPEES,
+    BASE_INFINITE_AIR,
+    BASE_INFINITE_AMMO,
+    BASE_INVINCIBILITY,
+    BASE_QUICK_TRANSFORM,
+    BASE_UNRESTRICTED_ITEMS,
+};
+
 static Cheat s_cheats[] = {
-    // Tooltips for Moon Jump / Quick Transform are built live in DrawMenu
+    // Tooltips for Moon Jump / Quick Transform are built live in the menu
     // (their combos are rebindable via Settings -> Rebind Hotkeys).
     { "Moon Jump",        nullptr,              false, cheat_moonJump },
     { "Infinite Hearts",  nullptr,              false, cheat_infiniteHearts },
@@ -211,39 +222,67 @@ void SetEnabled(int i, bool on)
     }
 }
 
-void DrawMenu()
+static void drawBaseCheat(BaseCheatId id)
 {
-    for (int i = 0; i < kBaseCount; ++i) {
-        const bool changed = ImGui::Checkbox(s_cheats[i].name,
-                                             &s_cheats[i].enabled);
-        if (changed && s_cheats[i].tick == cheat_unrestrictedItems)
-            setUnrestrictedItems(s_cheats[i].enabled);
-        if (s_cheats[i].tick == cheat_moonJump && ImGui::IsItemHovered()) {
-            char hk[64];
-            Input::HotkeyToString(ov::g_settings.moonJumpCombo, hk, sizeof(hk));
-            ImGui::SetTooltip("Hold %s", hk);
-        } else if (s_cheats[i].tick == cheat_quickTransform && ImGui::IsItemHovered()) {
-            char hk[64];
-            Input::HotkeyToString(ov::g_settings.quickTransformCombo, hk, sizeof(hk));
-            ImGui::SetTooltip("Press %s to switch human/wolf", hk);
-        } else if (s_cheats[i].desc && ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", s_cheats[i].desc);
-        }
+    Cheat& cheat = s_cheats[(int)id];
+    const bool changed = ImGui::Checkbox(cheat.name, &cheat.enabled);
+    if (changed && cheat.tick == cheat_unrestrictedItems)
+        setUnrestrictedItems(cheat.enabled);
+
+    if (cheat.tick == cheat_moonJump && ImGui::IsItemHovered()) {
+        char hotkey[64];
+        Input::HotkeyToString(ov::g_settings.moonJumpCombo,
+                              hotkey, sizeof(hotkey));
+        ImGui::SetTooltip("Hold %s", hotkey);
+    } else if (cheat.tick == cheat_quickTransform && ImGui::IsItemHovered()) {
+        char hotkey[64];
+        Input::HotkeyToString(ov::g_settings.quickTransformCombo,
+                              hotkey, sizeof(hotkey));
+        ImGui::SetTooltip("Press %s to switch human/wolf", hotkey);
+    } else if (cheat.desc && ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s", cheat.desc);
     }
-    if (ImGui::BeginMenu("Equipment Modifiers")) {
-        EquipmentModifiers::DrawMenu();
+}
+
+void DrawGameplayMenu()
+{
+    if (ImGui::BeginMenu("Player")) {
+        drawBaseCheat(BASE_MOON_JUMP);
+        drawBaseCheat(BASE_QUICK_TRANSFORM);
+        drawBaseCheat(BASE_INVINCIBILITY);
+        drawBaseCheat(BASE_INFINITE_HEARTS);
+        drawBaseCheat(BASE_INFINITE_AIR);
         ImGui::EndMenu();
     }
+
+    if (ImGui::BeginMenu("Items & Equipment")) {
+        ImGui::SeparatorText("Editor");
+        InventoryEditor::DrawMenuItem();
+
+        ImGui::SeparatorText("Resources");
+        drawBaseCheat(BASE_INFINITE_AMMO);
+        drawBaseCheat(BASE_INFINITE_RUPEES);
+
+        ImGui::SeparatorText("Item Rules");
+        drawBaseCheat(BASE_UNRESTRICTED_ITEMS);
+
+        ImGui::SeparatorText("Modifiers");
+        if (ImGui::BeginMenu("Equipment Modifiers")) {
+            EquipmentModifiers::DrawMenu();
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenu();
+    }
+
     if (ImGui::BeginMenu("Difficulty")) {
         Difficulty::DrawMenu();
         ImGui::EndMenu();
     }
-    if (ImGui::BeginMenu("Quality of Life")) {
+
+    if (ImGui::BeginMenu("Movement & World")) {
         QoL::DrawMenu();
         ImGui::EndMenu();
     }
-    ImGui::Separator();
-    InventoryEditor::DrawMenuButton();
 }
 
 void Tick()

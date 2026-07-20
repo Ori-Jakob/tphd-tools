@@ -4,7 +4,7 @@
 namespace Tools {
 namespace LinkPositionEditor {
 
-// Checkbox shown in the Tools menu.
+// Checkbox shown in Practice > Navigation.
 void DrawMenuItem();
 
 bool IsEnabled();

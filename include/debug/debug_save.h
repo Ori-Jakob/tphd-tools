@@ -9,7 +9,7 @@
 namespace Debug {
 namespace DebugSave {
 
-// Checkbox shown in the Debug menu (toggles the window).
+// Checkbox shown in Practice > Save & Restore (toggles the window).
 void DrawMenuItem();
 
 bool IsEnabled();

@@ -263,6 +263,7 @@ void DrawMenu()
 {
     bool changed = false;
 
+    ImGui::SeparatorText("Movement");
     changed |= modifierSlider("Climbing Speed", &s_climbingSpeedMultiplier,
                               0.25f, 5.0f);
     if (ImGui::IsItemHovered())
@@ -288,7 +289,7 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Scale front/side roll animation rate and movement velocity");
 
-    ImGui::Separator();
+    ImGui::SeparatorText("World & Time");
 
     float time = *kSavedTime;
     if (time < 0.0f || time >= 360.0f)
@@ -311,7 +312,7 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("0x freezes normal clock progression; events retain their native clock rules");
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Reset");
     if (ImGui::Button("Restore QoL Defaults")) {
         s_climbingSpeedMultiplier = 1.0f;
         s_climbHeightMultiplier = 1.0f;

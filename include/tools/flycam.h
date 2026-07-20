@@ -8,7 +8,7 @@
 namespace Tools {
 namespace FlyCam {
 
-// Checkbox shown in the Tools menu (enables/disables the feature).
+// Checkbox shown in Camera & HUD (enables/disables the feature).
 void DrawMenuItem();
 
 bool IsEnabled();

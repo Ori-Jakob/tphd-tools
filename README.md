@@ -29,17 +29,39 @@ module match are verified.
 
 ## Features
 
-### Tools
+The in-game top bar is organized as **Practice**, **Gameplay**,
+**Camera & HUD**, optional **Experimental**, and **Settings**.
+
+### Practice
+
+- Save Loader with named states, folders, position restoration, and post-load
+  actor or flag commands
+- One-slot Save/Load Coordinates with same-stage validation, in-place native
+  room streaming, and exact Link facing plus camera restoration
+- Loader for the game's shipped debug saves and personal save images
+- Warps by preset or stage, room, layer, and spawn
+- Link position and facing editor
+
+### Gameplay
+
+- Player cheats including Moon Jump, Quick Transform, Invincibility, and
+  infinite health or air
+- Resource and item-rule cheats including infinite ammo or rupees and
+  unrestricted item use
+- Inventory editor for player status, items, equipment, collection data,
+  dungeon/area data, warp portals, and event flags
+- Clawshot, Spinner, bomb, and Iron Boots modifiers
+- Combat, survival, and economy difficulty controls
+- Human/Wolf movement, climb-height, and world-clock modifiers
+
+### Camera & HUD
 
 - Fly Cam with independent movement, rotation, speed control, and optional
   teleport-to-camera exit
-- One-slot Save/Load Coordinates with same-stage validation, in-place
-  native same-stage room streaming, and exact Link facing plus camera restoration
-- Warps by preset or stage, room, layer, and spawn
-- Save Loader with named states, folders, position restoration, and post-load
-  actor or flag commands
+- Modern third-person camera with sensitivity, FOV, Epona, and inversion settings
 - GamePad and Pro Controller input viewer
-- Link position and facing editor
+- Game information HUD with position, angle, stage, room, time, and optional
+  system date and time
 
 ### Experimental
 
@@ -51,22 +73,7 @@ in-game **Experimental** menu:
   first verified encounter)
 - Native timer and autosplitter driven by Wii U split JSON files
 
-### Cheats
-
-- Moon Jump
-- Infinite Hearts, Rupees, Air, and Ammo
-- Invincibility
-- Quick Transform
-- Inventory editor for status, items, equipment, collection data, area data,
-  warps, and event flags
-
-### Debug
-
-- Game information HUD with position, angle, stage, room, time, and optional
-  system date and time
-- Loader for the game's shipped debug saves and personal save images
-
-### Menu and input
+### Settings and input
 
 - GamePad, Pro Controller, and Classic Controller input
 - GamePad touchscreen and Cemu mouse input
@@ -95,13 +102,13 @@ The menu is hidden on startup. The default open and close hotkey is
 | ZR + D-Pad Left | Save Link and camera coordinates |
 | ZR + D-Pad Right | Load saved coordinates in the same stage |
 
-Fly Cam is enabled from the Tools menu and toggled with
+Fly Cam is enabled from **Camera & HUD** and toggled with
 `ZL + ZR + L3 + R3`. While flying, the left stick moves, the right stick rotates,
 `ZL` and `ZR` move vertically, and `L` and `R` change speed. Press `L3` to return
 the camera to Link or `R3` to move Link to the camera.
 
-Save/Load Coordinates is enabled from the Tools menu. Its saved slot includes
-the stage, room, spawn, layer, Link position/facing, and camera target/eye. A
+Save/Load Coordinates is enabled from **Practice > Save & Restore**. Its saved
+slot includes the stage, room, spawn, layer, Link position/facing, and camera target/eye. A
   load is rejected when the current stage differs. A different saved room is
   streamed through the engine's native room-table path without a stage reload;
   Link is pinned at the saved position with zero momentum until the destination

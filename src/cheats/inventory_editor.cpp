@@ -19,10 +19,9 @@ namespace InventoryEditor {
 
 static bool s_open = false;
 
-void DrawMenuButton()
+void DrawMenuItem()
 {
-    if (ImGui::Button("Inventory Editor..."))
-        s_open = true;
+    ImGui::Checkbox("Inventory Editor", &s_open);
 }
 bool IsOpen()         { return s_open; }
 void SetOpen(bool o)  { s_open = o; }
@@ -721,15 +720,15 @@ void DrawWindow(bool menuActive)
         if (!dComIfGp_getPlayer()) {
             ImGui::TextDisabled("Load a game save first.");
         } else if (ImGui::BeginTabBar("##inveditor")) {
-            if (ImGui::BeginTabItem("Status"))     { drawStatusTab();     ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Player"))     { drawStatusTab();     ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Items"))      { drawItemsTab();      ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Amounts"))    { drawAmountsTab();    ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Equipment"))  { drawEquipmentTab();  ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Collection")) { drawCollectionTab(); ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Area"))       { drawAreaTab();       ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Warps"))      { drawWarpsTab();      ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Events"))     { drawEventsTab();     ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Obtained Items"))  { drawGotItemsTab();   ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Collection")) { drawCollectionTab(); ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Dungeon & Area")) { drawAreaTab();   ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Warp Portals")) { drawWarpsTab();    ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Event Flags")) { drawEventsTab();    ImGui::EndTabItem(); }
             ImGui::EndTabBar();
         }
     }

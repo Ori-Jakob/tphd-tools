@@ -4,7 +4,7 @@
 namespace Debug {
 namespace LinkPosition {
 
-// Checkboxes shown in the Debug menu.
+// Checkbox and options shown in Camera & HUD.
 void DrawMenuItem();
 
 // Persisted state (for the config file).
@@ -22,7 +22,7 @@ void GetWindowSize(float* w, float* h);
 void SetWindowSize(float w, float h);
 
 // The info window. Visible whenever the feature is enabled. When `menuActive`
-// (the Tools menu bar is up) the window is draggable/resizable; otherwise it is
+// (the overlay menu bar is up) the window is draggable/resizable; otherwise it is
 // locked in place and ignores input (a passive HUD over the game).
 void DrawWindow(bool menuActive);
 

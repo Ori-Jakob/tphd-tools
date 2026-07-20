@@ -229,6 +229,7 @@ void DrawMenu()
 {
     bool changed = false;
 
+    ImGui::SeparatorText("Combat");
     ImGui::SetNextItemWidth(210.0f);
     if (ImGui::SliderFloat("Damage Received Modifier",
                            &s_damageReceivedMultiplier,
@@ -248,8 +249,10 @@ void DrawMenu()
             clampQuarter(s_damageGivenMultiplier, 0.25f, 10.0f);
         changed = true;
     }
+    changed |= ImGui::Checkbox(kConfigNames[CONFIG_INFINITE_ENEMY_HEALTH],
+                               &s_config[CONFIG_INFINITE_ENEMY_HEALTH]);
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Economy");
     ImGui::SetNextItemWidth(150.0f);
     changed |= ImGui::SliderInt("Rupee Multiplier", &s_rupeeMultiplier,
                                 1, 10, "%dx");
@@ -266,9 +269,7 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Convert every rupee loss into an equal gain");
 
-    ImGui::Separator();
-    changed |= ImGui::Checkbox(kConfigNames[CONFIG_INFINITE_ENEMY_HEALTH],
-                               &s_config[CONFIG_INFINITE_ENEMY_HEALTH]);
+    ImGui::SeparatorText("Survival");
     changed |= ImGui::Checkbox(kConfigNames[CONFIG_NO_FALL_DAMAGE],
                                &s_config[CONFIG_NO_FALL_DAMAGE]);
     if (ImGui::IsItemHovered())
@@ -278,7 +279,7 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Spawn the native death-revival fairy even without a fairy or bottle");
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Reset");
     if (ImGui::Button("Restore Difficulty Defaults")) {
         s_damageReceivedMultiplier = 1.0f;
         s_damageGivenMultiplier = 1.0f;

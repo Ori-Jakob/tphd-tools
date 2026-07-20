@@ -1,8 +1,8 @@
 // menu.cpp -- see menu.h.
 //
-// The UI is a top main menu bar (shown only while the Tools menu is active) with
-// two menus, Settings and Debug. Their contents use plain widgets (Checkbox /
-// RadioButton / Button), NOT MenuItems, so interacting never dismisses the menu.
+// The UI is a workflow-oriented top menu bar shown while the overlay is active.
+// Menu contents use plain widgets (Checkbox / RadioButton / Button), NOT
+// MenuItems, so interacting never dismisses the menu.
 //
 // A true ImGui menu bar can normally only be *entered* with the keyboard Alt key
 // (there is no default gamepad binding for the menu layer). So when the menu
@@ -133,6 +133,7 @@ static void DrawToast(ImGuiIO& io)
 static void DrawSettingsMenu()
 {
     // Plain widgets (not MenuItems) so interacting never dismisses the menu.
+    ImGui::SeparatorText("Menu Behavior");
     ImGui::Checkbox("Block game input", &g_settings.blockEnabled);
     if (g_settings.blockEnabled) {
         ImGui::Indent();
@@ -141,8 +142,6 @@ static void DrawSettingsMenu()
         ImGui::RadioButton("Pro Controller only", &g_settings.blockMode, BLOCK_PRO);
         ImGui::Unindent();
     }
-
-    ImGui::Separator();
 
     ImGui::Checkbox("Freeze game while menu open", &g_settings.freezeOnMenu);
     ImGui::Checkbox("Game reset hotkey", &g_settings.gameResetHotkey);
@@ -154,7 +153,7 @@ static void DrawSettingsMenu()
         ImGui::Unindent();
     }
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Controllers");
 
     // Controller finalized when a save / debug save is loaded from the title screen
     // (before the game's own controller-select). Auto uses the Pro Controller when
@@ -179,7 +178,7 @@ static void DrawSettingsMenu()
     }
     ImGui::Unindent();
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Display & Windows");
 
     ImGui::TextUnformatted("Draw overlay on");
     ImGui::Indent();
@@ -189,8 +188,6 @@ static void DrawSettingsMenu()
     ImGui::SameLine();
     ImGui::RadioButton("Both##target", &g_settings.renderTarget, RENDER_BOTH);
     ImGui::Unindent();
-
-    ImGui::Separator();
 
     int overlayOpacityPercent = (int)(g_settings.overlayOpacity * 100.0f + 0.5f);
     if (ImGui::SliderInt("Overlay background opacity", &overlayOpacityPercent, 0, 100,
@@ -209,7 +206,7 @@ static void DrawSettingsMenu()
     if (g_settings.windowAdjustDeadzone > 0.9f)
         g_settings.windowAdjustDeadzone = 0.9f;
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Hotkeys");
 
     {
         char hk[64];
@@ -219,6 +216,28 @@ static void DrawSettingsMenu()
     if (ImGui::Button("Rebind Hotkeys"))
         s_hotkeysWindow = true;
 }
+
+struct HotkeyMenuEntry {
+    const char* group;
+    Input::HotkeyId id;
+};
+
+// Display order only. HotkeyId values and their persisted config fields remain
+// unchanged so existing configurations continue to load without migration.
+static const HotkeyMenuEntry kHotkeyMenuOrder[] = {
+    { "General",  Input::HOTKEY_MENU },
+    { nullptr,    Input::HOTKEY_GAME_RESET },
+    { "Practice", Input::HOTKEY_SAVE_STATE_RELOAD },
+    { nullptr,    Input::HOTKEY_SAVE_COORDINATES },
+    { nullptr,    Input::HOTKEY_LOAD_COORDINATES },
+    { "Camera",   Input::HOTKEY_FLY_CAM },
+    { "Gameplay", Input::HOTKEY_QUICK_TRANSFORM },
+    { nullptr,    Input::HOTKEY_MOON_JUMP },
+    { nullptr,    Input::HOTKEY_REMOTE_BOMBS },
+};
+static_assert(sizeof(kHotkeyMenuOrder) / sizeof(kHotkeyMenuOrder[0]) ==
+                  Input::HOTKEY_COUNT,
+              "Every rebindable hotkey must appear in the grouped menu");
 
 // Popup table of every rebindable feature hotkey. Capture uses the same press-
 // then-release flow as the original menu-hotkey Rebind; exact collisions with
@@ -244,8 +263,16 @@ static void DrawHotkeysWindow()
             ImGui::TableSetupColumn("",        ImGuiTableColumnFlags_WidthFixed,   90.0f);
             ImGui::TableHeadersRow();
 
-            for (int i = 0; i < Input::HOTKEY_COUNT; ++i) {
-                Input::HotkeyId id = (Input::HotkeyId)i;
+            for (unsigned i = 0;
+                 i < sizeof(kHotkeyMenuOrder) / sizeof(kHotkeyMenuOrder[0]);
+                 ++i) {
+                const HotkeyMenuEntry& entry = kHotkeyMenuOrder[i];
+                Input::HotkeyId id = entry.id;
+                if (entry.group) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextDisabled("%s", entry.group);
+                }
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted(Input::HotkeyName(id));
@@ -267,9 +294,9 @@ static void DrawHotkeysWindow()
                 ImGui::BeginDisabled(busy && !capturingThis);
                 char label[32];
                 if (capturingThis)
-                    snprintf(label, sizeof(label), "Cancel##hk%d", i);
+                    snprintf(label, sizeof(label), "Cancel##hk%d", (int)id);
                 else
-                    snprintf(label, sizeof(label), "Rebind##hk%d", i);
+                    snprintf(label, sizeof(label), "Rebind##hk%d", (int)id);
                 if (ImGui::Button(label)) {
                     if (capturingThis)
                         Input::CancelHotkeyCapture();
@@ -321,37 +348,55 @@ static void DrawHotkeysWindow()
     }
 }
 
-static void DrawToolsMenu()
+static void DrawPracticeMenu()
 {
+    ImGui::SeparatorText("Save & Restore");
+    Tools::SaveState::DrawMenuItem();
+    Tools::SaveLoadCoords::DrawMenuItem();
+    Debug::DebugSave::DrawMenuItem();
+
+    ImGui::SeparatorText("Navigation");
+    Tools::Warp::DrawMenuItem();
+    Tools::LinkPositionEditor::DrawMenuItem();
+}
+
+static void DrawCameraHudMenu()
+{
+    ImGui::SeparatorText("Camera");
     Tools::FlyCam::DrawMenuItem();
     if (Tools::FlyCam::IsEnabled()) {
-        char hk[64];
-        Input::HotkeyToString(g_settings.flyCamCombo, hk, sizeof(hk));
+        char hotkey[64];
+        Input::HotkeyToString(g_settings.flyCamCombo,
+                              hotkey, sizeof(hotkey));
         ImGui::Indent();
-        ImGui::TextDisabled("%s to fly", hk);
+        ImGui::TextDisabled("%s to fly", hotkey);
         ImGui::Unindent();
     }
-    Tools::SaveLoadCoords::DrawMenuItem();
-    Tools::ModernCamera::DrawMenuItem();
-    Tools::Warp::DrawMenuItem();
-    Tools::SaveState::DrawMenuItem();
+
+    Tools::ModernCamera::DrawToggle();
+    if (ImGui::BeginMenu("Modern Camera Settings")) {
+        Tools::ModernCamera::DrawSettingsMenu();
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Advanced Diagnostics")) {
+        Tools::ModernCamera::DrawDiagnosticsMenu();
+        ImGui::EndMenu();
+    }
+
+    ImGui::SeparatorText("HUD");
+    Debug::LinkPosition::DrawMenuItem();
     Tools::InputViewer::DrawMenuItem();
-    Tools::LinkPositionEditor::DrawMenuItem();
 }
 
 #ifdef TPHD_TOOLS_EXPERIMENTAL
 static void DrawExperimentalMenu()
 {
+    ImGui::SeparatorText("Practice");
     Tools::BossPractice::DrawMenuItem();
+    ImGui::SeparatorText("Timing & Splits");
     Tools::AutoSplitter::DrawMenuItem();
 }
 #endif
-
-static void DrawDebugMenu()
-{
-    Debug::LinkPosition::DrawMenuItem();
-    Debug::DebugSave::DrawMenuItem();
-}
 
 // A top-level tool window we manage (move/resize/clamp)? Skips child windows,
 // popups/tooltips, the menu bar, and our non-interactive toast.
@@ -562,12 +607,16 @@ void Draw(ImGuiIO& io)
 
     if (g_menuVisible) {
         if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Settings")) {
-                DrawSettingsMenu();
+            if (ImGui::BeginMenu("Practice")) {
+                DrawPracticeMenu();
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Tools")) {
-                DrawToolsMenu();
+            if (ImGui::BeginMenu("Gameplay")) {
+                Cheats::DrawGameplayMenu();
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Camera & HUD")) {
+                DrawCameraHudMenu();
                 ImGui::EndMenu();
             }
 #ifdef TPHD_TOOLS_EXPERIMENTAL
@@ -576,12 +625,8 @@ void Draw(ImGuiIO& io)
                 ImGui::EndMenu();
             }
 #endif
-            if (ImGui::BeginMenu("Cheats")) {
-                Cheats::DrawMenu();
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Debug")) {
-                DrawDebugMenu();
+            if (ImGui::BeginMenu("Settings")) {
+                DrawSettingsMenu();
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();

@@ -1,11 +1,11 @@
-// cheats/cheats.h -- the Cheats menu + per-frame cheat application.
+// cheats/cheats.h -- the Gameplay menu + per-frame cheat application.
 
 #pragma once
 
 namespace Cheats {
 
-// Draws the contents of the "Cheats" menu (a checkbox per cheat).
-void DrawMenu();
+// Draws the workflow-oriented Gameplay menu and its nested modifier groups.
+void DrawGameplayMenu();
 
 // Called once per presented frame: applies every enabled cheat.
 void Tick();

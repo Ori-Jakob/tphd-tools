@@ -4,7 +4,7 @@
 namespace Tools {
 namespace InputViewer {
 
-// Checkbox shown in the Tools menu.
+// Checkbox and opacity control shown in Camera & HUD.
 void DrawMenuItem();
 
 // Persisted state for config.

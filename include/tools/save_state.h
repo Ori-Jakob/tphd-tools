@@ -14,7 +14,7 @@
 namespace Tools {
 namespace SaveState {
 
-// Checkbox shown in the Tools menu (toggles the window).
+// Checkbox shown in Practice > Save & Restore (toggles the window).
 void DrawMenuItem();
 void Initialize();
 

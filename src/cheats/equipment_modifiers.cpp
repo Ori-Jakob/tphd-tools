@@ -478,11 +478,13 @@ void DrawMenu()
 {
     bool changed = false;
 
+    ImGui::SeparatorText("Clawshot");
     changed |= ImGui::Checkbox("Super Clawshot",
                                &s_config[CONFIG_SUPER_CLAWSHOT]);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Longer, faster Clawshot that sticks to any valid background");
 
+    ImGui::SeparatorText("Spinner");
     changed |= ImGui::Checkbox("Infinite Spinner Time",
                                &s_config[CONFIG_INFINITE_SPINNER_TIME]);
     if (ImGui::IsItemHovered())
@@ -499,6 +501,7 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Changes only the Spinner ride-speed accessor; Link's jump stays normal");
 
+    ImGui::SeparatorText("Bombs");
     changed |= ImGui::Checkbox("Remote Bombs",
                                &s_config[CONFIG_REMOTE_BOMBS]);
     if (ImGui::IsItemHovered()) {
@@ -514,12 +517,13 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Remove the three-active-bomb limit (use Infinite Ammo to refill bags)");
 
+    ImGui::SeparatorText("Movement Gear");
     changed |= ImGui::Checkbox("Fast Iron Boots",
                                &s_config[CONFIG_FAST_IRON_BOOTS]);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Use normal movement speed and animations while heavy");
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Reset");
     if (ImGui::Button("Restore All Defaults")) {
         for (int i = 0; i < CONFIG_COUNT; ++i)
             s_config[i] = false;

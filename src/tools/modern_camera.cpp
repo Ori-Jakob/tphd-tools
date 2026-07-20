@@ -493,12 +493,13 @@ void OnApplicationStart()
     s_lastDirMode = -1;
 }
 
-void DrawMenuItem()
+void DrawToggle()
 {
     ImGui::Checkbox("Modern Camera", &s_enabled);
-    if (!s_enabled)
-        return;
-    ImGui::Indent();
+}
+
+void DrawSettingsMenu()
+{
     ImGui::TextDisabled("Right stick steers; no auto-follow once touched.");
     ImGui::TextDisabled("R3 first person and cutscenes unchanged.");
     ImGui::SetNextItemWidth(200.0f);
@@ -518,6 +519,10 @@ void DrawMenuItem()
     ImGui::Checkbox("Invert X##mcam", &s_invertX);
     ImGui::SameLine();
     ImGui::Checkbox("Invert Y##mcam", &s_invertY);
+}
+
+void DrawDiagnosticsMenu()
+{
     // Field-verifiable diagnostics. "eng" is the engine index the dispatcher
     // actually ran last (1 = chase, 4 = first person, 8 = ride); "mode" is
     // the camera mode at that dispatch (0 = normal follow -- the only mode
@@ -548,7 +553,6 @@ void DrawMenuItem()
         s_perfSelfMax = 0;
         s_perfEngineMax = 0;
     }
-    ImGui::Unindent();
 }
 
 } // namespace ModernCamera
