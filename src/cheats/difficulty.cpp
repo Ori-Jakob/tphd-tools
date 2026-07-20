@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include "code_patch.h"
+#include "game/d_actor.h"
 #include "imgui.h"
 #include "logger.h"
 
@@ -66,6 +67,69 @@ static PatchOwner s_damageGivenPatch = {};
 static PatchOwner s_rupeePatch = {};
 static PatchOwner s_noFallDamagePatch = {};
 static PatchOwner s_alwaysFairyPatch = {};
+
+// TPHD actor offsets verified against the corresponding actor routines in
+// Zelda.rpx. These two enemies can enter damage/death actions without relying
+// solely on cc_at_check's shared health subtraction.
+constexpr uint32_t ENEMY_HEALTH_OFFSET = 0x566u;
+
+constexpr uint32_t E_S1_ACTION_OFFSET = 0x69Au;
+constexpr int16_t E_S1_MAX_HEALTH = 50;
+
+constexpr uint32_t E_ZS_ACTION_OFFSET = 0x664u;
+constexpr uint32_t E_ZS_MODE_OFFSET = 0x668u;
+constexpr uint32_t E_ZS_TARGET_SPRM_OFFSET = 0x8E4u;
+constexpr uint32_t E_ZS_COLLISION_SPRM_OFFSET = 0x8F8u;
+constexpr int16_t E_ZS_MAX_HEALTH = 20;
+
+template <typename T>
+static volatile T& actorField(fopAc_ac_c* actor, uint32_t offset)
+{
+    return *reinterpret_cast<volatile T*>(
+        reinterpret_cast<uint8_t*>(actor) + offset);
+}
+
+static fopAc_ac_c* preserveSpecialEnemyHealth(fopAc_ac_c* actor, void*)
+{
+    if (!actor)
+        return nullptr;
+
+    switch (fopAcM_GetName(actor)) {
+    case FPCNM_E_S1: {
+        // Shadow Beasts have group-finisher and fail states which can set
+        // health/action directly after the shared damage routine returns.
+        actorField<int16_t>(actor, ENEMY_HEALTH_OFFSET) = E_S1_MAX_HEALTH;
+        volatile int16_t& action =
+            actorField<int16_t>(actor, E_S1_ACTION_OFFSET);
+        if (action == 5 || action == 9 || action == 10)
+            action = 0;
+        break;
+    }
+    case FPCNM_E_ZS: {
+        // Staltroops disable target/push collision while in their custom
+        // damage action, so returning to wait must restore both set bits.
+        volatile int32_t& action =
+            actorField<int32_t>(actor, E_ZS_ACTION_OFFSET);
+        if (action == 2) {
+            action = 1;
+            actorField<int32_t>(actor, E_ZS_MODE_OFFSET) = 0;
+            volatile uint32_t& targetSPrm =
+                actorField<uint32_t>(actor, E_ZS_TARGET_SPRM_OFFSET);
+            volatile uint32_t& collisionSPrm =
+                actorField<uint32_t>(actor, E_ZS_COLLISION_SPRM_OFFSET);
+            targetSPrm = targetSPrm | 1u;
+            collisionSPrm = collisionSPrm | 1u;
+            actorField<int16_t>(actor, ENEMY_HEALTH_OFFSET) =
+                E_ZS_MAX_HEALTH;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return nullptr;
+}
 
 static float clampQuarter(float value, float minimum, float maximum)
 {
@@ -251,6 +315,8 @@ void DrawMenu()
     }
     changed |= ImGui::Checkbox(kConfigNames[CONFIG_INFINITE_ENEMY_HEALTH],
                                &s_config[CONFIG_INFINITE_ENEMY_HEALTH]);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Prevent shared collision damage and repair known actor-specific damage states");
 
     ImGui::SeparatorText("Economy");
     ImGui::SetNextItemWidth(150.0f);
@@ -298,6 +364,8 @@ void Tick()
 {
     installPermanentHooks();
     publishSettings();
+    if (s_config[CONFIG_INFINITE_ENEMY_HEALTH])
+        fopAcIt_Judge(preserveSpecialEnemyHealth, nullptr);
 }
 
 void OnApplicationStart()
