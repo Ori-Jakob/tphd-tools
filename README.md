@@ -1,273 +1,323 @@
 # TPHD Tools
 
-TPHD Tools is an experimental in-game tool suite for *The Legend of Zelda:
-Twilight Princess HD*. It uses Dear ImGui and the Wii U's native GX2 renderer to
-draw an overlay over the game's TV output, GamePad output, or both.
+TPHD Tools is an experimental in-game practice, debugging, and gameplay tool suite for *The
+Legend of Zelda: Twilight Princess HD*. It renders a Dear ImGui overlay through the Wii U GX2
+API and shares the same tools between Cemu and a Wii U running Aroma.
 
-It builds from one shared codebase with two platform-specific front ends:
-
-| Platform | Output | Integration |
+| Platform | Artifact | Integration |
 | --- | --- | --- |
-| Cemu | `tphd_tools.rpl` | Loaded by a Cemu graphics-pack codecave |
-| Wii U with Aroma | `tphd_tools.wps` | Loaded as a Wii U Plugin System plugin |
+| Cemu | `tphd_tools.rpl` | A graphics-pack codecave loads the RPL and forwards game hooks |
+| Wii U with Aroma | `tphd_tools.wps` | A Wii U Plugin System plugin installs its own runtime hooks |
 
-## Current status
+Standard builds include the practice tools, gameplay editors and modifiers, cameras, HUDs,
+and settings described below. Boss Practice and the autosplitter are compiled only when
+`EXPERIMENTAL=1` is set.
 
-The overlay, input hooks, configuration storage, tools, cheats, Save Loader, and
-both build targets are implemented. Boss Practice and the autosplitter are
-compile-time experimental features and are excluded from standard builds.
+> [!WARNING]
+> TPHD Tools reads and writes game memory through bindings made for TPHD v81. Using another
+> revision can crash the game or corrupt runtime state. Inventory, world, debug-save, and
+> Save Loader changes can also become permanent after a normal in-game save. Back up the
+> game's save data before using these tools.
 
-Game bindings and hook addresses currently target TPHD v81. The Cemu graphics
-pack declares support for these title IDs:
+## Compatibility
 
-- Japan: `000500001019C800`
-- United States: `000500001019E500`
-- Europe: `000500001019E600`
+The current title gates and Cemu graphics-pack rules accept these Wii U title IDs:
 
-Other game revisions are not supported unless their addresses and graphics-pack
-module match are verified.
+| Region | Product code | Title ID |
+| --- | --- | --- |
+| Japan | AZAJ | `000500001019C800` |
+| United States | AZAE | `000500001019E500` |
+| Europe | AZAP | `000500001019E600` |
 
-## Features
+The bundled graphics pack targets RPX module hashes `0x1A03E108` and `0xA3175EEA`. A matching
+title ID is not, by itself, proof that an unverified executable revision is safe. Many game
+structures, functions, patch sites, and global variables use fixed v81 addresses.
 
-The in-game top bar is organized as **Practice**, **Gameplay**,
-**Camera & HUD**, optional **Experimental**, and **Settings**.
+## Capabilities
+
+The standard menu contains **Practice**, **Gameplay**, **Camera & HUD**, and **Settings**.
+Experimental builds add an **Experimental** menu.
 
 ### Practice
 
-- Save Loader with named states, folders, position restoration, and post-load
-  actor or flag commands
-- One-slot Save/Load Coordinates with same-stage validation, in-place native
-  room streaming, and exact Link facing plus camera restoration
-- Loader for the game's shipped debug saves and personal save images
-- Warps by preset or stage, room, layer, and spawn
-- Link position and facing editor
+| Tool | What it does |
+| --- | --- |
+| Save Loader | Captures named state files, organizes them into folders, and restores persistent save data, scene information, Link, camera, and Epona state. A state can optionally run ordered actor-spawn, actor-delete, or current-area flag commands after the destination scene is stable. |
+| Save/Load Coordinates | Keeps one persistent position slot containing the stage, room, layer, spawn, Link position and facing, and camera target and eye. Loads are limited to the same stage; cross-room loads use the game's room-streaming path and wait for destination collision before releasing Link. |
+| Debug Save Loader | Opens the debug, QA, and cutscene saves shipped with the game and personal raw save images stored on the SD card. Personal images are validated before the game deserializer receives them. |
+| Warps | Offers 103 curated destinations grouped by region, plus manual stage, room, spawn, and layer entry. |
+| Link Position Editor | Reads or writes Link's X, Y, Z, and facing values. |
+
+Save Loader files are tool-managed game-state captures, not emulator snapshots. Loading a
+state may perform a full scene reload before restoring the remaining data. The optional
+command editor can select actors by process ID, engine name, or friendly name; spawn multiple
+actors with explicit parameters and transforms; remove matching actors; and set chest,
+switch, item, dungeon-item, or key-count values after loading.
 
 ### Gameplay
 
-- Player cheats including Moon Jump, Quick Transform, Invincibility, and
-  infinite health or air
-- Resource and item-rule cheats including infinite ammo or rupees and
-  unrestricted item use
-- Inventory editor for player status, items, equipment, collection data,
-  dungeon/area data, warp portals, and event flags
-- Clawshot, Spinner, bomb, and Iron Boots modifiers
-- Combat, survival, and economy difficulty controls
-- Human/Wolf movement, climb-height, and world-clock modifiers
+| Group | Capabilities |
+| --- | --- |
+| Player | Moon Jump, Quick Transform, Invincibility, Infinite Hearts, and Infinite Air. |
+| Items and resources | Infinite Ammo, Infinite Rupees, and Unrestricted Items in areas where the game normally blocks them. |
+| Inventory Editor | Edits health, rupees, lantern oil, wallet size, form, 24 inventory slots, capacities and counts, equipped and owned gear, obtained-item flags, Fused Shadows, Mirror Shards, Poe Souls, Hidden Skills, and Golden Bugs. |
+| World Editor | Edits 786 searchable story event flags; current-area chest, switch, item, dungeon-item, and stage-event flags; dungeon key count; and the persistent state of 15 warp portals. It is opened from **Movement & World > World & Time**. |
+| Equipment modifiers | Super Clawshot, Infinite Spinner Time, adjustable Spinner speed, Remote Bombs, No Bomb Limit, Fast Iron Boots, and Always Great Spin Attack. |
+| Difficulty | Scales damage received and dealt, gives enemies infinite health, simplifies sumo, changes rupee gains or losses, removes fall damage, and controls fairy revival behavior. |
+| Movement and world | Adjusts climbing, climb height, block pushing and pulling, crawling, roll speed and distance, time of day, and clock progression. Setting clock progression to zero freezes the normal world clock. |
 
-### Camera & HUD
+The Inventory Editor and World Editor modify the live save structures. They do not validate
+whether combinations of equipment, dungeon state, and story flags are logically reachable.
+Changing event flags can skip progression checks or leave a cutscene in an invalid state.
 
-- Fly Cam with independent movement, rotation, speed control, and optional
-  teleport-to-camera exit
-- Modern third-person camera with sensitivity, FOV, Epona, and inversion settings
-- GamePad and Pro Controller input viewer
-- Game information HUD with position, angle, stage, room, time, and optional
-  system date and time
+### Camera and HUD
 
-### Experimental
+| Tool | What it does |
+| --- | --- |
+| Fly Cam | Detaches the camera for free movement and rotation, with adjustable speed and separate exits for returning to Link or moving Link to the camera. |
+| Modern Camera | Adds right-stick chase-camera control with horizontal and vertical sensitivity, field-of-view scaling, optional global FOV, Epona support, axis inversion, and an advanced diagnostic view. |
+| Game Info HUD | Shows session time, game time of day, facing and look angles, speed, XYZ position, and Link's current action. System date and time are optional. |
+| Input Viewer | Displays the active controller's buttons and analog sticks in a movable, resizable passive HUD. |
 
-These features require a build made with `EXPERIMENTAL=1` and appear under the
-in-game **Experimental** menu:
-
-- Boss Practice launcher with native opening/direct-fight entry modes and an
-  isolated current, recommended, or custom combat loadout (Deku Toad is the
-  first verified encounter)
-- Native timer and autosplitter driven by Wii U split JSON files
+Passive HUDs remain visible while the main menu is closed. Interactive editor windows are
+drawn only while the menu is open.
 
 ### Settings and input
 
-- GamePad, Pro Controller, and Classic Controller input
-- GamePad touchscreen and Cemu mouse input
-- Optional game-input blocking while the menu is open
-- Optional game freeze while the menu is open
-- Optional action notifications for save-state loads, game resets, and
-  coordinate saves/loads (enabled by default)
-- Selectable overlay output: TV, GamePad, or both
-- Rebindable menu hotkey and configurable controller preference
-- Persistent settings, window positions, tool state, and cheat state
-- On-screen software keyboard for text fields
+Settings cover:
+
+- menu input blocking for all controllers, GamePad only, or Pro Controller only;
+- optional game freeze while the menu is open;
+- automatic, GamePad, or Pro Controller preference when a save is loaded from the title
+  screen;
+- TV, GamePad, or simultaneous overlay output;
+- overlay opacity, bold text, and window movement and resize deadzones;
+- notifications for actions such as state loads, resets, and coordinate operations; and
+- rebinding for every tool hotkey, with conflict detection before an existing binding is
+  replaced.
+
+The input layer supports the Wii U GamePad and KPAD devices, including Pro and Classic
+Controllers. GamePad touch input is supported, and Cemu mouse input is exposed to the UI as
+touch. Text fields can open the Wii U software keyboard.
+
+### Experimental tools
+
+Experimental tools are absent from standard binaries, not merely hidden in the menu.
+
+| Tool | Current scope |
+| --- | --- |
+| Boss Practice | Launches the Lakebed Temple Deku Toad encounter at its opening cinematic or directly into the fight. The launcher can retain the current loadout or construct a recommended or custom temporary loadout. |
+| Auto Splitter | Loads route JSON files from `tphd_tools/splits`, displays an in-game timer and split list, evaluates memory conditions, tracks personal-best history and gold segments, and can remove gameplay load time. |
 
 ## Controls
 
-The menu is hidden on startup. The default open and close hotkey is
-`ZR + D-Pad Down`.
+The menu is hidden when the game starts. Its default toggle is `ZR + D-Pad Down`.
+
+### Menu navigation
 
 | Input | Action |
 | --- | --- |
-| D-Pad | Navigate |
+| D-Pad | Navigate menus and controls |
 | A | Select or activate |
 | B | Cancel or go back |
 | Y | Cycle focus between the menu bar and open tool windows |
 | L / R | Change tabs in the focused window |
 | Hold ZL + right stick | Move the focused window |
 | Hold ZL + left stick | Resize the focused window |
-| Plus + X + B | Reset the game when the reset hotkey is enabled |
-| ZR + D-Pad Left | Save Link and camera coordinates |
-| ZR + D-Pad Right | Load saved coordinates in the same stage |
 
-Fly Cam is enabled from **Camera & HUD** and toggled with
-`ZL + ZR + L3 + R3`. While flying, the left stick moves, the right stick rotates,
-`ZL` and `ZR` move vertically, and `L` and `R` change speed. Press `L3` to return
-the camera to Link or `R3` to move Link to the camera.
+### Default hotkeys
 
-Save/Load Coordinates is enabled from **Practice > Save & Restore**. Its saved
-slot includes the stage, room, spawn, layer, Link position/facing, and camera target/eye. A
-  load is rejected when the current stage differs. A different saved room is
-  streamed through the engine's native room-table path without a stage reload;
-  Link is pinned at the saved position with zero momentum until the destination
-  collision is ready. The tool then finalizes the room/spawn/layer and transforms,
-  puts Link into the normal idle action with zero momentum, and stamps the live
-  room information once more on the next frame. Both hotkeys are configurable
-  under **Settings > Rebind Hotkeys**, and the saved slot plus Fly Cam and
-  Save/Load Coordinates enabled states persist in `config.json`.
+Every hotkey can be changed under **Settings > Rebind Hotkeys**. Tool-specific shortcuts act
+only while their corresponding tool or option is enabled.
 
-## Requirements
+| Hotkey | Action |
+| --- | --- |
+| `ZR + D-Pad Down` | Open or close the menu |
+| `Plus + X + B` | Reset the game |
+| `ZL + ZR + Plus` | Reload the last Save Loader state |
+| `ZR + Y` | Quick Transform |
+| `ZL + ZR + L3 + R3` | Enter or leave Fly Cam |
+| `ZR + A` | Moon Jump |
+| `ZR + D-Pad Left` | Save the coordinate slot |
+| `ZR + D-Pad Right` | Load the coordinate slot |
+| `ZR + L3` | Detonate player bombs when Remote Bombs is enabled |
 
-- devkitPro with the Wii U development packages and WUT
-- GNU Make
-- WiiUPluginSystem SDK for the Aroma target
-- `libmappedmemory` for the Aroma target (and MemoryMappingModule on the console)
-- The `external/imgui` Git submodule
+### Fly Cam
 
-Initialize the submodule after cloning:
+| Input | Action |
+| --- | --- |
+| Left stick | Move relative to the camera |
+| Right stick | Rotate yaw and pitch |
+| ZR / ZL | Move up or down |
+| R / L | Double or halve movement speed |
+| Hold A / B | Use maximum or minimum speed |
+| L3 | Exit and return the camera to Link |
+| R3 | Exit and move Link to the camera |
+
+## Building from source
+
+### Requirements
+
+All builds require:
+
+- devkitPro with devkitPPC and WUT;
+- GNU Make;
+- the `DEVKITPRO` environment variable; and
+- the `external/imgui` Git submodule.
+
+The Aroma target additionally requires the WiiUPluginSystem SDK and WUMS
+`libmappedmemory`. A console install also needs MemoryMappingModule at runtime.
+
+Initialize the repository submodules after cloning:
 
 ```sh
 git submodule update --init --recursive
 ```
 
-`DEVKITPRO` must be set in the build environment. The Makefiles include the WUT
-and WUPS rules from the devkitPro installation.
+When `VERSION` is omitted, the Makefiles call `powershell.exe` to calculate a deterministic
+source CRC32. On a host without Windows PowerShell, pass an explicit version to `make`, such
+as `VERSION=dev-local`.
 
-## Build
+### Build matrix
 
-Run builds from the project directory:
+Run commands from the repository root:
+
+| Target | Command | Output |
+| --- | --- | --- |
+| Cemu release | `make` | `tphd_tools.rpl` |
+| Cemu debug | `make debug` | `tphd_tools_debug.rpl` |
+| Cemu experimental release | `make EXPERIMENTAL=1` | `tphd_tools_experimental.rpl` |
+| Cemu experimental debug | `make EXPERIMENTAL=1 debug` | `tphd_tools_experimental_debug.rpl` |
+| Aroma release | `make -f Makefile.aroma` | `tphd_tools.wps` |
+| Aroma debug | `make -f Makefile.aroma debug` | `tphd_tools_debug.wps` |
+| Aroma experimental release | `make -f Makefile.aroma EXPERIMENTAL=1` | `tphd_tools_experimental.wps` |
+| Aroma experimental debug | `make -f Makefile.aroma EXPERIMENTAL=1 debug` | `tphd_tools_experimental_debug.wps` |
+
+Release builds use `-O2`; debug builds use `-O0` and define `TPHD_TOOLS_DEBUG`. Clean the Cemu
+artifacts with `make clean` and the Aroma artifacts with `make -f Makefile.aroma clean`.
+
+An explicit version can be embedded in either target:
 
 ```sh
-# Cemu release and debug RPLs
-make
-make debug
-
-# Aroma release and debug plugins
-make -f Makefile.aroma
-make -f Makefile.aroma debug
-
-# Experimental Cemu release and debug RPLs
-make EXPERIMENTAL=1
-make EXPERIMENTAL=1 debug
-
-# Experimental Aroma release and debug plugins
-make -f Makefile.aroma EXPERIMENTAL=1
-make -f Makefile.aroma EXPERIMENTAL=1 debug
+make VERSION=0.3.0
+make -f Makefile.aroma VERSION=0.3.0
 ```
 
-The outputs are:
+Without `VERSION`, `scripts/source_crc32.ps1` hashes the shared build inputs and emits a
+`CRC32-XXXXXXXX` identifier. The version shown in the menu and log also states whether the
+binary is `DEBUG` or `RELEASE` and whether it includes `EXPERIMENTAL` tools.
 
-```text
-tphd_tools.rpl
-tphd_tools_debug.rpl
-tphd_tools.wps
-tphd_tools_debug.wps
-tphd_tools_experimental.rpl
-tphd_tools_experimental_debug.rpl
-tphd_tools_experimental.wps
-tphd_tools_experimental_debug.wps
+### Cemu build-and-install script
+
+`run_build.ps1` forces a Cemu RPL rebuild and, unless told otherwise, copies the result and
+matching graphics-pack files to its configured local destinations.
+
+| Option | Effect |
+| --- | --- |
+| `-d`, `--debug` | Build and install the debug variant |
+| `-e`, `--experimental` | Include experimental tools |
+| `-ni`, `--no-install` | Build only; skip destination validation and all installation copies |
+| `-v <value>`, `--version <value>` | Use an explicit embedded version |
+| `--version=<value>` | Use an explicit embedded version |
+
+Examples:
+
+```powershell
+# Standard release build without installation
+.\run_build.ps1 -ni
+
+# Experimental debug build and installation
+.\run_build.ps1 -e -d
 ```
 
-Use `make clean` or `make -f Makefile.aroma clean` to remove the corresponding
-build output. A version string can be embedded with `VERSION=<version>`.
-Without one, both Makefiles calculate a deterministic `CRC32-XXXXXXXX` from the
-shared build inputs. The displayed/logged version always includes `DEBUG` or
-`RELEASE`, and experimental builds also include `EXPERIMENTAL`.
+The script contains developer-specific game `code` directories in `$destinations`; edit them
+before installing on another system. Its graphics-pack destination is derived from
+`$env:APPDATA\Cemu\graphicPacks`.
 
-`run_build.ps1` applies the same automatic versioning rule. Pass `-e` or
-`--experimental` to opt into the experimental feature set, and combine it with
-`-d` or `--debug` when needed. The script installs the selected experimental
-artifact under the normal module filename expected by the Cemu graphics pack.
-Pass `-ni` or `--no-install` to build without copying the RPL or graphics-pack
-files to the configured Cemu directories.
+## Installing on Cemu
 
-## Install on Cemu
+1. Build the required RPL variant.
+2. Copy the RPL into the game's `code` directory beside `Zelda.rpx`.
+3. Create a graphics-pack directory, for example
+   `Cemu/graphicPacks/TwilightPrincessHD/tphd_tools`.
+4. Copy `graphicspack/release/rules.txt` and `graphicspack/release/patch_overlay.asm` into that
+   directory.
+5. Enable **TPHD Tools** in Cemu's Graphics Packs window and launch the game.
 
-1. Build `tphd_tools.rpl`.
-2. Copy it into the game's `code` directory next to `Zelda.rpx`.
-3. Copy `graphicspack/release/rules.txt` and `patch_overlay.asm` into one
-   graphics-pack directory under Cemu's `graphicPacks` directory.
-4. Enable **TPHD Tools** in Cemu's Graphics Packs window and start the game.
+The release pack loads `tphd_tools.rpl` by that exact name. For a debug install, copy
+`tphd_tools_debug.rpl` and use both files from `graphicspack/debug`. Do not combine a release
+RPL with the debug pack or a debug RPL with the release pack.
 
-The RPL filename must remain `tphd_tools.rpl`; the graphics pack loads that
-module name directly.
+Experimental output names identify the build artifact but are not the module names expected
+by the packs. Rename `tphd_tools_experimental.rpl` to `tphd_tools.rpl`, or
+`tphd_tools_experimental_debug.rpl` to `tphd_tools_debug.rpl`, when installing manually.
+`run_build.ps1` performs this name mapping automatically.
 
-For a debug build, use `tphd_tools_debug.rpl` together with the files from
-`graphicspack/debug`. Do not mix release and debug artifacts.
+## Installing on Aroma
 
-For a manual experimental install, rename `tphd_tools_experimental.rpl` to
-`tphd_tools.rpl`, or `tphd_tools_experimental_debug.rpl` to
-`tphd_tools_debug.rpl`, when copying it into the game directory.
+1. Build the required WPS variant.
+2. Copy it to `sd:/wiiu/environments/aroma/plugins/tphd_tools.wps`.
+3. Boot the Aroma environment and launch TPHD.
 
-`run_build.ps1` is a developer convenience script with local Cemu and game
-paths. Edit its destination paths before using it on another system.
+The Aroma build does not use the Cemu graphics pack or RPL. Its function replacements are
+limited to game processes, and initialization is gated to the three supported title IDs.
+Rename an experimental WPS artifact to `tphd_tools.wps` when installing it manually.
 
-## Install on Aroma
+## Persistent data
 
-1. Build `tphd_tools.wps`.
-2. Copy it to:
-
-   ```text
-   sd:/wiiu/environments/aroma/plugins/tphd_tools.wps
-   ```
-
-3. Boot Aroma and launch TPHD.
-
-The Aroma build does not use the Cemu RPL or graphics pack. Its WUPS hooks are
-limited to game processes and only activate for the supported TPHD title IDs.
-Experimental Aroma artifacts may likewise be renamed to `tphd_tools.wps` when
-installed.
-
-## SD card data
-
-Both front ends store data under `sd:/tphd_tools`:
+Both frontends use the logical SD-card directory `sd:/tphd_tools`. Cemu binds its configured
+emulated SD card at `/vol/external01`; Aroma accesses the physical SD card through the WUT
+devoptab. TPHD Tools creates its own directories when storage becomes available.
 
 | Path | Contents |
 | --- | --- |
-| `config.json` | Menu, tool, cheat, and window settings |
-| `log.txt` | Current log; the previous log is rotated to `log.txt.old` |
-| `savestates/` | Save Loader state files and optional subfolders |
-| `saves/` | Personal save images used by the Debug Save Loader |
-| `splits/` | Autosplitter JSON files |
+| `config.json` | Menu behavior, controller selection, hotkeys, tools, cheats, modifiers, coordinate slot, HUD layout, and ImGui window state |
+| `log.txt` | Current asynchronous log; the previous session is rotated to `log.txt.old` |
+| `savestates/` | Save Loader `.bin` files and immediate subfolders |
+| `saves/` | Personal `.dat` images for the Debug Save Loader |
+| `splits/` | Experimental autosplitter route JSON files |
 | `split_times/` | Per-route personal-best history |
 | `split_golds/` | Per-route best segments |
 
-## Implementation
+Configuration writes are debounced and performed by a background worker. Save Loader and
+debug-save directory I/O also run outside the presentation hook so ordinary SD-card access
+does not stall every rendered frame.
 
-The Cemu graphics pack installs present, GamePad scan-out, `VPADRead`, and
-`KPADReadEx` hooks. All hooks dispatch through the RPL's single exported function,
-`TPHDToolsEntry(reason, a, b)`.
+## Architecture
 
-The Aroma plugin replaces `GX2CopyColorBufferToScanBuffer`, the GX2
-initialization/context setters, `VPADRead`, and `KPADReadEx` for game processes.
-It draws immediately before the completed TV color buffer is copied to the scan
-buffer, under a private mapped GX2 context, then restores the game's context
-before chaining the real copy.
+The project has one shared tool layer and two small platform frontends:
 
-Both front ends call the same overlay, input, storage, tool, cheat, and game
-binding code:
+- `src/cemu/` provides the RPL entry point, runtime setup, allocator, and Cemu storage backend.
+  The graphics pack hooks presentation, GamePad scan-out, controller reads, and scene/room
+  loading, then dispatches them through the single `TPHDToolsEntry(reason, a, b)` export.
+- `src/aroma/` provides WUPS lifecycle handling, title gating, input and GX2 function
+  replacements, mapped-memory rendering resources, and the Aroma storage backend. It draws
+  with a private GX2 context and restores the game's context before continuing the real
+  scan-out call.
+- `src/utils/` contains the overlay lifecycle, GX2 renderer, menu, input normalization,
+  configuration, logging, notifications, software keyboard, and guarded code-patch helper.
+- `src/tools/`, `src/cheats/`, and `src/debug/` contain the shared user-facing functionality.
+- `include/game/` contains reverse-engineered TPHD structures, functions, globals, and data
+  tables used by the tools.
+- `graphicspack/release/` and `graphicspack/debug/` contain the matching Cemu hook packs.
+- `external/imgui/` is the Wii U Dear ImGui branch; `external/cjson/` is the vendored JSON
+  implementation.
 
-```text
-src/cemu/          Cemu RPL entry point and storage backend
-src/aroma/         Aroma WUPS entry point and storage backend
-src/utils/         Renderer, input, menu, configuration, and logging
-src/tools/         Fly Cam, warps, Save Loader, autosplitter, and HUD tools
-src/cheats/        Runtime cheats and inventory editor
-src/debug/         Game information and debug-save tools
-include/game/      Reverse-engineered TPHD structures and function bindings
-graphicspack/      Release and debug Cemu hook packs
-external/imgui/    Dear ImGui Wii U branch
-external/cjson/    cJSON source used for configuration and split files
+Runtime instruction patches are guarded: the patch helper accepts the original game
+instruction or its own replacement and logs a conflict instead of overwriting an unrelated
+patch. This reduces collisions with other modifications at shared patch sites, but it does
+not make arbitrary graphics-pack combinations compatible.
+
+The actor selector used by Save Loader embeds `data/procs.bin`. When
+`actor_data/actor_table.tsv` changes, regenerate it with:
+
+```sh
+python tools/gen_procs_bin.py
 ```
 
-## Known limitations
 
-- ImGui timing is fixed at TPHD's 30 Hz presentation rate.
-- The Aroma plugin preserves its ImGui settings across applications, but drops
-  and recreates all GPU-facing GX2 objects for each TPHD launch.
-- Several tools and cheats write directly to game state through fixed TPHD v81
-  addresses. Unsupported revisions can crash or corrupt runtime state.
+## License
+
+This repository does not currently declare a project-level license. Unless a license is
+added, no permission to copy, modify, or redistribute the project's original source should
+be assumed. Third-party code under `external/` remains subject to its own license terms.
