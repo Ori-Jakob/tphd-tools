@@ -13,11 +13,6 @@ Standard builds include the practice tools, gameplay editors and modifiers, came
 and settings described below. Boss Practice and the autosplitter are compiled only when
 `EXPERIMENTAL=1` is set.
 
-> [!WARNING]
-> TPHD Tools reads and writes game memory through bindings made for TPHD v81. Using another
-> revision can crash the game or corrupt runtime state. Inventory, world, debug-save, and
-> Save Loader changes can also become permanent after a normal in-game save. Back up the
-> game's save data before using these tools.
 
 ## Compatibility
 
@@ -29,7 +24,7 @@ The current title gates and Cemu graphics-pack rules accept these Wii U title ID
 | United States | AZAE | `000500001019E500` |
 | Europe | AZAP | `000500001019E600` |
 
-The bundled graphics pack targets RPX module hashes `0x1A03E108` and `0xA3175EEA`. A matching
+The bundled graphics pack targets RPX module hashes `0x1A03E108`. A matching
 title ID is not, by itself, proof that an unverified executable revision is safe. Many game
 structures, functions, patch sites, and global variables use fixed v81 addresses.
 
