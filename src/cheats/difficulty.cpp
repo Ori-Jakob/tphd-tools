@@ -25,12 +25,14 @@ volatile uint8_t g_tphdRupeesOnlyIncreaseEnabled = 0;
 volatile uint8_t g_tphdInfiniteEnemyHealthEnabled = 0;
 volatile uint8_t g_tphdNoFallDamageEnabled = 0;
 volatile uint8_t g_tphdAlwaysFairyRevivalEnabled = 0;
+volatile uint8_t g_tphdEasySumoEnabled = 0;
 
 void tphdDamageReceivedHook();
 void tphdDamageGivenHook();
 void tphdRupeeChangeHook();
 void tphdNoFallDamageHook();
 void tphdAlwaysFairyRevivalHook();
+void tphdEasySumoHook();
 }
 
 namespace Cheats {
@@ -46,6 +48,7 @@ enum ConfigItem {
     CONFIG_INFINITE_ENEMY_HEALTH,
     CONFIG_NO_FALL_DAMAGE,
     CONFIG_ALWAYS_FAIRY_REVIVAL,
+    CONFIG_EASY_SUMO,
     CONFIG_COUNT,
 };
 
@@ -54,6 +57,7 @@ static const char* const kConfigNames[CONFIG_COUNT] = {
     "Infinite Enemy Health",
     "No Fall Damage",
     "Always Heal From Fairy On Death",
+    "Easy Sumo Wrestling",
 };
 
 static bool s_config[CONFIG_COUNT] = {};
@@ -67,6 +71,7 @@ static PatchOwner s_damageGivenPatch = {};
 static PatchOwner s_rupeePatch = {};
 static PatchOwner s_noFallDamagePatch = {};
 static PatchOwner s_alwaysFairyPatch = {};
+static PatchOwner s_easySumoPatch = {};
 
 // TPHD actor offsets verified against the corresponding actor routines in
 // Zelda.rpx. These two enemies can enter damage/death actions without relying
@@ -230,6 +235,16 @@ static void installPermanentHooks()
             (const void*)tphdAlwaysFairyRevivalHook, &word))
         CodePatch::Apply("Always Fairy Revival hook",
                          s_alwaysFairyPatch, &word, 1);
+
+    // daNpcWrestler_c::sumouAI's common epilogue. The hook can replace the
+    // selected response while r31 is still the wrestler, then performs the
+    // displaced native restore instruction.
+    if (CodePatch::BuildSingleHook(
+            "Easy Sumo Wrestling", s_easySumoPatch,
+            0x02667158u, 0x83E1000Cu,
+            (const void*)tphdEasySumoHook, &word))
+        CodePatch::Apply("Easy Sumo Wrestling hook", s_easySumoPatch,
+                         &word, 1);
 }
 
 static void removePermanentHooks()
@@ -267,6 +282,13 @@ static void removePermanentHooks()
             (const void*)tphdAlwaysFairyRevivalHook, &word))
         CodePatch::Remove("Always Fairy Revival hook",
                           s_alwaysFairyPatch, &word, 1);
+
+    if (CodePatch::BuildSingleHook(
+            "Easy Sumo Wrestling", s_easySumoPatch,
+            0x02667158u, 0x83E1000Cu,
+            (const void*)tphdEasySumoHook, &word))
+        CodePatch::Remove("Easy Sumo Wrestling hook", s_easySumoPatch,
+                          &word, 1);
 }
 
 static void publishSettings()
@@ -285,6 +307,8 @@ static void publishSettings()
             s_config[CONFIG_NO_FALL_DAMAGE] ? 1 : 0);
     setByte(&g_tphdAlwaysFairyRevivalEnabled,
             s_config[CONFIG_ALWAYS_FAIRY_REVIVAL] ? 1 : 0);
+    setByte(&g_tphdEasySumoEnabled,
+            s_config[CONFIG_EASY_SUMO] ? 1 : 0);
 }
 
 } // namespace
@@ -317,6 +341,12 @@ void DrawMenu()
                                &s_config[CONFIG_INFINITE_ENEMY_HEALTH]);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Prevent shared collision damage and repair known actor-specific damage states");
+
+    ImGui::SeparatorText("Minigames");
+    changed |= ImGui::Checkbox(kConfigNames[CONFIG_EASY_SUMO],
+                               &s_config[CONFIG_EASY_SUMO]);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Make the wrestler choose a native open response while preserving normal match and ring-out events");
 
     ImGui::SeparatorText("Economy");
     ImGui::SetNextItemWidth(150.0f);
@@ -375,6 +405,7 @@ void OnApplicationStart()
     s_rupeePatch = {};
     s_noFallDamagePatch = {};
     s_alwaysFairyPatch = {};
+    s_easySumoPatch = {};
     publishSettings();
     installPermanentHooks();
 }
@@ -389,6 +420,7 @@ void OnApplicationEnd()
     setByte(&g_tphdInfiniteEnemyHealthEnabled, 0);
     setByte(&g_tphdNoFallDamageEnabled, 0);
     setByte(&g_tphdAlwaysFairyRevivalEnabled, 0);
+    setByte(&g_tphdEasySumoEnabled, 0);
     removePermanentHooks();
 }
 

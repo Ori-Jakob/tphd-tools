@@ -15,6 +15,7 @@
 .extern g_tphdUnrestrictedItemsEnabled
 .extern g_tphdFastIronBootsEnabled
 .extern g_tphdFastIronBootsMultiplier
+.extern g_tphdAlwaysGreatSpinMode
 
 .global tphdSuperClawshotFailureHook
 .type tphdSuperClawshotFailureHook, @function
@@ -184,3 +185,55 @@ tphdFastIronBootsStoreF30Hook:
     addi 1, 1, 0x30
     blr
 .size tphdFastIronBootsStoreF30Hook, .-tphdFastIronBootsStoreF30Hook
+
+.global tphdAlwaysGreatSpinSkillHook
+.type tphdAlwaysGreatSpinSkillHook, @function
+tphdAlwaysGreatSpinSkillHook:
+    # Replaces checkCutLargeTurnState's native `beq 0x0203AC28` after the
+    # acquired-skill/training-flag test. Mode 2 bypasses that test; modes 0/1
+    # reproduce the native branch. This is a jump hook, so LR still belongs to
+    # checkCutLargeTurnState's caller and must remain untouched.
+    mfcr 11
+    lis 12, g_tphdAlwaysGreatSpinMode@ha
+    lbz 12, g_tphdAlwaysGreatSpinMode@l(12)
+    cmpwi 12, 2
+    beq .Lgreat_spin_skill_pass
+    mtcrf 0xff, 11
+    beq .Lgreat_spin_skill_fail
+.Lgreat_spin_skill_pass:
+    mtcrf 0xff, 11
+    lis 12, 0x0203
+    ori 12, 12, 0xAC18
+    mtctr 12
+    bctr
+.Lgreat_spin_skill_fail:
+    lis 12, 0x0203
+    ori 12, 12, 0xAC28
+    mtctr 12
+    bctr
+.size tphdAlwaysGreatSpinSkillHook, .-tphdAlwaysGreatSpinSkillHook
+
+.global tphdAlwaysGreatSpinHealthHook
+.type tphdAlwaysGreatSpinHealthHook, @function
+tphdAlwaysGreatSpinHealthHook:
+    # Replaces the native `beq 0x0203AC44` after current/max-health compare.
+    # Either enabled mode accepts non-full health; disabled preserves the
+    # compare and its native success/failure destinations.
+    mfcr 11
+    lis 12, g_tphdAlwaysGreatSpinMode@ha
+    lbz 12, g_tphdAlwaysGreatSpinMode@l(12)
+    cmpwi 12, 0
+    bne .Lgreat_spin_health_pass
+    mtcrf 0xff, 11
+    beq .Lgreat_spin_health_pass
+    lis 12, 0x0203
+    ori 12, 12, 0xAC28
+    mtctr 12
+    bctr
+.Lgreat_spin_health_pass:
+    mtcrf 0xff, 11
+    lis 12, 0x0203
+    ori 12, 12, 0xAC44
+    mtctr 12
+    bctr
+.size tphdAlwaysGreatSpinHealthHook, .-tphdAlwaysGreatSpinHealthHook

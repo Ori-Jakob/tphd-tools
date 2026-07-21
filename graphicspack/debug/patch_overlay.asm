@@ -8,6 +8,13 @@
 [TPHDv81]
 moduleMatches = 0x1A03E108, 0xA3175EEA
 
+; -------------------------- Zelda.rpx symbols -------------------------------
+0x102816d8 = _g_abTvColorBuffer:
+0x10281820 = _g_abDrcColorBuffer:
+0x02bde770 = _Gfx_PresentFrameAndSwap:
+0x02ac1108 = _dScnPly_phase_1:
+0x02ac3f68 = _dScnRoom_zone_create_phase:
+
 .origin = codecave
 
 ; ------------------------------- data ---------------------------------------
@@ -69,15 +76,15 @@ ovl_call_entry:
     beq   ovl_after_load
     mtctr r3
     li    r3, 0
-    lis   r4, 0x1028
-    ori   r4, r4, 0x16d8
-    lis   r5, 0x1028
-    ori   r5, r5, 0x1820
+    lis   r4, _g_abTvColorBuffer@ha
+    addi  r4, r4, _g_abTvColorBuffer@l
+    lis   r5, _g_abDrcColorBuffer@ha
+    addi  r5, r5, _g_abDrcColorBuffer@l
     bctrl
 
 ovl_after_load:
-    lis   r0, 0x02bd
-    ori   r0, r0, 0xe770
+    lis   r0, _Gfx_PresentFrameAndSwap@hi
+    ori   r0, r0, _Gfx_PresentFrameAndSwap@l
     mtctr r0
     bctrl
 
@@ -192,8 +199,8 @@ scene_phase1_hook:
 
 scene_phase1_real:
     lwz   r3, 0x30(r1)
-    lis   r12, 0x02ac
-    ori   r12, r12, 0x1108
+    lis   r12, _dScnPly_phase_1@ha
+    addi  r12, r12, _dScnPly_phase_1@l
     mtctr r12
     bctrl
 
@@ -223,8 +230,8 @@ room_zone_phase_hook:
 
 room_zone_phase_real:
     lwz   r3, 0x30(r1)
-    lis   r12, 0x02ac
-    ori   r12, r12, 0x3f68
+    lis   r12, _dScnRoom_zone_create_phase@ha
+    addi  r12, r12, _dScnRoom_zone_create_phase@l
     mtctr r12
     bctrl
     stw   r3, 0x2c(r1)

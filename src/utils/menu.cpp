@@ -29,6 +29,7 @@
 #include "tools/link_position_editor.h"
 #include "cheats/cheats.h"
 #include "cheats/inventory_editor.h"
+#include "cheats/world_editor.h"
 #include "game/game.h"          // dPad_* controller detection (Settings tab)
 
 #include "imgui.h"
@@ -642,6 +643,7 @@ void Draw(ImGuiIO& io)
         Tools::LinkPositionEditor::DrawWindow(true);
         Debug::DebugSave::DrawWindow(true);
         Cheats::InventoryEditor::DrawWindow(true);
+        Cheats::WorldEditor::DrawWindow(true);
     }
 
     // Passive HUD windows stay on-screen (locked, no input) when the menu closes.

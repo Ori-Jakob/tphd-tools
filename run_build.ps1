@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $debugBuild = $false
 $experimentalBuild = $false
+$noInstall = $false
 $version = $null
 $versionWasGenerated = $false
 $projectDirectory = $PSScriptRoot
@@ -13,6 +14,8 @@ for ($index = 0; $index -lt $args.Count; $index++) {
         '--debug' { $debugBuild = $true }
         '-e'             { $experimentalBuild = $true }
         '--experimental' { $experimentalBuild = $true }
+        '-ni'            { $noInstall = $true }
+        '--no-install'   { $noInstall = $true }
         '-v' {
             if ($index + 1 -ge $args.Count) {
                 throw "Missing version value after '$argument'."
@@ -29,7 +32,7 @@ for ($index = 0; $index -lt $args.Count; $index++) {
             if ($argument.StartsWith('--version=', [System.StringComparison]::OrdinalIgnoreCase)) {
                 $version = $argument.Substring('--version='.Length)
             } else {
-                throw "Unknown argument '$argument'. Use -d, --debug, -e, --experimental, -v, or --version."
+                throw "Unknown argument '$argument'. Use -d, --debug, -e, --experimental, -ni, --no-install, -v, or --version."
             }
         }
     }
@@ -101,6 +104,11 @@ try {
 
     if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
         throw "Build completed, but '$outputPath' was not found."
+    }
+
+    if ($noInstall) {
+        Write-Host "$buildChannel $buildName build completed successfully. Installation skipped (-ni)."
+        return
     }
 
     foreach ($requiredPackFile in @('patch_overlay.asm', 'rules.txt')) {

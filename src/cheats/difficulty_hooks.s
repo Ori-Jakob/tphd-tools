@@ -11,6 +11,7 @@
 .extern g_tphdInfiniteEnemyHealthEnabled
 .extern g_tphdNoFallDamageEnabled
 .extern g_tphdAlwaysFairyRevivalEnabled
+.extern g_tphdEasySumoEnabled
 
 .global tphdDamageReceivedHook
 .type tphdDamageReceivedHook, @function
@@ -165,3 +166,22 @@ tphdAlwaysFairyRevivalHook:
     mtctr 12
     bctr
 .size tphdAlwaysFairyRevivalHook, .-tphdAlwaysFairyRevivalHook
+
+.global tphdEasySumoHook
+.type tphdEasySumoHook, @function
+tphdEasySumoHook:
+    # Runs at daNpcWrestler_c::sumouAI's common epilogue while r31 still holds
+    # the wrestler. Action 4 is the game's native wait/open response; forcing
+    # that selected response makes Link's normal offensive actions win their
+    # exchange without bypassing movement, ring-out, or match events.
+    lis 12, g_tphdEasySumoEnabled@ha
+    lbz 12, g_tphdEasySumoEnabled@l(12)
+    cmpwi 12, 0
+    beq .Leasy_sumo_native
+    li 0, 4
+    stw 0, 0xE74(31)
+.Leasy_sumo_native:
+    # Replaced native epilogue instruction.
+    lwz 31, 0xC(1)
+    blr
+.size tphdEasySumoHook, .-tphdEasySumoHook

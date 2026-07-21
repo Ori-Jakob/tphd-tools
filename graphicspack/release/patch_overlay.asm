@@ -34,6 +34,13 @@
 [TPHDv81]
 moduleMatches = 0x1A03E108, 0xA3175EEA
 
+; -------------------------- Zelda.rpx symbols -------------------------------
+0x102816d8 = _g_abTvColorBuffer:
+0x10281820 = _g_abDrcColorBuffer:
+0x02bde770 = _Gfx_PresentFrameAndSwap:
+0x02ac1108 = _dScnPly_phase_1:
+0x02ac3f68 = _dScnRoom_zone_create_phase:
+
 .origin = codecave
 
 ; ------------------------------- data ---------------------------------------
@@ -102,16 +109,16 @@ ovl_call_entry:
     beq   ovl_after_load              ; export not resolved -> skip draw
     mtctr r3                          ; CTR = TPHDToolsEntry (capture before reusing r3)
     li    r3, 0                       ; reason = PRESENT
-    lis   r4, 0x1028                  ; r4 = &g_abTvColorBuffer  (0x102816d8)
-    ori   r4, r4, 0x16d8
-    lis   r5, 0x1028                  ; r5 = &g_abDrcColorBuffer (0x10281820)
-    ori   r5, r5, 0x1820
+    lis   r4, _g_abTvColorBuffer@ha
+    addi  r4, r4, _g_abTvColorBuffer@l
+    lis   r5, _g_abDrcColorBuffer@ha
+    addi  r5, r5, _g_abDrcColorBuffer@l
     bctrl                             ; loaded RPL export = real PPC -> bctrl ok
 
 ovl_after_load:
-    ; original present: Gfx_PresentFrameAndSwap @ 0x02bde770 (real PPC -> bctrl ok)
-    lis   r0, 0x02bd
-    ori   r0, r0, 0xe770
+    ; original present is real PPC, so an indirect bctrl is safe
+    lis   r0, _Gfx_PresentFrameAndSwap@hi
+    ori   r0, r0, _Gfx_PresentFrameAndSwap@l
     mtctr r0
     bctrl
 
@@ -252,8 +259,8 @@ scene_phase1_hook:
 
 scene_phase1_real:
     lwz   r3, 0x30(r1)
-    lis   r12, 0x02ac
-    ori   r12, r12, 0x1108         ; dScnPly::phase_1
+    lis   r12, _dScnPly_phase_1@ha
+    addi  r12, r12, _dScnPly_phase_1@l
     mtctr r12
     bctrl
 
@@ -284,8 +291,8 @@ room_zone_phase_hook:
 
 room_zone_phase_real:
     lwz   r3, 0x30(r1)
-    lis   r12, 0x02ac
-    ori   r12, r12, 0x3f68         ; original room zone-create phase
+    lis   r12, _dScnRoom_zone_create_phase@ha
+    addi  r12, r12, _dScnRoom_zone_create_phase@l
     mtctr r12
     bctrl
     stw   r3, 0x2c(r1)             ; preserve original phase result

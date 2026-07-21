@@ -30,6 +30,7 @@ volatile uint8_t g_tphdRemoteBombsEnabled = 0;
 volatile uint8_t g_tphdUnrestrictedBombsEnabled = 0;
 volatile uint8_t g_tphdUnrestrictedItemsEnabled = 0;
 volatile uint8_t g_tphdFastIronBootsEnabled = 0;
+volatile uint8_t g_tphdAlwaysGreatSpinMode = 0;
 float g_tphdFastIronBootsMultiplier = 1.0f;
 
 void tphdSuperClawshotFailureHook();
@@ -41,6 +42,8 @@ void tphdUnrestrictedSwordHook();
 void tphdFastIronBootsAnimeHook();
 void tphdFastIronBootsStoreF13Hook();
 void tphdFastIronBootsStoreF30Hook();
+void tphdAlwaysGreatSpinSkillHook();
+void tphdAlwaysGreatSpinHealthHook();
 }
 
 namespace Cheats {
@@ -59,6 +62,8 @@ enum ConfigItem {
     CONFIG_REMOTE_BOMBS,
     CONFIG_UNRESTRICTED_BOMBS,
     CONFIG_FAST_IRON_BOOTS,
+    CONFIG_ALWAYS_GREAT_SPIN,
+    CONFIG_GREAT_SPIN_NO_SKILL,
     CONFIG_COUNT,
 };
 
@@ -70,6 +75,8 @@ static const char* const kConfigNames[CONFIG_COUNT] = {
     "Remote Bombs",
     "No Bomb Limit",
     "Fast Iron Boots",
+    "Always Great Spin Attack",
+    "Always Great Spin: Skill Not Required",
 };
 
 static bool s_config[CONFIG_COUNT] = {};
@@ -83,6 +90,7 @@ static PatchOwner s_unrestrictedItemsPatch = {};
 static PatchOwner s_unrestrictedSwordPatch = {};
 static PatchOwner s_fastIronBootsAnimePatch = {};
 static PatchOwner s_fastIronBootsSpeedPatch = {};
+static PatchOwner s_alwaysGreatSpinPatch = {};
 
 // These are deliberately RPL/WPS-owned values. Permanently redirected native
 // load sites read them directly, avoiding TPHD's heavily deduplicated constant
@@ -241,6 +249,34 @@ static bool buildFastIronBootsSpeedPatch(PatchWord* words, int* count)
     return true;
 }
 
+static bool buildAlwaysGreatSpinPatch(PatchWord* words, int* count)
+{
+    uint32_t skillHook = 0;
+    uint32_t healthHook = 0;
+    if (!CodePatch::MakeHookJump(
+            "Always Great Spin skill", s_alwaysGreatSpinPatch,
+            0x0203AC14u, (const void*)tphdAlwaysGreatSpinSkillHook,
+            &skillHook) ||
+        !CodePatch::MakeHookJump(
+            "Always Great Spin health", s_alwaysGreatSpinPatch,
+            0x0203AC24u, (const void*)tphdAlwaysGreatSpinHealthHook,
+            &healthHook))
+        return false;
+
+    // checkCutLargeTurnState first tests the seventh hidden skill (or the
+    // training flag), then compares current and maximum health. These jump
+    // hooks preserve the native branches when disabled and selectively bypass
+    // those two requirements according to g_tphdAlwaysGreatSpinMode.
+    const PatchWord built[] = {
+        { 0x0203AC14u, 0x41820014u, skillHook },
+        { 0x0203AC24u, 0x41820020u, healthHook },
+    };
+    *count = (int)(sizeof(built) / sizeof(built[0]));
+    for (int i = 0; i < *count; ++i)
+        words[i] = built[i];
+    return true;
+}
+
 static void installPermanentHooks()
 {
     PatchWord clawshot[21];
@@ -312,6 +348,12 @@ static void installPermanentHooks()
         CodePatch::Apply("Fast Iron Boots speed hook",
                          s_fastIronBootsSpeedPatch, fastBootsSpeed,
                          fastBootsSpeedCount);
+
+    PatchWord greatSpin[2];
+    int greatSpinCount = 0;
+    if (buildAlwaysGreatSpinPatch(greatSpin, &greatSpinCount))
+        CodePatch::Apply("Always Great Spin hook", s_alwaysGreatSpinPatch,
+                         greatSpin, greatSpinCount);
 }
 
 static void removePermanentHooks()
@@ -380,6 +422,12 @@ static void removePermanentHooks()
         CodePatch::Remove("Fast Iron Boots speed hook",
                           s_fastIronBootsSpeedPatch, fastBootsSpeed,
                           fastBootsSpeedCount);
+
+    PatchWord greatSpin[2];
+    int greatSpinCount = 0;
+    if (buildAlwaysGreatSpinPatch(greatSpin, &greatSpinCount))
+        CodePatch::Remove("Always Great Spin hook", s_alwaysGreatSpinPatch,
+                          greatSpin, greatSpinCount);
 }
 
 static bool setByteMode(volatile uint8_t* value, bool on)
@@ -389,6 +437,19 @@ static bool setByteMode(volatile uint8_t* value, bool on)
         return false;
     *value = next;
     DCFlushRange((void*)value, sizeof(*value));
+    OSMemoryBarrier();
+    return true;
+}
+
+static bool setGreatSpinMode(uint8_t mode)
+{
+    if (mode > 2)
+        mode = 0;
+    if (g_tphdAlwaysGreatSpinMode == mode)
+        return false;
+    g_tphdAlwaysGreatSpinMode = mode;
+    DCFlushRange((void*)&g_tphdAlwaysGreatSpinMode,
+                 sizeof(g_tphdAlwaysGreatSpinMode));
     OSMemoryBarrier();
     return true;
 }
@@ -523,6 +584,32 @@ void DrawMenu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Use normal movement speed and animations while heavy");
 
+    ImGui::SeparatorText("Sword");
+    changed |= ImGui::Checkbox(
+        kConfigNames[CONFIG_ALWAYS_GREAT_SPIN],
+        &s_config[CONFIG_ALWAYS_GREAT_SPIN]);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Use the Great Spin attack without requiring full health");
+
+    int greatSpinRequirement =
+        s_config[CONFIG_GREAT_SPIN_NO_SKILL] ? 1 : 0;
+    const char* greatSpinRequirements[] = {
+        "Skill Required", "Skill Not Required"
+    };
+    ImGui::BeginDisabled(!s_config[CONFIG_ALWAYS_GREAT_SPIN]);
+    ImGui::SetNextItemWidth(170.0f);
+    if (ImGui::Combo("Great Spin Requirement", &greatSpinRequirement,
+                     greatSpinRequirements,
+                     (int)(sizeof(greatSpinRequirements) /
+                           sizeof(greatSpinRequirements[0])))) {
+        s_config[CONFIG_GREAT_SPIN_NO_SKILL] =
+            greatSpinRequirement == 1;
+        changed = true;
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("Choose whether the seventh hidden skill must be obtained");
+
     ImGui::SeparatorText("Reset");
     if (ImGui::Button("Restore All Defaults")) {
         for (int i = 0; i < CONFIG_COUNT; ++i)
@@ -565,6 +652,12 @@ void Tick()
         Logger::Log("[tphd_tools][equipment] Fast Iron Boots mode %s",
                     s_config[CONFIG_FAST_IRON_BOOTS] ? "enabled" :
                                                      "disabled");
+    const uint8_t greatSpinMode =
+        !s_config[CONFIG_ALWAYS_GREAT_SPIN] ? 0 :
+        s_config[CONFIG_GREAT_SPIN_NO_SKILL] ? 2 : 1;
+    if (setGreatSpinMode(greatSpinMode))
+        Logger::Log("[tphd_tools][equipment] Always Great Spin mode=%u",
+                    (unsigned)greatSpinMode);
     tickRemoteBombs(s_config[CONFIG_REMOTE_BOMBS]);
 }
 
@@ -582,6 +675,7 @@ void OnApplicationStart()
     s_unrestrictedSwordPatch = {};
     s_fastIronBootsAnimePatch = {};
     s_fastIronBootsSpeedPatch = {};
+    s_alwaysGreatSpinPatch = {};
     setSuperClawshotMode(s_config[CONFIG_SUPER_CLAWSHOT]);
     setByteMode(&g_tphdInfiniteSpinnerTimeEnabled,
                 s_config[CONFIG_INFINITE_SPINNER_TIME]);
@@ -592,6 +686,9 @@ void OnApplicationStart()
                 s_config[CONFIG_UNRESTRICTED_BOMBS]);
     setByteMode(&g_tphdFastIronBootsEnabled,
                 s_config[CONFIG_FAST_IRON_BOOTS]);
+    setGreatSpinMode(
+        !s_config[CONFIG_ALWAYS_GREAT_SPIN] ? 0 :
+        s_config[CONFIG_GREAT_SPIN_NO_SKILL] ? 2 : 1);
     installPermanentHooks();
 }
 
@@ -604,6 +701,7 @@ void OnApplicationEnd()
     setByteMode(&g_tphdUnrestrictedBombsEnabled, false);
     setByteMode(&g_tphdUnrestrictedItemsEnabled, false);
     setByteMode(&g_tphdFastIronBootsEnabled, false);
+    setGreatSpinMode(0);
     removePermanentHooks();
 }
 

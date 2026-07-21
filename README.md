@@ -182,6 +182,8 @@ shared build inputs. The displayed/logged version always includes `DEBUG` or
 `--experimental` to opt into the experimental feature set, and combine it with
 `-d` or `--debug` when needed. The script installs the selected experimental
 artifact under the normal module filename expected by the Cemu graphics pack.
+Pass `-ni` or `--no-install` to build without copying the RPL or graphics-pack
+files to the configured Cemu directories.
 
 ## Install on Cemu
 

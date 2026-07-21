@@ -6,6 +6,7 @@
 // 1.0 multipliers execute the original calculations unchanged.
 
 #include "cheats/qol.h"
+#include "cheats/world_editor.h"
 
 #include <coreinit/cache.h>
 
@@ -290,6 +291,7 @@ void DrawMenu()
         ImGui::SetTooltip("Scale front/side roll animation rate and movement velocity");
 
     ImGui::SeparatorText("World & Time");
+    WorldEditor::DrawMenuItem();
 
     float time = *kSavedTime;
     if (time < 0.0f || time >= 360.0f)
