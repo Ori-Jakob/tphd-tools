@@ -51,6 +51,13 @@ enum { TAB_DEBUG = 0, TAB_QA, TAB_CS, TAB_PERSONAL };
 static const uint32_t kPersonalSaveFileSize = 0x0E00u;
 static_assert((kPersonalSaveFileSize & 0x3Fu) == 0,
               "Personal save file buffer must remain 0x40-aligned in size");
+// Read capacity: one byte more than the largest valid file, rounded up to FS
+// DMA granularity. fread caps at the passed size, so reading exactly 0xE00
+// would make ANY larger (i.e. not-a-save) file look like a perfect 0xE00
+// image; reading 0xE01 makes oversize detectable and rejectable.
+static const uint32_t kPersonalSaveReadCapacity = 0x0E40u;
+static_assert(kPersonalSaveReadCapacity > kPersonalSaveFileSize,
+              "Read capacity must exceed the largest valid file to detect oversize");
 
 struct TabDef {
     const char* title;
@@ -200,17 +207,20 @@ static int worker(int argc, const char** argv)
             uint32_t bytesRead = 0;
             TPHD_BREADCRUMB(
                 "[tphd_tools][personal] worker read begin: name='%s' capacity=0x%X",
-                job->name, (unsigned)kPersonalSaveFileSize);
-            job->image = (uint8_t*)memalign(0x40, kPersonalSaveFileSize);
+                job->name, (unsigned)kPersonalSaveReadCapacity);
+            job->image = (uint8_t*)memalign(0x40, kPersonalSaveReadCapacity);
             if (job->image)
-                memset(job->image, 0, kPersonalSaveFileSize);
+                memset(job->image, 0, kPersonalSaveReadCapacity);
             TPHD_BREADCRUMB(
                 "[tphd_tools][personal] worker buffer: ptr=%p aligned40=%d",
                 (void*)job->image,
                 job->image && (((uintptr_t)job->image & 0x3Fu) == 0));
+            // Read one byte past the largest valid size: an oversized file
+            // then yields bytesRead 0xE01 and fails the size gate below
+            // instead of masquerading as a perfectly sized save image.
             Storage::ReadResult result = job->image
-                ? Storage::LoadGameSave(job->name, job->image, kPersonalSaveFileSize,
-                                        &bytesRead)
+                ? Storage::LoadGameSave(job->name, job->image,
+                                        kPersonalSaveFileSize + 1u, &bytesRead)
                 : Storage::READ_ERROR;
             bool supportedSize = bytesRead == GAME_DSV_SERIALIZED_SIZE ||
                                  bytesRead == kPersonalSaveFileSize;
@@ -402,6 +412,48 @@ static void requestPersonalLoad(const char* name)
     snprintf(s_status, sizeof(s_status), "Reading %.63s ...", name);
 }
 
+// Aroma relaunch support. The scan/load worker thread belonged to the game
+// process that just ended; only these plugin statics survived. Drop the thread
+// flag so the next request starts a fresh worker in the new process, free
+// anything the dead worker left in the mailboxes (plugin-heap allocations, so
+// still valid), and clear the busy latches -- otherwise a scan or personal
+// load in flight at exit wedges the loader until a console reboot. No thread
+// can race this: the old worker died with its process, the new one doesn't
+// exist yet. Never touches game memory.
+void OnApplicationStart()
+{
+    if (s_threadStarted) {
+        OSMessage msg;
+        while (OSReceiveMessage(&s_jobQueue, &msg, OS_MESSAGE_FLAGS_NONE)) {
+            WorkerMessage* m = (WorkerMessage*)msg.message;
+            if (m) {
+                free(m->files);
+                free(m->image);
+                free(m);
+            }
+        }
+        while (OSReceiveMessage(&s_resultQueue, &msg, OS_MESSAGE_FLAGS_NONE)) {
+            WorkerMessage* m = (WorkerMessage*)msg.message;
+            if (m) {
+                free(m->files);
+                free(m->image);
+                free(m);
+            }
+        }
+    }
+    s_threadStarted = false;
+    s_pendingTab = -1;
+    s_personalBusy = false;
+    s_pendingName[0] = '\0';
+    // The display list may describe the previous session's storage; force the
+    // active tab to rescan on first draw.
+    s_displayTab = -1;
+    free(s_files);
+    s_files = nullptr;
+    s_fileCount = 0;
+    s_status[0] = '\0';
+}
+
 // ---- per-frame tick (present thread) ----------------------------------------
 void Tick()
 {
@@ -553,10 +605,21 @@ static void drawTab(int tab)
                 if (kTabs[tab].personal) {
                     requestPersonalLoad(s_files[i].stem);
                 } else if (!s_personalBusy) {
-                    snprintf(s_pendingName, sizeof(s_pendingName), "%.31s%.63s",
-                             kTabs[tab].prefix, s_files[i].stem);
-                    snprintf(s_status, sizeof(s_status), "Loading %.63s ...",
-                             s_files[i].stem);
+                    // The engine stores this name in a fixed char[0x20] with
+                    // strncpy semantics -- 32+ chars leave it UNTERMINATED and
+                    // the debug-load scene sprintf's the path from it. Never
+                    // pass a name that doesn't fit; a truncated name would
+                    // also silently load a different file.
+                    if (strlen(kTabs[tab].prefix) + strlen(s_files[i].stem) > 31) {
+                        snprintf(s_status, sizeof(s_status),
+                                 "Name too long for the game's loader: %.48s",
+                                 s_files[i].stem);
+                    } else {
+                        snprintf(s_pendingName, sizeof(s_pendingName), "%.31s%.63s",
+                                 kTabs[tab].prefix, s_files[i].stem);
+                        snprintf(s_status, sizeof(s_status), "Loading %.63s ...",
+                                 s_files[i].stem);
+                    }
                 }
             }
             ImGui::SameLine();

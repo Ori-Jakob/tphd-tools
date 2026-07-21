@@ -14,7 +14,7 @@
 namespace Tools {
 namespace SaveState {
 
-// Checkbox shown in the Tools menu (toggles the window).
+// Checkbox shown in Practice > Save & Restore (toggles the window).
 void DrawMenuItem();
 void Initialize();
 
@@ -37,6 +37,29 @@ void DrawWindow(bool menuActive);
 // stage has loaded.
 void Tick();
 
+// Aroma: called at ON_APPLICATION_START. The previous game process took the
+// worker thread and any in-flight load with it; this drops that stale state so
+// nothing from the last session (a pending warp, a handed-off snapshot, a
+// wedged busy flag) can leak into the new one. Cemu front ends load the module
+// fresh per boot and don't need it.
+void OnApplicationStart();
+
+// Called immediately before Zelda.rpx dScnPly::phase_1. This is the exact
+// old-scene-gone/new-scene-not-started boundary used to install a pending save
+// block safely. Front ends own the platform-specific hook and call this shared
+// handler; calls made without a pending load are harmless.
+void OnScenePhase1();
+
+// Called immediately before the room phase parses room.dzr. The game's map
+// event gate reads mMemory/mDan while those room actors initialize/order their
+// events, so the saved stage records must already be live at this boundary.
+void OnRoomCreateBegin(void* roomScene);
+
+// Called immediately after that room phase allocates the room's transient
+// dSv_zone_c. Zone slots do not exist at the pre-parse boundary, so their
+// room-matched flags are merged here separately.
+void OnRoomZoneReady(void* roomScene);
+
 // Reload `stage` (room/spawn/layer) rebuilding the runtime from the CURRENT
 // in-memory save block. If `pos` is non-null Link is forced there (facing
 // `angle`) once the reload settles; otherwise the stage's spawn point places
@@ -44,6 +67,21 @@ void Tick();
 // block. Drives the same warp + re-stamp sequence as a save-state load via Tick().
 void BeginInPlaceReload(const char* stage, s8 room, s16 spawn, s8 layer,
                         const cXyz* pos, s16 angle);
+
+// Queue a deterministic practice reload from a caller-prepared full dSv_info_c
+// image. The image is copied immediately and remains isolated from the outgoing
+// scene. `sceneSetup`, when non-null, runs once at the phase_1 barrier after the
+// save image is installed but before the target stage begins creating actors.
+// This is the right boundary for native encounter-entry state such as the
+// game's own demo-skip byte; callers must not spawn actors from the callback.
+// When `pos`, `camAt`, and `camEye` are all supplied, Link and the camera are
+// held at that captured practice view while the target room settles.
+typedef void (*PracticeSceneSetupFn)();
+bool BeginPracticeLoad(const char* sourceName, const void* infoImage,
+                       uint32_t size, const char* stage, s8 room, s16 spawn,
+                       s8 layer, const cXyz* pos, s16 angle,
+                       const cXyz* camAt, const cXyz* camEye,
+                       PracticeSceneSetupFn sceneSetup);
 
 // Load a raw GAME_DSV_SERIALIZED_SIZE-byte game/debug save image from external
 // storage. The image is copied immediately; deserialization happens during the

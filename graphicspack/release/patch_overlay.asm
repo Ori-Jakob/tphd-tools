@@ -8,13 +8,21 @@
 ;
 ;   reason 0 (PRESENT): a = &g_abTvColorBuffer, b = &g_abDrcColorBuffer
 ;   reason 1 (VPAD):    a = VPADStatus* buffers, b = sample count
+;   reason 2 (KPAD):    a = KPADStatus* buffers, b = sample count
 ;   reason 3 (DRC):     a = GX2ColorBuffer* at the DRC scan-out copy
+;   reason 4 (PHASE_1): a = dScnPly* immediately before dScnPly::phase_1
+;   reason 5 (ROOM_PRE):  a = dScnRoom* before room.dzr is parsed
+;   reason 6 (ROOM_POST): a = dScnRoom* after its dSv_zone_c is allocated
 ;
 ; Hook sites:
 ;   0x02af0f94  bl Gfx_PresentFrameAndSwap  -> draw ImGui, then chain present
 ;   0x02bde82c  bl GX2CopyColorBufferToScanBuffer -> draw DRC immediately
 ;               before scan-out, after the game has finished the buffer
 ;   0x02bfae38  bl VPADRead                 -> real read, then filter game input
+;   0x10129b28  dScnPly phase table slot    -> inject pending save-state data
+;                                               at the exact phase_1 boundary
+;   0x10129bd8  dScnRoom phase table slot   -> restore saved stage flags before
+;                                               room.dzr can order its events
 ;
 ; One-time on the first present: OSDynLoad_Acquire("tphd_tools") + one FindExport
 ; to resolve TPHDToolsEntry. Both hooks then call the resolved address.
@@ -25,6 +33,13 @@
 
 [TPHDv81]
 moduleMatches = 0x1A03E108, 0xA3175EEA
+
+; -------------------------- Zelda.rpx symbols -------------------------------
+0x102816d8 = _g_abTvColorBuffer:
+0x10281820 = _g_abDrcColorBuffer:
+0x02bde770 = _Gfx_PresentFrameAndSwap:
+0x02ac1108 = _dScnPly_phase_1:
+0x02ac3f68 = _dScnRoom_zone_create_phase:
 
 .origin = codecave
 
@@ -94,16 +109,16 @@ ovl_call_entry:
     beq   ovl_after_load              ; export not resolved -> skip draw
     mtctr r3                          ; CTR = TPHDToolsEntry (capture before reusing r3)
     li    r3, 0                       ; reason = PRESENT
-    lis   r4, 0x1028                  ; r4 = &g_abTvColorBuffer  (0x102816d8)
-    ori   r4, r4, 0x16d8
-    lis   r5, 0x1028                  ; r5 = &g_abDrcColorBuffer (0x10281820)
-    ori   r5, r5, 0x1820
+    lis   r4, _g_abTvColorBuffer@ha
+    addi  r4, r4, _g_abTvColorBuffer@l
+    lis   r5, _g_abDrcColorBuffer@ha
+    addi  r5, r5, _g_abDrcColorBuffer@l
     bctrl                             ; loaded RPL export = real PPC -> bctrl ok
 
 ovl_after_load:
-    ; original present: Gfx_PresentFrameAndSwap @ 0x02bde770 (real PPC -> bctrl ok)
-    lis   r0, 0x02bd
-    ori   r0, r0, 0xe770
+    ; original present is real PPC, so an indirect bctrl is safe
+    lis   r0, _Gfx_PresentFrameAndSwap@hi
+    ori   r0, r0, _Gfx_PresentFrameAndSwap@l
     mtctr r0
     bctrl
 
@@ -220,9 +235,90 @@ kpad_read_done:
     addi  r1, r1, 0x20
     blr
 
+; ------------------------ dScnPly::phase_1 hook -----------------------------
+; Ghidra identifies FUN_02ac1108 as dScnPly::phase_1; its phase-table entry at
+; 0x10129b28 is the function's only data xref. Routing the table slot here gives
+; the loader the exact old-scene-gone/new-scene-not-started boundary. Call the
+; RPL first, then chain Nintendo's original phase function and preserve its
+; return value.
+scene_phase1_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)             ; above the callee parameter-save area
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   scene_phase1_real
+    mtctr r9
+    li    r3, 4                    ; reason = PHASE_1
+    lwz   r4, 0x30(r1)             ; a = dScnPly*
+    li    r5, 0
+    bctrl
+
+scene_phase1_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, _dScnPly_phase_1@ha
+    addi  r12, r12, _dScnPly_phase_1@l
+    mtctr r12
+    bctrl
+
+    lwz   r0, 0x34(r1)             ; leave original return value in r3
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
+; --------------------- dScnRoom zone-create phase hook ---------------------
+; FUN_02ac3f68 allocates the room's dSv_zone_c, stores its slot in room
+; control, and parses room.dzr. Restore mMemory/mDan before entering it -- the
+; same timing as a normal getSave load -- then merge the new zone after it.
+room_zone_phase_hook:
+    stwu  r1, -0x40(r1)
+    mflr  r0
+    stw   r0, 0x34(r1)
+    stw   r3, 0x30(r1)             ; dScnRoom*
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_real
+    mtctr r9
+    li    r3, 5                    ; reason = ROOM_PRE
+    lwz   r4, 0x30(r1)             ; a = dScnRoom*
+    li    r5, 0
+    bctrl
+
+room_zone_phase_real:
+    lwz   r3, 0x30(r1)
+    lis   r12, _dScnRoom_zone_create_phase@ha
+    addi  r12, r12, _dScnRoom_zone_create_phase@l
+    mtctr r12
+    bctrl
+    stw   r3, 0x2c(r1)             ; preserve original phase result
+
+    lis   r9, _ovl_fn@ha
+    lwz   r9, _ovl_fn@l(r9)
+    cmpwi r9, 0
+    beq   room_zone_phase_done
+    mtctr r9
+    li    r3, 6                    ; reason = ROOM_POST
+    lwz   r4, 0x30(r1)             ; a = dScnRoom*
+    li    r5, 0
+    bctrl
+
+room_zone_phase_done:
+    lwz   r3, 0x2c(r1)
+    lwz   r0, 0x34(r1)
+    mtlr  r0
+    addi  r1, r1, 0x40
+    blr
+
 ; ------------------------------- hooks --------------------------------------
 0x02af0f94 = bla overlay_present_hook
 0x02bde82c = bla drc_copy_hook
 0x02bfae38 = bla vpad_read_hook
 0x02bfb94c = bla kpad_read_hook
 0x02bfceac = bla kpad_read_hook
+0x10129b28 = .int scene_phase1_hook
+0x10129bd8 = .int room_zone_phase_hook

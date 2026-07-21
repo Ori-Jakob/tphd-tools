@@ -18,11 +18,17 @@
 #include "input.h"
 #include "logger.h"
 #include "menu.h"
+#include "notifications.h"
 #include "config.h"
 #include "swkbd.h"
 #include "tools/save_state.h"
-#include "tools/flycam.h"
+#include "tools/save_load_coords.h"
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+#include "tools/boss_practice.h"
 #include "tools/auto_splitter.h"
+#endif
+#include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "cheats/cheats.h"
 #include "debug_save.h"
 #include "game/game.h"          // dCam_setFreeze (freeze-on-menu)
@@ -90,12 +96,16 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
     // customized hotkey is in effect before the input is consumed below.
     Config::Load();
     Tools::SaveState::Initialize();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     Tools::AutoSplitter::Initialize();
+#endif
 
     // Consume this frame's stashed controller input, then act on the hotkey.
     Input::BeginFrame();
-    if (Input::GameResetHotkeyFired())
+    if (Input::GameResetHotkeyFired()) {
+        Notifications::Show("Game reset");
         dComIfG_requestGameReset();
+    }
     if (Input::HotkeyToggled())
         Menu::Toggle();
 
@@ -113,11 +123,18 @@ void Present(GX2ColorBuffer* tv, GX2ColorBuffer* gamePad)
         Input::FeedMenu(io, (float)tv->surface.width, (float)tv->surface.height);
 
     // Fly cam runs every frame from the live game controller (independent of the
-    // menu); apply any pending save-state load / Link-position override.
+    // menu); apply any pending save-state load / Link-position override. The
+    // modern camera ticks first so it can yield the same frame the fly cam
+    // activates (it checks FlyCam::IsActive()).
+    Tools::ModernCamera::Tick();
     Tools::FlyCam::Tick();
+    Tools::SaveLoadCoords::Tick();
     Debug::DebugSave::Tick();   // may arm an in-place reload consumed below
     Tools::SaveState::Tick();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    Tools::BossPractice::Tick();
     Tools::AutoSplitter::Tick();
+#endif
     Cheats::Tick();
 
     // Optionally halt the game while the menu is open (the same freeze bit FlyCam
@@ -152,6 +169,24 @@ void PresentGamePad(GX2ColorBuffer* gamePad)
 {
     if (Renderer::IsReady() && s_frameReady)
         drawGamePad(gamePad);
+}
+
+bool WantsGamePadDraw()
+{
+    return Renderer::IsReady() && s_frameReady && drawsGamePad();
+}
+
+void OnApplicationStart()
+{
+    s_frameReady = false;
+    Notifications::Clear();
+    Renderer::ResetDeviceObjects();
+}
+
+void OnApplicationEnd()
+{
+    s_frameReady = false;
+    Renderer::ResetDeviceObjects();
 }
 
 } // namespace Overlay

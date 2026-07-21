@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#include <coreinit/debug.h>     // OSReport (storage failures precede the file log)
+
 namespace Storage {
 
 // SD-card root for paths. WUPS_USE_WUT_DEVOPTAB() (see aroma/plugin.cpp) installs
@@ -58,7 +60,18 @@ static bool makeOneDir(const char* path)
 {
     if (dirExists(path))
         return true;
-    return mkdir(path, 0777) == 0 || errno == EEXIST;
+    if (mkdir(path, 0777) == 0 || errno == EEXIST)
+        return true;
+
+    // Failures here happen before the file logger can work, so mirror the first
+    // one to OSReport (visible via Aroma's logging module) for field debugging.
+    static bool reported = false;
+    if (!reported) {
+        reported = true;
+        OSReport("[tphd_tools][storage] mkdir '%s' failed (errno=%d)\n",
+                 path, errno);
+    }
+    return false;
 }
 
 static bool ensureDir(const char* relativeDir)
@@ -67,8 +80,13 @@ static bool ensureDir(const char* relativeDir)
     if (!makePath(relativeDir, full, sizeof(full)))
         return false;
 
-    char* start = strstr(full, ":/");
-    start = start ? start + 2 : full;
+    // Create only OUR directories: component-walk the part below the SD root.
+    // Never stat/mkdir the mount root's own components -- on real hardware
+    // mkdir("fs:/vol") fails with an error other than EEXIST (unlike Cemu's
+    // host FS), which aborted the walk before tphd_tools was ever created and
+    // silently broke the log/config/save-state storage. The Cemu backend's
+    // makeDirs() skips the mount root for the same reason.
+    char* start = full + strlen(kSdRoot);
     while (*start == '/')
         ++start;
 
@@ -309,8 +327,15 @@ bool PrepareLog()
     rename(logPath, oldPath);
 
     FILE* f = fopen(logPath, "wb");
-    if (!f)
+    if (!f) {
+        static bool reported = false;
+        if (!reported) {
+            reported = true;
+            OSReport("[tphd_tools][storage] create '%s' failed (errno=%d)\n",
+                     logPath, errno);
+        }
         return false;
+    }
     fclose(f);
     return true;
 }

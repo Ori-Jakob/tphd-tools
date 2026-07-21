@@ -1,10 +1,11 @@
-// inventory_editor.cpp -- see inventory_editor.h.
+// inventory_editor.cpp -- inventory and world-state editor windows.
 //
 // A live save editor (modeled on dusklight's ImGuiSaveEditor) scoped to the
 // inventory + player status. All edits poke the persistent save block info @
 // 0x10145348 via the typed views in game/d_inventory.h. Item-wheel changes go
 // through the game's setItem so the lineup + equipped slots refresh.
 #include "cheats/inventory_editor.h"
+#include "cheats/world_editor.h"
 
 #include "imgui.h"
 #include "game/game.h"
@@ -19,10 +20,9 @@ namespace InventoryEditor {
 
 static bool s_open = false;
 
-void DrawMenuButton()
+void DrawMenuItem()
 {
-    if (ImGui::Button("Inventory Editor..."))
-        s_open = true;
+    ImGui::Checkbox("Inventory Editor", &s_open);
 }
 bool IsOpen()         { return s_open; }
 void SetOpen(bool o)  { s_open = o; }
@@ -384,6 +384,19 @@ static void drawCollectionTab()
     }
 }
 
+} // namespace InventoryEditor
+
+namespace WorldEditor {
+
+static bool s_open = false;
+
+void DrawMenuItem()
+{
+    ImGui::Checkbox("World Editor", &s_open);
+}
+bool IsOpen()         { return s_open; }
+void SetOpen(bool o)  { s_open = o; }
+
 // ---- events tab -------------------------------------------------------------
 // Case-insensitive "haystack contains needle".
 static bool ciContains(const char* hay, const char* needle)
@@ -705,7 +718,36 @@ static void drawWarpsTab()
     }
 }
 
-// ---- window -----------------------------------------------------------------
+// ---- world editor window ----------------------------------------------------
+void DrawWindow(bool menuActive)
+{
+    if (!s_open)
+        return;
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing;
+    if (!menuActive)
+        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav;
+
+    ImGui::SetNextWindowPos(ImVec2(580.0f, 100.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(660.0f, 560.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("World Editor", &s_open, flags)) {
+        if (!dComIfGp_getPlayer()) {
+            ImGui::TextDisabled("Load a game save first.");
+        } else if (ImGui::BeginTabBar("##worldeditor")) {
+            if (ImGui::BeginTabItem("Event Flags")) { drawEventsTab(); ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Dungeon / Area Flags")) { drawAreaTab(); ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Warp Portals")) { drawWarpsTab(); ImGui::EndTabItem(); }
+            ImGui::EndTabBar();
+        }
+    }
+    ImGui::End();
+}
+
+} // namespace WorldEditor
+
+namespace InventoryEditor {
+
+// ---- inventory editor window ------------------------------------------------
 void DrawWindow(bool menuActive)
 {
     if (!s_open)
@@ -721,15 +763,12 @@ void DrawWindow(bool menuActive)
         if (!dComIfGp_getPlayer()) {
             ImGui::TextDisabled("Load a game save first.");
         } else if (ImGui::BeginTabBar("##inveditor")) {
-            if (ImGui::BeginTabItem("Status"))     { drawStatusTab();     ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Player"))     { drawStatusTab();     ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Items"))      { drawItemsTab();      ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Amounts"))    { drawAmountsTab();    ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Equipment"))  { drawEquipmentTab();  ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Collection")) { drawCollectionTab(); ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Area"))       { drawAreaTab();       ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Warps"))      { drawWarpsTab();      ImGui::EndTabItem(); }
-            if (ImGui::BeginTabItem("Events"))     { drawEventsTab();     ImGui::EndTabItem(); }
             if (ImGui::BeginTabItem("Obtained Items"))  { drawGotItemsTab();   ImGui::EndTabItem(); }
+            if (ImGui::BeginTabItem("Collection")) { drawCollectionTab(); ImGui::EndTabItem(); }
             ImGui::EndTabBar();
         }
     }

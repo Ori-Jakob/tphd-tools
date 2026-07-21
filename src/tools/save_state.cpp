@@ -6,10 +6,10 @@
 // build-specific Storage backend. The info block is the live store for hearts,
 // rupees, items, events and area flags, so snapshotting it captures full game
 // state.
-// Loading restores the block, does a full save-load warp to the stage (which
-// rebuilds the runtime from the block), re-stamps the block once the reload has
-// settled (the transition can clobber it mid-flight -- mirrors dusklight's
-// tickPendingApply), then forces Link to the saved position and refills air.
+// Loading restores the durable save/runtime chunks, does a full save-load warp to
+// the stage (which rebuilds volatile scene state), re-stamps those durable chunks
+// once the reload has settled, then forces Link to the saved position and refills
+// air.
 // File I/O runs on a background thread; the restore/warp is applied on the
 // present thread via Tick().
 #include "tools/save_state.h"
@@ -17,6 +17,8 @@
 #include "imgui.h"
 #include "overlay.h"            // ov::g_settings.controllerPref
 #include "input.h"
+#include "notifications.h"
+#include "ui_hotkey.h"
 #include "game/game.h"
 #include "storage.h"
 #include "logger.h"
@@ -30,6 +32,7 @@
 #include <math.h>
 #include <malloc.h>     // memalign -- FS read/write buffers need 0x40 alignment
 
+#include <coreinit/cache.h>     // OSMemoryBarrier -- worker->present handoff
 #include <coreinit/debug.h>
 #include <coreinit/thread.h>
 #include <coreinit/messagequeue.h>
@@ -169,6 +172,19 @@ static const uint32_t kDeleteRecordSize =
     sizeof(CommandRecordHeader) + sizeof(DeleteActorsPayload);
 static const uint32_t kAreaFlagRecordSize =
     sizeof(CommandRecordHeader) + sizeof(SetAreaFlagPayload);
+
+// Clamp image fields the game's deserializer trusts blindly. FUN_02aa8af8 uses
+// the saved camera-config byte as an unclamped index into a 4-entry table on
+// its own stack frame, so a corrupt image would make the ENGINE read
+// out-of-bounds memory during the load. Applied to every external image before
+// it can reach dSave_loadImage.
+static void sanitizeSaveImageForEngine(uint8_t* image)
+{
+    if (!image)
+        return;
+    if (image[DSV_IMAGE_CAMERA_CONFIG_OFF] > DSV_IMAGE_CAMERA_CONFIG_MAX)
+        image[DSV_IMAGE_CAMERA_CONFIG_OFF] = DSV_IMAGE_CAMERA_CONFIG_MAX;
+}
 
 // ---- background worker (save write / load read / delete) --------------------
 enum { OP_SAVE = 0, OP_LOAD = 1, OP_DELETE = 2, OP_EDIT_LOAD = 3 };
@@ -503,6 +519,9 @@ static char           s_readyLoadName[64] = {};
 static bool           s_applyPosNext = true;     // override Link's pos on this load?
 static bool           s_pendingSerialized = false; // pendingInfo starts as a 0xDF8 image
 static bool           s_normalSaveResume = false; // use file-select transition semantics
+static bool           s_practiceLoad = false;     // caller-prepared deterministic encounter image
+static PracticeSceneSetupFn s_practiceSceneSetup = nullptr;
+static char           s_practiceSource[64] = {};
 static StateCommand   s_loadCommands[kMaxCommands] = {};
 static uint32_t       s_loadCommandCount = 0;
 
@@ -513,12 +532,12 @@ static volatile bool   s_editBusy = false;
 
 // Pending restore/override applied on the present thread once the warp loads.
 //
-// Phases: TEARDOWN waits for the old scene to drop Link (pMPlayer0 null) and
-// injects the saved block then -- after the old scene cleaned up with its own
-// data, before the new scene builds (tpgz's phase_1-inject timing) -> WAIT for the
-// new Link, then immediately re-stamp + apply the saved position -> APPLY pins the
-// position (and camera) until Link's collision reports ground, so he doesn't fall
-// through a floor still streaming in. Room + velocity are corrected on the teleport.
+// Phases: TEARDOWN waits for the exact dScnPly::phase_1 hook, which injects the
+// saved block after the old scene cleaned up with its own data and before the new
+// scene starts reading it -> WAIT for the new Link, then immediately re-stamp +
+// apply the saved position -> APPLY pins the position (and camera) until Link's
+// collision reports ground, so he doesn't fall through a floor still streaming
+// in. Room + velocity are corrected on the teleport.
 enum { OV_IDLE = 0, OV_TEARDOWN, OV_WAIT, OV_APPLY };
 static int          s_ovPhase = OV_IDLE;
 static int          s_ovWait  = 0;
@@ -541,6 +560,8 @@ static int          s_ovReadyFrames = 0;       // consecutive target-stage-ready
 static bool         s_ovApplyPos   = true;      // force Link to s_ovPos once settled?
 static bool         s_ovNeedsRuntimePrep = false; // load requested before gameplay HUD/items exist
 static bool         s_ovCommandsStarted = false;
+static bool         s_ovEarlyStageFlagsRestored = false;
+static uint32_t     s_ovEarlyZoneRoomMask[2] = {};
 
 // Commands continue after the load-position settle phase has completed.
 static StateCommand s_execCommands[kMaxCommands] = {};
@@ -549,8 +570,7 @@ static uint32_t     s_execCommandIndex = 0;
 static uint32_t     s_execFrame = 0;
 static char         s_execStage[8] = {};
 
-static const int OV_TEARDOWN_TIMEOUT = 30;   // frames to wait for the old scene to drop Link
-static const int OV_PERSONAL_TEARDOWN_TIMEOUT = 300; // never force-inject a Personal save
+static const int OV_PHASE1_TIMEOUT = 300; // abort safely if the exact scene hook never arrives
 static const int OV_HOLD_TIMEOUT   = 90;  // max frames (~10s) to wait for the floor to stream in
 static const int OV_GROUND_CONFIRM = 3;    // frames of confirmed ground contact before releasing
 static const int OV_READY_CONFIRM  = 3;    // target stage + Link stable before applying state
@@ -587,6 +607,30 @@ static void copyPrintableFixed(char* out, size_t outSize, const char* src, size_
         out[i] = isprint(c) ? (char)c : '?';
     }
     out[i] = '\0';
+}
+
+static bool stageNameEquals(const char* stage, const char* expected)
+{
+    return stage && expected && strncmp(stage, expected, DSTAGE_NAME_LEN) == 0;
+}
+
+static bool useNativeRestartEntryForSaveState(const char* stage)
+{
+    // Lakebed room-entry save states can crash when entered as "saved room +
+    // saved spawn" because some rooms do not expose that spawn in the selected
+    // PLYR table. Queueing point -1 makes dStage_playerInit use the restart
+    // room/pos tuple instead. Do not apply this globally: field stages such as
+    // F_SP121 use their real spawn point to avoid start/cutscene side effects.
+    return stageNameEquals(stage, "D_MN01");
+}
+
+static bool useSelectiveInfoRestoreForSaveState(const char* stage)
+{
+    // The selective dSv_info restore is a Lakebed-specific safety valve. Other
+    // stages can depend on the captured mZone/event scratch being present when
+    // Link appears inside a trigger volume; Gateclip in F_SP121 is one such
+    // case, where skipping that scratch restarts the cutscene/event on load.
+    return stageNameEquals(stage, "D_MN01");
 }
 
 #ifdef TPHD_TOOLS_DEBUG
@@ -874,6 +918,9 @@ static int worker(int argc, const char** argv)
                 }
                 free(buf);
                 s_editResult = result;
+                // PPC stores are weakly ordered across cores: make the result
+                // fields visible before the ready flag.
+                OSMemoryBarrier();
                 s_editReady = true; // set LAST
             } else {
                 s_editBusy = false;
@@ -893,6 +940,7 @@ static int worker(int argc, const char** argv)
                 uint8_t* info = (uint8_t*)memalign(0x40, kInfoSize);
                 if (info) {
                     memcpy(info, buf + sizeof(StateHeader), kInfoSize);
+                    sanitizeSaveImageForEngine(info);
                     s_loadHeader  = *hdr;
                     s_pendingInfo = info;
                     memcpy(s_loadCommands, commands,
@@ -902,6 +950,11 @@ static int worker(int argc, const char** argv)
                     s_readyLoadFolder[sizeof(s_readyLoadFolder) - 1] = '\0';
                     strncpy(s_readyLoadName, job->name, sizeof(s_readyLoadName) - 1);
                     s_readyLoadName[sizeof(s_readyLoadName) - 1] = '\0';
+                    // PPC stores are weakly ordered across cores: make the
+                    // header/info/command writes above visible before the
+                    // ready flag, or the present thread can consume a
+                    // half-published load.
+                    OSMemoryBarrier();
                     s_loadReady   = true;   // set LAST
                     queued = true;
                     Logger::Log("[tphd_tools] state load queued: %s/%s",
@@ -1034,6 +1087,21 @@ static void requestSave(const char* folder, const char* name)
         hdr->camEye   = cam->eye;
         hdr->camValid = 1;
     }
+    // Commit the live current-stage flags before snapshotting. dSv_info_c keeps
+    // active room state in mMemory and only mirrors it to mSavedata.mSave[] at
+    // explicit save/transition points. tpgz does this same putSave step before
+    // writing a memfile; without it a state captured immediately after a switch
+    // can contain a stale persistent stage record.
+    const int captureStageNo =
+        (int)dSave_getStageNo((const void*)GAME_ADDR_gameInfo_info);
+    const bool stageMemoryCommitted = dSave_commitCurrentStageMemory();
+    (void)captureStageNo;
+    (void)stageMemoryCommitted;
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-save] commit current-stage memory before capture: "
+        "stageNo=%d success=%d",
+        captureStageNo, stageMemoryCommitted);
+
     // Snapshot the whole persistent save block (player status, items, events,
     // area flags, restart -- everything the game serializes on a save).
     uint8_t* infoImage = image + sizeof(StateHeader);
@@ -1094,9 +1162,10 @@ static void requestLoad(const char* folder, const char* name)
     char location[132];
     snprintf(location, sizeof(location), "%s%s%s",
              job->folder[0] ? job->folder : "", job->folder[0] ? "/" : "", name);
-    if (postJob(job))
+    if (postJob(job)) {
         snprintf(s_status, sizeof(s_status), "Loading %.82s ...", location);
-    else {
+        Notifications::Showf("Loading save state: %.120s", location);
+    } else {
         s_loadBusy = false;
         snprintf(s_status, sizeof(s_status), "Unable to queue state load.");
     }
@@ -1141,6 +1210,66 @@ void BeginInPlaceReload(const char* stage, s8 room, s16 spawn, s8 layer,
     s_loadReady = true;        // Tick() drives the warp + re-stamp
 }
 
+bool BeginPracticeLoad(const char* sourceName, const void* infoImage,
+                       uint32_t size, const char* stage, s8 room, s16 spawn,
+                       s8 layer, const cXyz* pos, s16 angle,
+                       const cXyz* camAt, const cXyz* camEye,
+                       PracticeSceneSetupFn sceneSetup)
+{
+    if (!infoImage || size < kInfoSize || !stage || !stage[0] ||
+        room < 0 || room > 63 ||
+        memchr(stage, '\0', DSTAGE_NAME_LEN) == nullptr ||
+        s_loadBusy || s_loadReady || s_ovPhase != OV_IDLE) {
+        return false;
+    }
+    for (const char* c = stage; *c; ++c) {
+        if (!isprint((unsigned char)*c))
+            return false;
+    }
+
+    uint8_t* copy = (uint8_t*)memalign(0x40, kInfoSize);
+    if (!copy)
+        return false;
+    memcpy(copy, infoImage, kInfoSize);
+    sanitizeSaveImageForEngine(copy);
+
+    if (s_pendingInfo)
+        free(s_pendingInfo);
+    s_pendingInfo = copy;
+
+    memset(&s_loadHeader, 0, sizeof(s_loadHeader));
+    memcpy(s_loadHeader.stage, stage, strnlen(stage, sizeof(s_loadHeader.stage) - 1));
+    s_loadHeader.room = room;
+    s_loadHeader.layer = layer;
+    s_loadHeader.spawn = spawn;
+    if (pos) {
+        s_loadHeader.pos = *pos;
+        s_loadHeader.angle = angle;
+    }
+    if (pos && camAt && camEye) {
+        s_loadHeader.camAt = *camAt;
+        s_loadHeader.camEye = *camEye;
+        s_loadHeader.camValid = 1;
+    }
+
+    s_applyPosNext = pos != nullptr;
+    s_readyLoadFolder[0] = '\0';
+    s_readyLoadName[0] = '\0';
+    s_pendingSerialized = false;
+    s_normalSaveResume = false;
+    s_practiceLoad = true;
+    s_practiceSceneSetup = sceneSetup;
+    snprintf(s_practiceSource, sizeof(s_practiceSource), "%.63s",
+             sourceName && sourceName[0] ? sourceName : "Practice");
+    s_loadCommandCount = 0;
+    s_loadReady = true;
+    Logger::Log("[tphd_tools][boss-practice] load queued: %s stage='%s' "
+                "room=%d spawn=%d layer=%d position=%d camera=%d",
+                s_practiceSource, s_loadHeader.stage, (int)room, (int)spawn,
+                (int)layer, pos != nullptr, s_loadHeader.camValid != 0);
+    return true;
+}
+
 bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
 {
 #ifdef TPHD_TOOLS_DEBUG
@@ -1167,10 +1296,25 @@ bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
     const uint8_t* bytes = (const uint8_t*)image;
     const dSv_player_return_place_c* destination =
         (const dSv_player_return_place_c*)(bytes + DSV_DAT_RETURN_PLACE_OFF);
-    if (!destination->mName[0]) {
+    // The destination record drives a real engine warp, so reject images whose
+    // return place could not have been written by the game: the stage must be
+    // a printable, NUL-terminated name and the room a valid stage room index.
+    // A garbage stage name would otherwise send the engine after a nonexistent
+    // stage archive.
+    bool destinationValid =
+        destination->mName[0] &&
+        memchr(destination->mName, '\0', sizeof(destination->mName)) != nullptr &&
+        destination->mRoomNo >= 0 && destination->mRoomNo <= 63;
+    for (const char* c = destination->mName; destinationValid && *c; ++c) {
+        if (!isprint((unsigned char)*c))
+            destinationValid = false;
+    }
+    if (!destinationValid) {
         TPHD_BREADCRUMB(
-            "[tphd_tools][personal:%u] bridge rejected: empty destination stage",
-            (unsigned)trace);
+            "[tphd_tools][personal:%u] bridge rejected: invalid destination "
+            "record (stage[0]=%02X room=%d)",
+            (unsigned)trace, (unsigned)(u8)destination->mName[0],
+            (int)destination->mRoomNo);
         return false;
     }
 
@@ -1199,6 +1343,7 @@ bool BeginGameSaveLoad(const char* sourceName, const void* image, uint32_t size)
     }
     memset(copy, 0, kInfoSize);
     memcpy(copy, image, GAME_DSV_SERIALIZED_SIZE);
+    sanitizeSaveImageForEngine(copy);
     TPHD_BREADCRUMB(
         "[tphd_tools][personal:%u] bridge image copied into pending buffer",
         (unsigned)trace);
@@ -1304,6 +1449,7 @@ static void consumeEditResult()
 {
     if (!s_editReady)
         return;
+    OSMemoryBarrier();   // acquire the worker's result fields behind the flag
     s_editReady = false;
     EditLoadResult* result = s_editResult;
     s_editResult = nullptr;
@@ -1496,17 +1642,45 @@ static void preparePositionRestartState()
         return;
 
     dSv_restart_c* restart = dSv_getRestartFromInfo(s_pendingInfo);
+    const u32 oldRoomParam = restart->mRoomParam;
+    const bool nativeRestartEntry = useNativeRestartEntryForSaveState(s_loadHeader.stage);
+    const s16 oldStartPoint = restart->mStartPoint;
+    const s16 newStartPoint = nativeRestartEntry ? (s16)-1 : oldStartPoint;
+
+    // dStage_playerInit treats point -1 as a true restart: it copies mRoomParam
+    // verbatim into Link's actor parameters instead of taking the parameters
+    // from a PLYR entry. Link interprets the high byte as getStartEvent(). A
+    // stale/default value of zero therefore calls setStartDemo(0), which starts
+    // room 3's R03-neoshige camera STB even though the unrelated LV3R03OP
+    // completion switch 0x7A is already set. Normal PLYR entries use 0xFF for
+    // "no explicit map-tool start event". Apply that same sentinel to our
+    // synthetic exact-position restart, preserving the start-mode/misc bits in
+    // the middle and replacing only the event byte and destination room.
+    static const u32 kRestartRoomMask = 0x0000003Fu;
+    static const u32 kRestartStartEventMask = 0xFF000000u;
+    const u32 newRoomParam =
+        nativeRestartEntry
+            ? ((oldRoomParam & ~(kRestartStartEventMask | kRestartRoomMask)) |
+               kRestartStartEventMask |
+               ((u32)s_loadHeader.room & kRestartRoomMask))
+            : oldRoomParam;
     TPHD_BREADCRUMB(
         "[tphd_tools][state-room] patch pending restart: room %d -> %d "
-        "pos=(%.1f,%.1f,%.1f) -> (%.1f,%.1f,%.1f) angle=%d -> %d",
+        "spawn=%d -> %d pos=(%.1f,%.1f,%.1f) -> (%.1f,%.1f,%.1f) "
+        "angle=%d -> %d param=%08X -> %08X nativeRestart=%d",
         (int)restart->mRoomNo, (int)s_loadHeader.room,
+        (int)oldStartPoint, (int)newStartPoint,
         restart->mRoomPos.x, restart->mRoomPos.y, restart->mRoomPos.z,
         s_loadHeader.pos.x, s_loadHeader.pos.y, s_loadHeader.pos.z,
-        (int)restart->mRoomAngleY, (int)s_loadHeader.angle);
+        (int)restart->mRoomAngleY, (int)s_loadHeader.angle,
+        (unsigned)oldRoomParam, (unsigned)newRoomParam,
+        nativeRestartEntry);
 
     restart->mRoomNo = s_loadHeader.room;
+    restart->mStartPoint = newStartPoint;
     restart->mRoomPos = s_loadHeader.pos;
     restart->mRoomAngleY = s_loadHeader.angle;
+    restart->mRoomParam = newRoomParam;
 }
 
 struct ActorDeleteContext {
@@ -1705,6 +1879,17 @@ static void tickCommandExecution()
         cancelCommandExecution("target stage changed");
         return;
     }
+    // Never touch actors while the scene isn't quiet: Link must be live and no
+    // event/demo may be running. A load can drop Link straight into an EvtArea
+    // (Gate Clip: the F_SP121 triggers start the King Bulblin event whose
+    // participants are the very e_rd actors a delete command targets); killing
+    // an event's actors while it runs leaves the event/message system walking
+    // freed processes. Defer -- hold the frame clock rather than cancel -- so
+    // the commands still run, delays intact, once the event has finished.
+    // dEvt_isEventRunning() also covers our own menu-freeze, which sets the
+    // same status byte; commands then apply when the game unfreezes.
+    if (!dComIfGp_getPlayer() || dEvt_isEventRunning())
+        return;
 
     while (s_execCommandIndex < s_execCommandCount &&
            s_execCommands[s_execCommandIndex].frameDelay <= s_execFrame) {
@@ -1756,13 +1941,445 @@ static void endLoad()
     s_ovHorseWait = 0;
     s_ovReadyFrames = 0;
     s_ovCommandsStarted = false;
+    s_ovEarlyStageFlagsRestored = false;
+    s_ovEarlyZoneRoomMask[0] = 0;
+    s_ovEarlyZoneRoomMask[1] = 0;
     s_loadCommandCount = 0;
     s_pendingSerialized = false;
     s_normalSaveResume = false;
+    s_practiceLoad = false;
+    s_practiceSceneSetup = nullptr;
+    s_practiceSource[0] = '\0';
     s_activeGameSaveTrace = 0;
     s_gameSaveTraceSource[0] = '\0';
     s_traceWaitEntryLogged = false;
     s_traceTargetReadyLogged = false;
+}
+
+static_assert(DSV_INFO_MEMORY_OFF == GAME_DSV_SERIALIZED_SIZE,
+              "dSv_info_c serialized image should end at live mMemory");
+static_assert(DSV_INFO_MEMORY_SIZE == DSV_STAGE_RECORD_SIZE,
+              "live mMemory should match one saved stage record");
+static_assert(DSV_INFO_DAN_OFF == DSV_INFO_MEMORY_OFF + DSV_INFO_MEMORY_SIZE,
+              "mDan should follow live mMemory");
+static_assert(DSV_INFO_DAN_OFF + DSV_INFO_DAN_SIZE == DSV_INFO_ZONE_OFF,
+              "mZone/stage-event pool should follow mDan");
+static_assert(DSV_ZONE_RECORD_COUNT * DSV_ZONE_RECORD_SIZE == DSV_INFO_ZONE_SIZE,
+              "mZone record layout should cover the zone pool");
+static_assert(DSV_ZONE_FLAGS_OFF + DSV_ZONE_FLAGS_SIZE <= DSV_ZONE_RECORD_SIZE,
+              "mZone flag bytes should stay inside one zone record");
+static_assert(DSV_INFO_ZONE_OFF + DSV_INFO_ZONE_SIZE == DSV_INFO_RESTART_OFF,
+              "mRestart should follow the stage-event pool");
+static_assert(DSV_INFO_RESTART_OFF + sizeof(dSv_restart_c) ==
+                  DSV_INFO_TMP_EVENT_OFF,
+              "temporary event flags should follow mRestart");
+static_assert(DSV_INFO_TMP_EVENT_OFF + DSV_INFO_TMP_EVENT_SIZE <= GAME_DSVINFO_SIZE,
+              "temporary event flags should stay inside dSv_info_c");
+
+static void restoreSaveStateTemporaryEventFlags(const uint8_t* snapshot,
+                                                const char* point)
+{
+    if (!snapshot)
+        return;
+
+    memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_TMP_EVENT_OFF),
+           snapshot + DSV_INFO_TMP_EVENT_OFF, DSV_INFO_TMP_EVENT_SIZE);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored temporary event flags: "
+        "point=%s offset=0x%X size=0x%X",
+        point ? point : "?", (unsigned)DSV_INFO_TMP_EVENT_OFF,
+        (unsigned)DSV_INFO_TMP_EVENT_SIZE);
+}
+
+static int restoreSaveStateZoneFlags(const uint8_t* snapshot, const char* point)
+{
+    if (!snapshot)
+        return 0;
+
+    const uint8_t* savedZones = snapshot + DSV_INFO_ZONE_OFF;
+    volatile uint8_t* liveZones =
+        (volatile uint8_t*)(GAME_ADDR_gameInfo_info + DSV_INFO_ZONE_OFF);
+    int restored = 0;
+
+    // Zone slots are allocated dynamically as rooms stream in, so a slot number
+    // is not stable across a reload. Match records by their room id and copy only
+    // the area/room switch+item flag bytes. Actor flags and the unknown trailing
+    // u16 remain owned by the newly created scene.
+    for (int savedSlot = 0; savedSlot < DSV_ZONE_RECORD_COUNT; ++savedSlot) {
+        const uint8_t* savedRecord =
+            savedZones + (u32)savedSlot * DSV_ZONE_RECORD_SIZE;
+        const s8 savedRoom = *(const s8*)(savedRecord + DSV_ZONE_ROOMNO_OFF);
+        if (savedRoom < 0 || savedRoom >= 64)
+            continue;
+
+        for (int liveSlot = 0; liveSlot < DSV_ZONE_RECORD_COUNT; ++liveSlot) {
+            volatile uint8_t* liveRecord =
+                liveZones + (u32)liveSlot * DSV_ZONE_RECORD_SIZE;
+            const s8 liveRoom =
+                *(volatile const s8*)(liveRecord + DSV_ZONE_ROOMNO_OFF);
+            if (liveRoom != savedRoom)
+                continue;
+
+            memcpy((void*)(liveRecord + DSV_ZONE_FLAGS_OFF),
+                   savedRecord + DSV_ZONE_FLAGS_OFF, DSV_ZONE_FLAGS_SIZE);
+            ++restored;
+            break;
+        }
+    }
+
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored room-matched zone flags: "
+        "point=%s records=%d flagBytes=0x%X",
+        point ? point : "?", restored, (unsigned)DSV_ZONE_FLAGS_SIZE);
+    return restored;
+}
+
+static bool restoreSaveStateZoneFlagsForRoom(const uint8_t* snapshot, s8 roomNo,
+                                             int liveSlot, const char* point)
+{
+    if (!snapshot || roomNo < 0 || roomNo >= 64 ||
+        liveSlot < 0 || liveSlot >= DSV_ZONE_RECORD_COUNT) {
+        return false;
+    }
+
+    const uint8_t* savedRecord = nullptr;
+    const uint8_t* savedZones = snapshot + DSV_INFO_ZONE_OFF;
+    for (int slot = 0; slot < DSV_ZONE_RECORD_COUNT; ++slot) {
+        const uint8_t* record =
+            savedZones + (u32)slot * DSV_ZONE_RECORD_SIZE;
+        if (*(const s8*)(record + DSV_ZONE_ROOMNO_OFF) == roomNo) {
+            savedRecord = record;
+            break;
+        }
+    }
+    if (!savedRecord)
+        return false;
+
+    volatile uint8_t* liveRecord =
+        (volatile uint8_t*)(GAME_ADDR_gameInfo_info + DSV_INFO_ZONE_OFF) +
+        (u32)liveSlot * DSV_ZONE_RECORD_SIZE;
+    if (*(volatile const s8*)(liveRecord + DSV_ZONE_ROOMNO_OFF) != roomNo)
+        return false;
+
+    memcpy((void*)(liveRecord + DSV_ZONE_FLAGS_OFF),
+           savedRecord + DSV_ZONE_FLAGS_OFF, DSV_ZONE_FLAGS_SIZE);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored room zone flags before actors: "
+        "point=%s room=%d liveSlot=%d flagBytes=0x%X",
+        point ? point : "?", (int)roomNo, liveSlot,
+        (unsigned)DSV_ZONE_FLAGS_SIZE);
+    return true;
+}
+
+static void restoreFullSaveStateInfoSnapshot(uint8_t* snapshot, const char* point,
+                                             bool normalizeSerializedImage)
+{
+    if (!snapshot)
+        return;
+
+    if (normalizeSerializedImage) {
+        // Keep the same cold-load runtime preparation/normalization as the
+        // selective path, but preserve the full save-state tail afterward.
+        TPHD_BREADCRUMB(
+            "[tphd_tools][state-load] preparing save/meter runtime before "
+            "full save-state restore: point=%s info=%p play=%p",
+            point ? point : "?", (void*)GAME_ADDR_gameInfo_info,
+            (void*)GAME_ADDR_gameInfo_play);
+        dSave_prepareLoadRuntime();
+        const int deserializeResult = dSave_loadImage(snapshot);
+        (void)deserializeResult;
+        TPHD_BREADCRUMB(
+            "[tphd_tools][state-load] dSave_loadImage(full save-state) returned: "
+            "point=%s result=%d",
+            point ? point : "?", deserializeResult);
+        memcpy(snapshot, (const void*)GAME_ADDR_gameInfo_info,
+               GAME_DSV_SERIALIZED_SIZE);
+    } else {
+        memcpy((void*)GAME_ADDR_gameInfo_info, snapshot,
+               GAME_DSV_SERIALIZED_SIZE);
+    }
+
+    memcpy((void*)(GAME_ADDR_gameInfo_info + GAME_DSV_SERIALIZED_SIZE),
+           snapshot + GAME_DSV_SERIALIZED_SIZE,
+           kInfoSize - GAME_DSV_SERIALIZED_SIZE);
+
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] full info restore: point=%s "
+        "serialized=0x%X tail=0x%X normalized=%d",
+        point ? point : "?",
+        (unsigned)GAME_DSV_SERIALIZED_SIZE,
+        (unsigned)(kInfoSize - GAME_DSV_SERIALIZED_SIZE),
+        normalizeSerializedImage);
+}
+
+static void restoreSaveStateInfoSnapshot(uint8_t* snapshot, const char* point,
+                                         bool normalizeSerializedImage,
+                                         bool restoreLiveStageChunks)
+{
+    if (!snapshot)
+        return;
+
+    // Save states still capture the whole dSv_info_c block on disk for fidelity
+    // and future compatibility, but applying the volatile middle of that block
+    // during scene creation can resurrect per-room scratch state from the old
+    // scene. Lakebed room loads are especially sensitive here: the stage creates
+    // its water/zone state while Link and the HUD are rebuilding, and a full
+    // 0x13D8 memcpy can leave those structures half-old/half-new.
+    //
+    // Restore only the durable parts the load needs:
+    //   - serialized save image: player status, inventory, events, mSave[32], ...
+    //   - live current-stage mMemory + mDan stage selector, but only after the
+    //     engine's own stage init has run
+    //   - restart tuple, including mLastMode's respawn/held-item metadata
+    // Leave mZone/stage-event scratch and the unknown tail for the engine to
+    // initialize in the new scene.
+    if (normalizeSerializedImage) {
+        // The game's debug-save path does this before deserializing a save image.
+        // It clears stale meter/HUD runtime and rebuilds the play-side item data
+        // from a sane baseline. Without it, loading a state from title/demo scenes
+        // can reach Meter2 creation with a null runtime pointer.
+        TPHD_BREADCRUMB(
+            "[tphd_tools][state-load] preparing save/meter runtime before "
+            "save-state restore: point=%s info=%p play=%p",
+            point ? point : "?", (void*)GAME_ADDR_gameInfo_info,
+            (void*)GAME_ADDR_gameInfo_play);
+        dSave_prepareLoadRuntime();
+        const int deserializeResult = dSave_loadImage(snapshot);
+        (void)deserializeResult;
+        TPHD_BREADCRUMB(
+            "[tphd_tools][state-load] dSave_loadImage(save-state) returned: "
+            "point=%s result=%d",
+            point ? point : "?", deserializeResult);
+        // Keep the pending buffer normalized too; the target-ready re-stamp uses
+        // it later and must not undo fixes or the putSave() stage-record repair.
+        memcpy(snapshot, (const void*)GAME_ADDR_gameInfo_info,
+               GAME_DSV_SERIALIZED_SIZE);
+    } else {
+        memcpy((void*)GAME_ADDR_gameInfo_info, snapshot, GAME_DSV_SERIALIZED_SIZE);
+    }
+    if (restoreLiveStageChunks) {
+        memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_MEMORY_OFF),
+               snapshot + DSV_INFO_MEMORY_OFF, DSV_INFO_MEMORY_SIZE);
+        memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_DAN_OFF),
+               snapshot + DSV_INFO_DAN_OFF, DSV_INFO_DAN_SIZE);
+    }
+    memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_RESTART_OFF),
+           snapshot + DSV_INFO_RESTART_OFF, sizeof(dSv_restart_c));
+
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] selective info restore: point=%s "
+        "serialized=0x%X memory=0x%X dan=0x%X restart=0x%X "
+        "skippedZone=0x%X skippedTail=0x%X normalized=%d liveChunks=%d",
+        point ? point : "?",
+        (unsigned)GAME_DSV_SERIALIZED_SIZE,
+        restoreLiveStageChunks ? (unsigned)DSV_INFO_MEMORY_SIZE : 0u,
+        restoreLiveStageChunks ? (unsigned)DSV_INFO_DAN_SIZE : 0u,
+        (unsigned)sizeof(dSv_restart_c),
+        (unsigned)DSV_INFO_ZONE_SIZE,
+        (unsigned)(GAME_DSVINFO_SIZE -
+                   (DSV_INFO_RESTART_OFF + sizeof(dSv_restart_c))),
+        normalizeSerializedImage, restoreLiveStageChunks);
+}
+
+void OnScenePhase1()
+{
+    // This callback runs immediately before Zelda.rpx dScnPly::phase_1. Unlike
+    // polling pMPlayer0 from Present(), this is an engine-owned ordering
+    // boundary: the old scene has finished tearing down, while phase_1 has not
+    // yet moved mNextStage to mStartStage or requested the new stage archive.
+    if (s_ovPhase != OV_TEARDOWN)
+        return;
+
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] dScnPly::phase_1 barrier reached: "
+        "targetStage='%s' pendingInfo=%p serialized=%d normalResume=%d "
+        "link=%p wait=%d",
+        s_ovStage, (void*)s_pendingInfo, s_pendingSerialized, s_normalSaveResume,
+        (void*)dComIfGp_getPlayer(), s_ovWait);
+
+    if (s_pendingInfo) {
+        const bool fullInfoSnapshot = !s_pendingSerialized;
+        if (s_practiceLoad) {
+            // Practice images deliberately contain only durable save state plus
+            // a freshly initialized target-stage working set. Never restore the
+            // outgoing scene's zone/event tail into a deterministic encounter.
+            restoreSaveStateInfoSnapshot(s_pendingInfo, "practice-phase1",
+                                         true, false);
+        } else if (s_pendingSerialized) {
+            logGameSaveImageState("pre-deserialize", s_pendingInfo,
+                                  GAME_DSV_SERIALIZED_SIZE);
+            if (s_activeGameSaveTrace) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] calling dSave_prepareLoadRuntime "
+                    "at dScnPly::phase_1: info=%p play=%p",
+                    (unsigned)s_activeGameSaveTrace,
+                    (void*)GAME_ADDR_gameInfo_info,
+                    (void*)GAME_ADDR_gameInfo_play);
+            }
+            dSave_prepareLoadRuntime();
+            if (s_activeGameSaveTrace) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] dSave_prepareLoadRuntime returned",
+                    (unsigned)s_activeGameSaveTrace);
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] calling dSave_loadImage: image=%p",
+                    (unsigned)s_activeGameSaveTrace, (void*)s_pendingInfo);
+            }
+            int deserializeResult = dSave_loadImage(s_pendingInfo);
+            (void)deserializeResult;
+            if (s_activeGameSaveTrace) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] dSave_loadImage returned: result=%d",
+                    (unsigned)s_activeGameSaveTrace, deserializeResult);
+                logGameSaveImageState(
+                    "live-after-deserialize",
+                    (const uint8_t*)GAME_ADDR_gameInfo_info, kInfoSize);
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] copying live info back to "
+                    "pending buffer: dst=%p src=%p size=0x%X",
+                    (unsigned)s_activeGameSaveTrace, (void*)s_pendingInfo,
+                    (void*)GAME_ADDR_gameInfo_info, (unsigned)kInfoSize);
+            }
+            memcpy(s_pendingInfo, (const void*)GAME_ADDR_gameInfo_info, kInfoSize);
+            if (s_activeGameSaveTrace) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][personal:%u] live info copy-back returned",
+                    (unsigned)s_activeGameSaveTrace);
+            }
+            s_pendingSerialized = false;
+        } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
+            restoreSaveStateInfoSnapshot(s_pendingInfo, "phase1", true, false);
+            // dSave_prepareLoadRuntime() clears mTmp. Restore it separately from
+            // mZone so event state is available while the target scene creates.
+            restoreSaveStateTemporaryEventFlags(s_pendingInfo, "phase1");
+        } else {
+            restoreFullSaveStateInfoSnapshot(s_pendingInfo, "phase1", true);
+        }
+
+        if (fullInfoSnapshot) {
+            if (s_practiceLoad) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][boss-practice] durable image installed at "
+                    "phase1; target-stage working state remains deferred");
+            } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][state-load] deferred live mMemory/mDan restore; "
+                    "dStage_stagInfoInit will run getSave/initDan during stage create");
+            } else {
+                TPHD_BREADCRUMB(
+                    "[tphd_tools][state-load] restored full save-state info at "
+                    "phase1; event/zone scratch preserved");
+            }
+        }
+    } else {
+        TPHD_BREADCRUMB(
+            "[tphd_tools][state-load] dScnPly::phase_1 barrier has no pendingInfo");
+    }
+
+    // Run native encounter-entry setup after save normalization so the callback
+    // cannot be overwritten by dSave_loadImage, and before the target archive
+    // begins creating actors. The callback is consumed exactly once.
+    if (s_practiceLoad && s_practiceSceneSetup) {
+        PracticeSceneSetupFn setup = s_practiceSceneSetup;
+        s_practiceSceneSetup = nullptr;
+        setup();
+        TPHD_BREADCRUMB(
+            "[tphd_tools][boss-practice] native scene setup applied: source='%s'",
+            s_practiceSource);
+    }
+
+    logRoomState("scene-phase1-after-inject", s_ovRoom, s_pendingInfo,
+                 s_pendingInfo && !s_pendingSerialized);
+    s_ovPhase = OV_WAIT;
+    s_ovWait  = 300;   // ~20s @30fps before giving up on the recreate
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] phase transition: OV_TEARDOWN -> OV_WAIT wait=%d",
+        s_ovWait);
+}
+
+static bool getPendingRoomNumber(void* roomScene, s8* outRoomNo)
+{
+    if (!roomScene || !outRoomNo)
+        return false;
+
+    const s32 roomValue =
+        *(volatile const s32*)((const u8*)roomScene + DSCNROOM_OFF_ROOMNO);
+    if (roomValue < 0 || roomValue >= 64)
+        return false;
+    *outRoomNo = (s8)roomValue;
+    return true;
+}
+
+void OnRoomCreateBegin(void* roomScene)
+{
+    // FUN_02ac3f68 parses room.dzr inside the original phase call. Restore the
+    // same stage records a normal getSave() load supplies BEFORE entering it:
+    // Lakebed room 3's TagEv orders LV3R03OP (REVT id 0x23), and dEvt::order
+    // suppresses it only when the REVT completion switch 0x7A is already set.
+    if (!s_pendingInfo || s_normalSaveResume || s_ovEarlyStageFlagsRestored ||
+        (s_ovPhase != OV_WAIT && s_ovPhase != OV_APPLY)) {
+        return;
+    }
+
+    s8 roomNo = -1;
+    if (!getPendingRoomNumber(roomScene, &roomNo) || roomNo != s_ovRoom)
+        return;
+
+    const s8 savedStageNo = dSave_getStageNo(s_pendingInfo);
+    if (savedStageNo < 0 || savedStageNo >= DSV_STAGE_RECORD_COUNT)
+        return;
+
+    // Use Zelda.rpx's getSave implementation, exactly as a normal stage load
+    // does: persistent mSave[stageNo] -> live mMemory. requestSave() paired this
+    // with the inverse putSave call before it captured the snapshot.
+    dSv_info_getSave((void*)GAME_ADDR_gameInfo_info, savedStageNo);
+    memcpy((void*)(GAME_ADDR_gameInfo_info + DSV_INFO_DAN_OFF),
+           s_pendingInfo + DSV_INFO_DAN_OFF, DSV_INFO_DAN_SIZE);
+    restoreSaveStateTemporaryEventFlags(s_pendingInfo, "room-create-begin");
+    s_ovEarlyStageFlagsRestored = true;
+
+    // Switch 0x7A is the concrete Lakebed room-3 opening-event gate. Log its
+    // captured/live value in debug builds while keeping this restore generic.
+#ifdef TPHD_TOOLS_DEBUG
+    const volatile dSv_memBit_c* liveMemory =
+        (const volatile dSv_memBit_c*)(GAME_ADDR_gameInfo_info +
+                                      DSV_INFO_MEMORY_OFF);
+    const dSv_memBit_c* savedMemory =
+        (const dSv_memBit_c*)(s_pendingInfo + DSV_INFO_MEMORY_OFF);
+    TPHD_BREADCRUMB(
+        "[tphd_tools][state-load] restored live stage flags before room.dzr: "
+        "room=%d stageNo=%d getSave=1 memory=0x%X dan=0x%X "
+        "switch7A(saved/live)=%d/%d",
+        (int)roomNo, (int)savedStageNo, (unsigned)DSV_INFO_MEMORY_SIZE,
+        (unsigned)DSV_INFO_DAN_SIZE,
+        dMem_getBit((volatile u32*)savedMemory->mSwitch, 0x7A),
+        dMem_getBit((volatile u32*)liveMemory->mSwitch, 0x7A));
+#endif
+}
+
+void OnRoomZoneReady(void* roomScene)
+{
+    if (!s_pendingInfo || s_normalSaveResume ||
+        (s_ovPhase != OV_WAIT && s_ovPhase != OV_APPLY)) {
+        return;
+    }
+
+    s8 roomNo = -1;
+    if (!getPendingRoomNumber(roomScene, &roomNo))
+        return;
+    const s8 zoneSlot = dStage_getRoomZoneNo(roomNo);
+    if (zoneSlot < 0 || zoneSlot >= DSV_ZONE_RECORD_COUNT)
+        return; // this invocation was still waiting; createZone has not run
+    const uint32_t word = (uint32_t)roomNo >> 5;
+    const uint32_t bit = 1u << ((uint32_t)roomNo & 31u);
+
+    bool roomFlagsReady = (s_ovEarlyZoneRoomMask[word] & bit) != 0;
+    if (!roomFlagsReady) {
+        roomFlagsReady = restoreSaveStateZoneFlagsForRoom(
+            s_pendingInfo, roomNo, zoneSlot, "room-zone-ready");
+        if (roomFlagsReady)
+            s_ovEarlyZoneRoomMask[word] |= bit;
+    }
 }
 
 // After a normal card-save resume, the scene rebuild can reset the control-pad
@@ -1771,6 +2388,84 @@ static void endLoad()
 // provider -- looks exactly like a freeze. Re-select the controller for a short
 // window after the load so it sticks even if the settle resets it more than once.
 static int s_ctrlReselect = 0;
+
+// Aroma relaunch support. The worker thread and any in-flight load belonged to
+// the game process that just ended; only these plugin statics survived. Drop
+// the thread flag (the next job starts a fresh worker in the new process) and
+// neutralize every handed-off or mid-warp load, or a stale s_loadReady /
+// s_ovPhase from last session would warp the NEW game and inject the old
+// snapshot at its first scene transition. All freed buffers live in the plugin
+// heap, which persists across game processes, so freeing them here is valid.
+// Must be called before any hook can run gameplay; never touches game memory.
+void OnApplicationStart()
+{
+    // Free jobs still queued for the dead worker (their buffers are ours).
+    // No thread can race this: the old worker died with its process and the
+    // new one hasn't been created yet.
+    if (s_threadStarted) {
+        OSMessage msg;
+        while (OSReceiveMessage(&s_queue, &msg, OS_MESSAGE_FLAGS_NONE)) {
+            Job* job = (Job*)msg.message;
+            if (job) {
+                free(job->image);
+                free(job);
+            }
+        }
+    }
+    s_threadStarted = false;
+
+    s_loadReady = false;
+    s_loadBusy = false;
+    s_loadError = 0;
+    if (s_pendingInfo) {
+        free(s_pendingInfo);
+        s_pendingInfo = nullptr;
+    }
+    s_loadCommandCount = 0;
+    s_readyLoadFolder[0] = '\0';
+    s_readyLoadName[0] = '\0';
+    s_pendingSerialized = false;
+    s_normalSaveResume = false;
+    s_practiceLoad = false;
+    s_practiceSceneSetup = nullptr;
+    s_practiceSource[0] = '\0';
+
+    s_ovPhase = OV_IDLE;
+    s_ovNeedsRuntimePrep = false;
+    s_ovHorseRiding = false;
+    s_ovHorseSpawnRequested = false;
+    s_ovHorseWait = 0;
+    s_ovReadyFrames = 0;
+    s_ovCommandsStarted = false;
+    s_ovEarlyStageFlagsRestored = false;
+    s_ovEarlyZoneRoomMask[0] = 0;
+    s_ovEarlyZoneRoomMask[1] = 0;
+    s_execCommandCount = 0;
+    s_execCommandIndex = 0;
+    s_execFrame = 0;
+    s_execStage[0] = '\0';
+    s_ctrlReselect = 0;
+
+    s_editReady = false;
+    s_editBusy = false;
+    if (s_editResult) {
+        free(s_editResult->baseImage);
+        free(s_editResult);
+        s_editResult = nullptr;
+    }
+    s_editorOpen = false;
+    if (s_editorBaseImage) {
+        free(s_editorBaseImage);
+        s_editorBaseImage = nullptr;
+    }
+    s_editorCommandCount = 0;
+
+    s_activeGameSaveTrace = 0;
+    s_gameSaveTraceSource[0] = '\0';
+    s_traceWaitEntryLogged = false;
+    s_traceTargetReadyLogged = false;
+    s_status[0] = '\0';
+}
 
 void Tick()
 {
@@ -1798,10 +2493,12 @@ void Tick()
     // info yet -- if we overwrite it before the warp, the OLD scene tears down
     // reading the new data (wrong stage / water state / flags for the scene it's
     // actually cleaning up), which crashes on state transitions like
-    // underwater->land. Instead we inject during the teardown's null-Link window
-    // (OV_TEARDOWN), approximating tpgz's dScnPly phase_1 inject: the old scene
-    // cleans up with its own data, then the new scene builds from ours.
+    // underwater->land. Instead the dScnPly::phase_1 hook injects at the exact
+    // boundary used by tpgz: the old scene cleans up with its own data, then the
+    // new scene builds from ours.
     if (s_loadReady) {
+        // Acquire the worker's header/info/command writes behind the flag.
+        OSMemoryBarrier();
         cancelCommandExecution("another save state load began");
         logRoomState("loadReady-before-warp", s_loadHeader.room, s_pendingInfo,
                      s_pendingInfo && !s_pendingSerialized);
@@ -1875,6 +2572,33 @@ void Tick()
         prepareHorseRestartMode();
         logRoomState("loadReady-prepared", s_loadHeader.room, s_pendingInfo,
                      s_pendingInfo && !s_pendingSerialized);
+
+        // Arm the callback before exposing the warp request to the engine. The
+        // transition normally advances on a later main-loop pass, but this
+        // ordering also makes the hook safe if scene processing observes
+        // mNextStage immediately on another execution path.
+        memcpy(s_ovStage, s_loadHeader.stage, sizeof(s_ovStage));
+        s_ovPos        = s_loadHeader.pos;
+        s_ovAngle      = s_loadHeader.angle;
+        s_ovRoom       = s_loadHeader.room;
+        s_ovCamAt      = s_loadHeader.camAt;
+        s_ovCamEye     = s_loadHeader.camEye;
+        s_ovCamValid   = s_applyPosNext && (s_loadHeader.camValid != 0);
+        s_ovHorsePos   = s_loadHeader.horsePos;
+        s_ovHorseAngle = s_loadHeader.horseAngle;
+        s_ovHorseRoom  = s_loadHeader.horseRoom;
+        s_ovHorseRiding = (s_loadHeader.horseRiding != 0);
+        s_ovHorseSpawnRequested = false;
+        s_ovHorseWait = 0;
+        s_ovReadyFrames = 0;
+        s_ovApplyPos   = s_applyPosNext;
+        s_ovCommandsStarted = false;
+        s_ovEarlyStageFlagsRestored = false;
+        s_ovEarlyZoneRoomMask[0] = 0;
+        s_ovEarlyZoneRoomMask[1] = 0;
+        s_ovPhase = OV_TEARDOWN;
+        s_ovWait = OV_PHASE1_TIMEOUT;
+
         if (s_normalSaveResume) {
             if (s_activeGameSaveTrace) {
                 TPHD_BREADCRUMB(
@@ -1892,42 +2616,35 @@ void Tick()
                     *(volatile s8*)(GAME_ADDR_nextStage + DSTAGE_OFF_ENABLE));
             }
         } else {
-            dStage_loadStage(s_loadHeader.stage, s_loadHeader.room, s_loadHeader.spawn,
-                             s_loadHeader.layer);
+            const bool nativeRestartEntry =
+                s_applyPosNext && useNativeRestartEntryForSaveState(s_loadHeader.stage);
+            const bool lakebedMainStage = stageNameEquals(s_loadHeader.stage, "D_MN01");
+            const s16 queueSpawn = nativeRestartEntry ? (s16)-1 : s_loadHeader.spawn;
+            const s8 queueLayer = lakebedMainStage ? (s8)DSTAGE_LAYER_DEFAULT
+                                                   : s_loadHeader.layer;
+            TPHD_BREADCRUMB(
+                "[tphd_tools][state-load] queue save-state warp: stage='%s' "
+                "saved(room=%d spawn=%d layer=%d) queued(room=%d spawn=%d layer=%d) "
+                "nativeRestart=%d lakebedDefaultLayer=%d pos=(%.1f,%.1f,%.1f)",
+                s_loadHeader.stage,
+                (int)s_loadHeader.room, (int)s_loadHeader.spawn,
+                (int)s_loadHeader.layer,
+                (int)s_loadHeader.room, (int)queueSpawn, (int)queueLayer,
+                nativeRestartEntry, lakebedMainStage,
+                s_loadHeader.pos.x, s_loadHeader.pos.y, s_loadHeader.pos.z);
+            dStage_loadStateDirect(s_loadHeader.stage, s_loadHeader.room,
+                                   queueSpawn, queueLayer);
         }
         if (s_loadHeader.horseRiding) {
-            // dStage_loadStage queues the warp with last-scene-mode 0, so the LIVE
+            // dStage_loadStateDirect queues the warp with last-scene-mode 0, so the LIVE
             // restart nibble is 0 right now. Link's recreate reads mLastMode directly
             // from the live block (setStartProcInit), and that read races our
-            // OV_TEARDOWN inject of s_pendingInfo. Stamp the horse-start nibble live
+            // phase_1 injection of s_pendingInfo. Stamp the horse-start nibble live
             // here, before any recreate can run, so checkHorseStart() is true no matter
             // when Link rebuilds. prepareHorseRestartMode() keeps the same nibble in the
-            // pending image so the teardown memcpy doesn't revert it.
+            // pending image so the phase_1 injection doesn't revert it.
             dStage_setRestartHorseStart();
         }
-        memcpy(s_ovStage, s_loadHeader.stage, sizeof(s_ovStage));
-        s_ovPos        = s_loadHeader.pos;
-        s_ovAngle      = s_loadHeader.angle;
-        s_ovRoom       = s_loadHeader.room;
-        s_ovCamAt      = s_loadHeader.camAt;
-        s_ovCamEye     = s_loadHeader.camEye;
-        s_ovCamValid   = s_applyPosNext && (s_loadHeader.camValid != 0);
-        s_ovHorsePos   = s_loadHeader.horsePos;
-        s_ovHorseAngle = s_loadHeader.horseAngle;
-        s_ovHorseRoom  = s_loadHeader.horseRoom;
-        s_ovHorseRiding = (s_loadHeader.horseRiding != 0);
-        s_ovHorseSpawnRequested = false;
-        s_ovHorseWait = 0;
-        s_ovReadyFrames = 0;
-        s_ovApplyPos   = s_applyPosNext;
-        s_ovCommandsStarted = false;
-        s_ovPhase = s_ovNeedsRuntimePrep ? OV_WAIT : OV_TEARDOWN;
-        if (s_ovNeedsRuntimePrep)
-            s_ovWait = 300;
-        else if (s_normalSaveResume)
-            s_ovWait = OV_PERSONAL_TEARDOWN_TIMEOUT;
-        else
-            s_ovWait = OV_TEARDOWN_TIMEOUT;
         if (s_activeGameSaveTrace) {
             TPHD_BREADCRUMB(
                 "[tphd_tools][personal:%u] warp queued: phase=%d wait=%d "
@@ -1939,107 +2656,25 @@ void Tick()
 
     switch (s_ovPhase) {
     case OV_TEARDOWN: {
-        // The warp drops the old Link (pMPlayer0 -> null) once the old scene has
-        // torn down. Inject the saved block at that moment -- the dying scene
-        // never sees it, and the new scene/Link build from it. Save-state loads
-        // retain their timeout fallback; Personal saves require the real null-Link
-        // barrier and abort instead. Then hand off to OV_WAIT for the new Link.
-        bool gone = (dComIfGp_getPlayer() == nullptr);
-        bool timedOut = !gone && --s_ovWait <= 0;
-
-        // A Personal save contains serialized item/HUD state. Applying it while
-        // the old Link is still alive mutates data underneath the old scene and
-        // can crash its next update. Null-Link is therefore a hard barrier for
-        // this path: never fall through to the save-state timeout injection.
-        if (timedOut && s_normalSaveResume) {
+        // OnScenePhase1() owns the injection. Present-thread polling can never
+        // prove that old-scene teardown is complete, so a missing hook is a hard
+        // failure for every load type: cancel a still-pending warp and retain the
+        // live info block instead of force-injecting into an arbitrary scene.
+        if (--s_ovWait <= 0) {
             bool warpPending = dStage_warpPending();
             if (warpPending) {
-                // The engine has not consumed the request, so cancel it before
-                // releasing the pending image.
                 *(volatile s8*)(GAME_ADDR_nextStage + DSTAGE_OFF_ENABLE) = 0;
             }
-            if (s_activeGameSaveTrace) {
-                TPHD_BREADCRUMB(
-                    "[tphd_tools][personal:%u] OV_TEARDOWN timed out with Link alive; "
-                    "aborting without deserialization: warpPending=%d canceled=%d link=%p",
-                    (unsigned)s_activeGameSaveTrace, warpPending, warpPending,
-                    (void*)dComIfGp_getPlayer());
-            }
+            TPHD_BREADCRUMB(
+                "[tphd_tools][state-load] OV_TEARDOWN timed out waiting for "
+                "dScnPly::phase_1; aborting without injection: warpPending=%d "
+                "canceled=%d link=%p",
+                warpPending, warpPending, (void*)dComIfGp_getPlayer());
+            Logger::LogError(
+                "[tphd_tools] state load aborted: dScnPly::phase_1 hook did not run");
             endLoad();
             snprintf(s_status, sizeof(s_status),
-                     "Personal save load aborted: scene teardown timed out.");
-            break;
-        }
-
-        if (gone || timedOut) {
-            if (s_activeGameSaveTrace) {
-                TPHD_BREADCRUMB(
-                    "[tphd_tools][personal:%u] OV_TEARDOWN barrier reached: "
-                    "linkGone=%d wait=%d pendingInfo=%p serialized=%d",
-                    (unsigned)s_activeGameSaveTrace, gone, s_ovWait,
-                    (void*)s_pendingInfo, s_pendingSerialized);
-            }
-            if (s_pendingInfo) {
-                if (s_pendingSerialized) {
-                    logGameSaveImageState("pre-deserialize", s_pendingInfo,
-                                          GAME_DSV_SERIALIZED_SIZE);
-                    if (s_activeGameSaveTrace) {
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] calling dSave_prepareLoadRuntime: "
-                            "info=%p play=%p",
-                            (unsigned)s_activeGameSaveTrace,
-                            (void*)GAME_ADDR_gameInfo_info,
-                            (void*)GAME_ADDR_gameInfo_play);
-                    }
-                    dSave_prepareLoadRuntime();
-                    if (s_activeGameSaveTrace) {
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] dSave_prepareLoadRuntime returned",
-                            (unsigned)s_activeGameSaveTrace);
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] calling dSave_loadImage: image=%p",
-                            (unsigned)s_activeGameSaveTrace, (void*)s_pendingInfo);
-                    }
-                    int deserializeResult = dSave_loadImage(s_pendingInfo);
-                    (void)deserializeResult;
-                    if (s_activeGameSaveTrace) {
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] dSave_loadImage returned: result=%d",
-                            (unsigned)s_activeGameSaveTrace, deserializeResult);
-                        logGameSaveImageState(
-                            "live-after-deserialize",
-                            (const uint8_t*)GAME_ADDR_gameInfo_info, kInfoSize);
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] copying live info back to "
-                            "pending buffer: dst=%p src=%p size=0x%X",
-                            (unsigned)s_activeGameSaveTrace, (void*)s_pendingInfo,
-                            (void*)GAME_ADDR_gameInfo_info, (unsigned)kInfoSize);
-                    }
-                    memcpy(s_pendingInfo, (const void*)GAME_ADDR_gameInfo_info, kInfoSize);
-                    if (s_activeGameSaveTrace) {
-                        TPHD_BREADCRUMB(
-                            "[tphd_tools][personal:%u] live info copy-back returned",
-                            (unsigned)s_activeGameSaveTrace);
-                    }
-                    s_pendingSerialized = false;
-                } else {
-                    memcpy((void*)GAME_ADDR_gameInfo_info, s_pendingInfo, kInfoSize);
-                }
-            } else if (s_activeGameSaveTrace) {
-                TPHD_BREADCRUMB(
-                    "[tphd_tools][personal:%u] OV_TEARDOWN has no pendingInfo",
-                    (unsigned)s_activeGameSaveTrace);
-            }
-            logRoomState("teardown-after-inject", s_ovRoom, s_pendingInfo,
-                         s_pendingInfo && !s_pendingSerialized);
-            s_ovPhase = OV_WAIT;
-            s_ovWait  = 300;   // ~20s @30fps before giving up on the recreate
-            if (s_activeGameSaveTrace) {
-                TPHD_BREADCRUMB(
-                    "[tphd_tools][personal:%u] phase transition: OV_TEARDOWN -> "
-                    "OV_WAIT wait=%d",
-                    (unsigned)s_activeGameSaveTrace, s_ovWait);
-            }
+                     "State load aborted: scene phase hook timed out.");
         }
         break;
     }
@@ -2144,17 +2779,35 @@ void Tick()
                             horse ? horse->current.pos.y : 0.0f,
                             horse ? horse->current.pos.z : 0.0f);
             }
-            // The full-block re-stamp is a SAVE-STATE mechanism: a save-state captured
-            // the entire live block, so re-applying it after the scene rebuilt restores
-            // exactly that state. A normal card-save resume is different: the teardown
-            // deserialize already loaded the save, and the engine rebuilds the live
-            // working memory (mMemory) from mSave[stage] -- via its own getSave -- as
-            // the scene builds. Re-stamping the whole 0x13D8 block here would undo that
-            // (e.g. zero the current-stage key, which lives in mMemory) AND overwrite
-            // live scene state (mZone/mRestart) mid-rebuild, wedging the recreation. So
-            // only the save-state path re-stamps; normal-resume defers to the engine.
-            if (s_pendingInfo && !s_normalSaveResume)
-                memcpy((void*)GAME_ADDR_gameInfo_info, s_pendingInfo, kInfoSize);
+            // The post-ready re-stamp is a SAVE-STATE mechanism: a save-state captured
+            // live runtime bytes that are not all regenerated from the serialized save
+            // image. Lakebed uses the narrow restore to avoid touching fragile water/
+            // zone scratch; other stages keep the old full-tail behavior so event
+            // scratch from the captured state is preserved. A normal card-save resume
+            // is different: the teardown deserialize already loaded the save, and the
+            // engine rebuilds the live working memory (mMemory) from mSave[stage] --
+            // via its own getSave -- as the scene builds. Normal resume therefore
+            // defers to the engine here.
+            if (s_pendingInfo && !s_normalSaveResume) {
+                if (s_practiceLoad) {
+                    // Practice state was installed before stage creation and
+                    // its target mMemory/mDan was restored before room.dzr.
+                    // Do not stamp it again here: encounter actors may have
+                    // legitimately changed start switches while coming alive.
+                    TPHD_BREADCRUMB(
+                        "[tphd_tools][boss-practice] target ready; preserving "
+                        "native actor changes made during scene creation");
+                } else if (useSelectiveInfoRestoreForSaveState(s_ovStage)) {
+                    restoreSaveStateInfoSnapshot(s_pendingInfo, "target-ready",
+                                                 false, true);
+                    restoreSaveStateTemporaryEventFlags(s_pendingInfo,
+                                                        "target-ready");
+                    restoreSaveStateZoneFlags(s_pendingInfo, "target-ready");
+                } else {
+                    restoreFullSaveStateInfoSnapshot(s_pendingInfo,
+                                                     "target-ready", false);
+                }
+            }
             if (s_ovNeedsRuntimePrep)
                 dComIfGp_itemDataInit((void*)GAME_ADDR_gameInfo_play);
             if (s_normalSaveResume) {
@@ -2608,7 +3261,11 @@ void DrawWindow(bool menuActive)
         ImGui::Checkbox("Override saved position", &s_overridePosition);
         if (!s_overridePosition)
             ImGui::TextDisabled("Uses the saved stage, room, layer, and spawn point.");
-        ImGui::Checkbox("Reload last state hotkey (ZL + ZR + Start)", &s_reloadLastHotkey);
+        {
+            ImGui::Checkbox("Reload last state hotkey", &s_reloadLastHotkey);
+            ImGui::SameLine(0.0f, 0.0f);
+            UiHotkey::DrawText(ov::g_settings.saveStateReloadCombo, " (", ")");
+        }
         if (s_lastLoadedName[0]) {
             ImGui::TextDisabled("Last loaded: %s%s%s",
                                 s_lastLoadedFolder[0] ? s_lastLoadedFolder : "Main",

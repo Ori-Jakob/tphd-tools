@@ -100,6 +100,17 @@ static int worker(int argc, const char** argv)
     return 0;
 }
 
+void OnApplicationStart()
+{
+    // The worker thread was created inside the previous game process and died
+    // with it; only the plugin's statics survived. Drop the started flag so the
+    // next enqueue re-initializes the queue and creates a fresh thread in the
+    // NEW process. Any messages still queued at exit are intentionally NOT
+    // freed: they were malloc'd in the dead process, so the pointers are no
+    // longer ours to free -- re-initializing the queue just forgets them.
+    s_threadStarted = false;
+}
+
 void Init()
 {
     if (s_threadStarted)

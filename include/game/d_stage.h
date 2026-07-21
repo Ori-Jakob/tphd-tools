@@ -28,6 +28,89 @@
 #define GAME_ADDR_nextStage    0x1014a5f6u   // dStage_nextStage_c  (pending)
 #define GAME_ADDR_restartMode  (GAME_ADDR_restart + 0x1Cu)
 
+// Native room streaming/control state. Verified in TPHD against
+// dStage_roomControl_c::init (FUN_02ab9c40), setStayNo (FUN_02ab61b4),
+// loadRoom (FUN_02ab61ec), and dStage_RoomCheck (FUN_02aba488).
+#define GAME_ADDR_roomControlStayNo       0x1016b1e4u
+#define GAME_ADDR_roomControlOldStayNo    0x1016b1e5u
+#define GAME_ADDR_roomControlNextStayNo   0x1016b1e6u
+#define GAME_ADDR_roomControlRoomReadId   0x10126c92u
+#define GAME_ADDR_roomControlStatusFlag   0x1016b5dcu
+#define GAME_ADDR_dStage_RoomCheck        0x02aba488u
+// dScnPly's phase table. Ghidra: phase_1 is FUN_02ac1108 and the corresponding
+// table entry at 0x10129B28 is its only data xref. The save-state loader hooks
+// this slot so the restored info block is installed after old-scene teardown
+// and immediately before the new scene starts reading it.
+#define GAME_ADDR_dScnPly_phase1       0x02ac1108u
+#define GAME_ADDR_dScnPly_phase1_slot  0x10129b28u
+typedef int (*dScnPly_phase1_t)(void* scene);
+
+// Room-create phase that allocates the room's dSv_zone_c and then parses
+// room.dzr. Its phase-table slot is the function's only data xref. A save-state
+// hook restores the current stage's saved records before chaining the function,
+// then merges the newly allocated room-zone flags after it returns.
+#define GAME_ADDR_dScnRoom_zone_phase       0x02ac3f68u
+#define GAME_ADDR_dScnRoom_zone_phase_slot  0x10129bd8u
+#define DSCNROOM_OFF_ROOMNO                 0x00b0u
+typedef int (*dScnRoom_zone_phase_t)(void* roomScene);
+
+// roomControl status table: TPHD's room zone-create phase reads/writes the s8
+// zone index at base + roomNo*0x404. A nonnegative value proves createZone has
+// claimed a live record for that room; the phase hook uses this to avoid
+// mistaking an injected pre-create snapshot record for a new allocation.
+#define GAME_ADDR_roomControlZoneNo  0x1016b5dfu
+#define DROOM_STATUS_STRIDE          0x0404u
+
+static inline s8 dStage_getRoomZoneNo(s8 roomNo)
+{
+    if (roomNo < 0 || roomNo >= 64)
+        return -1;
+    return *(volatile s8*)(GAME_ADDR_roomControlZoneNo +
+                           (u32)roomNo * DROOM_STATUS_STRIDE);
+}
+
+static inline s8 dStage_getStayRoomNo(void)
+{
+    return *(volatile s8*)GAME_ADDR_roomControlStayNo;
+}
+
+static inline u8 dStage_getRoomStatusFlags(s8 roomNo)
+{
+    if (roomNo < 0 || roomNo >= 64)
+        return 0;
+    return *(volatile u8*)(GAME_ADDR_roomControlStatusFlag +
+                           (u32)roomNo * DROOM_STATUS_STRIDE);
+}
+
+// daBg_Create sets status bit 0x10 only after the room's collision has been
+// registered with dComIfG_Bgsp. It is the safe point for placing Link there.
+static inline bool dStage_isRoomBackgroundReady(s8 roomNo)
+{
+    return (dStage_getRoomStatusFlags(roomNo) & 0x10u) != 0;
+}
+
+static inline void dStage_setRoomReadId(s8 roomNo)
+{
+    *(volatile s8*)GAME_ADDR_roomControlRoomReadId = roomNo;
+}
+
+typedef int (*dStage_RoomCheck_t)(void* groundCheck);
+#define dStage_RoomCheck ((dStage_RoomCheck_t)GAME_ADDR_dStage_RoomCheck)
+
+// Force the same native RTBL-driven path used by no-change-room triggers and
+// Zant's multi-room fight. Calling with no ground check makes mRoomReadId both
+// the new stay room and the room-table entry whose room group is streamed.
+static inline int dStage_requestRoom(s8 roomNo)
+{
+    dStage_setRoomReadId(roomNo);
+    return dStage_RoomCheck((void*)0);
+}
+
+static inline void dStage_clearRoomRequest(void)
+{
+    dStage_setRoomReadId(-1);
+}
+
 // dStage_startStage_c field offsets (shared by start/next stage).
 #define DSTAGE_OFF_NAME   0x0
 #define DSTAGE_OFF_POINT  0x8
@@ -40,6 +123,7 @@
 
 #define DSTAGE_LAYER_DEFAULT  (-1)   // 0xFF: let the engine resolve the layer
 #define DSTAGE_WIPE_INSTANT   13     // tpgz uses wipe 13 for an instant load
+#define DSTAGE_WIPE_SPEED_INSTANT 1
 #define DSTAGE_NAME_LEN       8
 
 #ifdef __cplusplus
@@ -77,6 +161,25 @@ static inline s8 dStage_getRoomNo(void)
     return *(volatile s8*)(GAME_ADDR_startStage + DSTAGE_OFF_ROOM);
 }
 
+// Rewrite the live start-stage descriptor without requesting a scene change.
+// Coordinate loads use this to make the game's current room/spawn/layer agree
+// with the in-place Link/camera transform.
+static inline void dStage_setCurrentInfo(s8 room, s16 spawn, s8 layer)
+{
+    *(volatile s16*)(GAME_ADDR_startStage + DSTAGE_OFF_POINT) = spawn;
+    *(volatile s8*) (GAME_ADDR_startStage + DSTAGE_OFF_ROOM)  = room;
+    *(volatile s8*) (GAME_ADDR_startStage + DSTAGE_OFF_LAYER) = layer;
+}
+
+static inline void dStage_setLinkRoom(s8 roomNo)
+{
+    fopAc_ac_c* link = dComIfGp_getPlayer();
+    if (!link)
+        return;
+    link->old.roomNo = roomNo;
+    link->current.roomNo = roomNo;
+}
+
 // ---- queue a warp -----------------------------------------------------------
 // Fills mNextStage and trips `enabled` so the engine loads it next frame.
 // `layer` may be DSTAGE_LAYER_DEFAULT. Mirrors tpgz's warping_menu trigger.
@@ -93,6 +196,7 @@ static inline void dStage_setNextStage(const char* name, s8 room, s16 spawn, s8 
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_ROOM)  = room;
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_LAYER) = layer;
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_WIPE)  = DSTAGE_WIPE_INSTANT;
+    *(volatile u8*) (GAME_ADDR_nextStage + DSTAGE_OFF_WSPEED) = DSTAGE_WIPE_SPEED_INSTANT;
     *(volatile u32*) GAME_ADDR_restartMode                   = 0;          // mLastMode = 0
     // enabled LAST: the engine acts the instant it sees this byte set.
     *(volatile s8*) (GAME_ADDR_nextStage + DSTAGE_OFF_ENABLE) = 1;
@@ -171,6 +275,16 @@ static inline void dStage_loadStage(const char* name, s8 room, s16 spawn, s8 lay
                           DSTAGE_WIPESPEEDT_LOAD);
 }
 
+// Queue a memfile/save-state transition the way tpgz does: establish the saved
+// restart point, fill mNextStage directly, then publish `enabled` last. This
+// avoids deriving field-last-stay, item-start, and other transition metadata
+// from the outgoing scene immediately before phase_1 replaces dSv_info_c.
+static inline void dStage_loadStateDirect(const char* name, s8 room, s16 spawn, s8 layer)
+{
+    dSv_getRestart()->mStartPoint = spawn;
+    dStage_setNextStage(name, room, spawn, layer);
+}
+
 // Normal file-select resume transition, matching FUN_029076e4. Unlike the
 // save-state transition above, noVisit is false and the destination comes from
 // dSv_player_return_place_c.
@@ -190,12 +304,13 @@ static inline void dStage_setLinkPos(const cXyz* pos, s16 angleY, s8 roomNo)
     fopAc_ac_c* link = dComIfGp_getPlayer();
     if (!link)
         return;
-    link->current.pos    = *pos;
-    link->old.roomNo     = roomNo;
-    link->current.roomNo = roomNo;
-    link->shape_angle.y  = angleY;
-    link->speed.x = link->speed.y = link->speed.z = 0.0f;
-    link->speedF  = 0.0f;
+    link->current.pos     = *pos;
+    link->old.roomNo      = roomNo;
+    link->current.roomNo  = roomNo;
+    link->old.angle.y     = angleY;
+    link->current.angle.y = angleY;
+    link->shape_angle.y   = angleY;
+    daAlink_clearMomentum(link);
 }
 
 #ifdef __cplusplus

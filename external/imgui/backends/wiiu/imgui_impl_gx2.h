@@ -23,3 +23,7 @@ IMGUI_IMPL_API bool     ImGui_ImplGX2_CreateFontsTexture();
 IMGUI_IMPL_API void     ImGui_ImplGX2_DestroyFontsTexture();
 IMGUI_IMPL_API bool     ImGui_ImplGX2_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplGX2_DestroyDeviceObjects();
+
+// True once CreateDeviceObjects has succeeded (shaders + font texture live).
+// RenderDrawData silently no-ops without them; callers can surface that state.
+IMGUI_IMPL_API bool     ImGui_ImplGX2_DeviceObjectsCreated();

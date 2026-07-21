@@ -19,4 +19,9 @@ void NewFrame(GX2ColorBuffer* display, float deltaTime);
 void FinishFrame();
 void Draw(GX2ColorBuffer* target);
 
+// Aroma keeps the plugin resident across title transitions. Drop GPU-facing
+// device objects between applications while preserving the ImGui context and
+// its loaded settings; NewFrame recreates them on the next TPHD presentation.
+void ResetDeviceObjects();
+
 } // namespace Renderer

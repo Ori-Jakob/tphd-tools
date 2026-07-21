@@ -1,14 +1,19 @@
-// cheats/cheats.h -- the Cheats menu + per-frame cheat application.
+// cheats/cheats.h -- the Gameplay menu + per-frame cheat application.
 
 #pragma once
 
 namespace Cheats {
 
-// Draws the contents of the "Cheats" menu (a checkbox per cheat).
-void DrawMenu();
+// Draws the workflow-oriented Gameplay menu and its nested modifier groups.
+void DrawGameplayMenu();
 
 // Called once per presented frame: applies every enabled cheat.
 void Tick();
+
+// Aroma title-process lifecycle.  Enabled settings persist, while ownership of
+// Zelda.rpx code patches must be reset/released for each application lifetime.
+void OnApplicationStart();
+void OnApplicationEnd();
 
 // --- persistence: let the config save/restore which cheats are enabled ---
 // Cheats are addressed by name (stable across registry reordering) for storage.

@@ -49,6 +49,14 @@ static inline bool dSv_hasSaveTimestamp(void)
 typedef int (*dSv_info_loadImage_t)(void* info, const void* image);
 #define dSv_info_loadImage ((dSv_info_loadImage_t)0x02aa8af8u)
 
+// FUN_02aa8af8 trusts the image it deserializes: the camera-config selector at
+// image+0x1E5 (live byte @ 0x1014552D) is used as an UNCLAMPED index into a
+// 4-entry table on the function's own stack frame, so a corrupt image with a
+// value > 3 makes the ENGINE read out-of-bounds stack memory during the load.
+// Clamp the byte before handing any external image to dSave_loadImage.
+#define DSV_IMAGE_CAMERA_CONFIG_OFF 0x1E5u
+#define DSV_IMAGE_CAMERA_CONFIG_MAX 3u
+
 // FUN_02aa84d0 / FUN_0290a3e8 are called by the game's own debug-save request
 // consumer before it reads the .dat. Together they clear transient save/meter
 // state and rebuild dComIfG_play_c item/HUD counters from a sane baseline.
@@ -67,6 +75,75 @@ static inline void dSave_prepareLoadRuntime(void)
 static inline int dSave_loadImage(const void* image)
 {
     return dSv_info_loadImage((void*)GAME_ADDR_gameInfo_info, image);
+}
+
+// ---- rebuild the live current-stage save record -----------------------------
+// A full dSv_info_c snapshot contains both:
+//   mSavedata.mSave[32] @ info+0x2F0 (persistent per-stage records), and
+//   mMemory             @ info+0xDF8 (the live current-stage record).
+//
+// tpgz's phase_1 memfile injector calls dComIfGs_getSave(mDan.mStageNo)
+// immediately after its full-block memcpy. TPHD's equivalent is
+// FUN_02aa8520: it copies mSavedata.mSave[stageNo] to mMemory. Ghidra confirms
+// mDan.mStageNo at info+0xE18 and the selected-record stride of 0x20.
+#define DSV_INFO_STAGE_RECORDS_OFF 0x02F0u
+#define DSV_STAGE_RECORD_SIZE      0x0020u
+#define DSV_STAGE_RECORD_COUNT     32
+#define DSV_INFO_MEMORY_OFF        0x0DF8u
+#define DSV_INFO_MEMORY_SIZE       DSV_STAGE_RECORD_SIZE
+#define DSV_INFO_DAN_OFF           0x0E18u
+#define DSV_INFO_ZONE_OFF          0x0E54u
+#define DSV_INFO_ZONE_SIZE         0x0400u
+#define DSV_ZONE_RECORD_COUNT      32
+#define DSV_ZONE_RECORD_SIZE       0x0020u
+#define DSV_ZONE_ROOMNO_OFF        0x0000u
+#define DSV_ZONE_FLAGS_OFF         0x0002u
+#define DSV_ZONE_FLAGS_SIZE        0x000Cu
+#define DSV_INFO_DAN_SIZE          (DSV_INFO_ZONE_OFF - DSV_INFO_DAN_OFF)
+#define DSV_INFO_DAN_STAGENO_OFF   DSV_INFO_DAN_OFF
+
+// mZone records contain a room id, 0x0C bytes of area/room switch+item flags,
+// an unknown u16, and 0x10 bytes of actor runtime state. The flag bytes are safe
+// to merge into the freshly initialized target-room slots; the remaining bytes
+// are deliberately left to stage creation.
+
+// Temporary event bits are a second dSv_event_c after mRestart. They use their
+// own label table: an mTmp bit number does NOT identify the same story flag in
+// mSavedata.mEvent, so these bytes must be restored as transient save-state data
+// rather than copied into the serialized permanent event array.
+#define DSV_INFO_TMP_EVENT_OFF     0x1278u
+#define DSV_INFO_TMP_EVENT_SIZE    0x0100u
+
+typedef void (*dSv_info_getSave_t)(void* info, int stageNo);
+#define dSv_info_getSave ((dSv_info_getSave_t)0x02aa8520u)
+
+// FUN_02aa856c is the inverse operation used by dComIfGs_putSave: copy live
+// mMemory back to mSavedata.mSave[stageNo]. tpgz performs this before capturing
+// a memfile so the serialized stage record cannot lag behind live room flags.
+typedef void (*dSv_info_putSave_t)(void* info, int stageNo);
+#define dSv_info_putSave ((dSv_info_putSave_t)0x02aa856cu)
+
+static inline s8 dSave_getStageNo(const void* info)
+{
+    return *(const s8*)((const u8*)info + DSV_INFO_DAN_STAGENO_OFF);
+}
+
+static inline bool dSave_commitCurrentStageMemory(void)
+{
+    s8 stageNo = dSave_getStageNo((const void*)GAME_ADDR_gameInfo_info);
+    if (stageNo < 0 || stageNo >= DSV_STAGE_RECORD_COUNT)
+        return false;
+    dSv_info_putSave((void*)GAME_ADDR_gameInfo_info, stageNo);
+    return true;
+}
+
+static inline bool dSave_rebuildCurrentStageMemory(void)
+{
+    s8 stageNo = dSave_getStageNo((const void*)GAME_ADDR_gameInfo_info);
+    if (stageNo < 0 || stageNo >= DSV_STAGE_RECORD_COUNT)
+        return false;
+    dSv_info_getSave((void*)GAME_ADDR_gameInfo_info, stageNo);
+    return true;
 }
 
 // ---- Link's oxygen/air (in the play struct) ---------------------------------

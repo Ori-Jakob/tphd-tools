@@ -1,13 +1,21 @@
 $ErrorActionPreference = 'Stop'
 
 $debugBuild = $false
+$experimentalBuild = $false
+$noInstall = $false
 $version = $null
+$versionWasGenerated = $false
+$projectDirectory = $PSScriptRoot
 
 for ($index = 0; $index -lt $args.Count; $index++) {
     $argument = [string]$args[$index]
     switch ($argument.ToLowerInvariant()) {
         '-d'      { $debugBuild = $true }
         '--debug' { $debugBuild = $true }
+        '-e'             { $experimentalBuild = $true }
+        '--experimental' { $experimentalBuild = $true }
+        '-ni'            { $noInstall = $true }
+        '--no-install'   { $noInstall = $true }
         '-v' {
             if ($index + 1 -ge $args.Count) {
                 throw "Missing version value after '$argument'."
@@ -24,20 +32,28 @@ for ($index = 0; $index -lt $args.Count; $index++) {
             if ($argument.StartsWith('--version=', [System.StringComparison]::OrdinalIgnoreCase)) {
                 $version = $argument.Substring('--version='.Length)
             } else {
-                throw "Unknown argument '$argument'. Use -d, --debug, -v, or --version."
+                throw "Unknown argument '$argument'. Use -d, --debug, -e, --experimental, -ni, --no-install, -v, or --version."
             }
         }
     }
 }
 
-if ($null -ne $version) {
-    if ([string]::IsNullOrWhiteSpace($version)) {
-        throw 'Version must not be empty.'
+if ($null -eq $version) {
+    $versionScript = Join-Path $projectDirectory 'scripts\source_crc32.ps1'
+    if (-not (Test-Path -LiteralPath $versionScript -PathType Leaf)) {
+        throw "Automatic version script was not found: '$versionScript'"
     }
-    if ($version.Contains('"') -or $version.Contains("'") -or $version.Contains('\') -or
-        $version.Contains("`r") -or $version.Contains("`n")) {
-        throw 'Version must not contain quotes, apostrophes, backslashes, or newlines.'
-    }
+    $version = & $versionScript -ProjectRoot $projectDirectory
+    $versionWasGenerated = $true
+}
+
+if ([string]::IsNullOrWhiteSpace($version)) {
+    throw 'Version must not be empty.'
+}
+$version = $version.Trim()
+if ($version.Contains('"') -or $version.Contains("'") -or $version.Contains('\') -or
+    $version.Contains("`r") -or $version.Contains("`n")) {
+    throw 'Version must not contain quotes, apostrophes, backslashes, or newlines.'
 }
 
 $destinations = @(
@@ -45,11 +61,16 @@ $destinations = @(
     'C:\Emulation\Games\WiiU\THE LEGEND OF ZELDA Twilight Princess HD [AZAP]\code'
 )
 
-$projectDirectory = $PSScriptRoot
 $buildName = if ($debugBuild) { 'debug' } else { 'release' }
-$outputFileName = if ($debugBuild) { 'tphd_tools_debug.rpl' } else { 'tphd_tools.rpl' }
+$buildChannel = if ($experimentalBuild) { 'experimental' } else { 'standard' }
+$installedOutputFileName = if ($debugBuild) { 'tphd_tools_debug.rpl' } else { 'tphd_tools.rpl' }
+$builtOutputFileName = if ($experimentalBuild) {
+    if ($debugBuild) { 'tphd_tools_experimental_debug.rpl' } else { 'tphd_tools_experimental.rpl' }
+} else {
+    $installedOutputFileName
+}
 $oppositeFileName = if ($debugBuild) { 'tphd_tools.rpl' } else { 'tphd_tools_debug.rpl' }
-$outputPath = Join-Path $projectDirectory $outputFileName
+$outputPath = Join-Path $projectDirectory $builtOutputFileName
 $graphicsPackSource = Join-Path $projectDirectory "graphicspack\$buildName"
 $graphicsPackDestination =
     Join-Path $env:APPDATA 'Cemu\graphicPacks\TwilightPrincessHD\tphd_tools'
@@ -57,13 +78,20 @@ $graphicsPackDestination =
 Push-Location $projectDirectory
 
 try {
-    Write-Host "Building $buildName RPL: $outputFileName..."
+    Write-Host "Building $buildChannel $buildName RPL: $builtOutputFileName..."
 
     $makeArguments = @('-B', '-f', 'Makefile')
-    if ($null -ne $version) {
-        $makeArguments += "VERSION=$version"
-        Write-Host "Using version '$version$(if ($debugBuild) { ' DEBUG' })'."
+    $makeArguments += "VERSION=$version"
+    if ($experimentalBuild) {
+        $makeArguments += 'EXPERIMENTAL=1'
     }
+    $versionKind = if ($versionWasGenerated) { 'automatic source CRC32' } else { 'specified' }
+    $versionLabel = if ($experimentalBuild) {
+        "$version EXPERIMENTAL $($buildName.ToUpperInvariant())"
+    } else {
+        "$version $($buildName.ToUpperInvariant())"
+    }
+    Write-Host "Using $versionKind version '$versionLabel'."
     if ($debugBuild) {
         $makeArguments += 'debug'
     }
@@ -76,6 +104,11 @@ try {
 
     if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
         throw "Build completed, but '$outputPath' was not found."
+    }
+
+    if ($noInstall) {
+        Write-Host "$buildChannel $buildName build completed successfully. Installation skipped (-ni)."
+        return
     }
 
     foreach ($requiredPackFile in @('patch_overlay.asm', 'rules.txt')) {
@@ -96,8 +129,8 @@ try {
             Remove-Item -LiteralPath $oppositePath -Force
         }
 
-        $destinationPath = Join-Path $destination $outputFileName
-        Write-Host "Copying $outputFileName to '$destinationPath'..."
+        $destinationPath = Join-Path $destination $installedOutputFileName
+        Write-Host "Copying $builtOutputFileName to '$destinationPath'..."
         Copy-Item -LiteralPath $outputPath -Destination $destinationPath -Force
     }
 
@@ -113,7 +146,7 @@ try {
         Copy-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
     }
 
-    Write-Host "$buildName build and installation completed successfully."
+    Write-Host "$buildChannel $buildName build and installation completed successfully."
 }
 finally {
     Pop-Location

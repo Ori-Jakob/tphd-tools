@@ -9,7 +9,7 @@
 namespace Debug {
 namespace DebugSave {
 
-// Checkbox shown in the Debug menu (toggles the window).
+// Checkbox shown in Practice > Save & Restore (toggles the window).
 void DrawMenuItem();
 
 bool IsEnabled();
@@ -21,6 +21,12 @@ void DrawWindow(bool menuActive);
 // Called once per presented frame: adopts background reads and queues the
 // appropriate game/debug-save transition outside the ImGui draw.
 void Tick();
+
+// Aroma: called at ON_APPLICATION_START. The previous game process took the
+// scan/load worker thread with it; this drops that stale state (thread flag,
+// queued mailboxes, busy latches) so the loader works on relaunch instead of
+// wedging until a reboot. Cemu front ends load the module fresh per boot.
+void OnApplicationStart();
 
 } // namespace DebugSave
 } // namespace Debug
