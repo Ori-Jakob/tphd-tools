@@ -6,6 +6,11 @@
 .extern g_tphdClimbingSpeedMultiplier
 .extern g_tphdClimbHeightMultiplier
 .extern g_tphdBlockPushSpeedMultiplier
+.extern g_tphdBlockPushSpeedQuarters
+.extern g_tphdBemosMovePhase
+.extern g_tphdChainPullSpeedMultiplier
+.extern g_tphdChainPullSpeedQuarters
+.extern tphdLv4ChandelierCurveDelta
 .extern g_tphdCrawlSpeedMultiplier
 .extern g_tphdRollSpeedMultiplier
 .extern g_tphdTimeSpeedMultiplier
@@ -39,6 +44,267 @@ tphdBlockPushSpeedReturnHook:
     fmuls 1, 1, 0
     blr
 .size tphdBlockPushSpeedReturnHook, .-tphdBlockPushSpeedReturnHook
+
+# Movebox actors keep their own travel timers. The slider advances in quarter
+# steps, so nativeFrames * 4 / speedQuarters gives an inverse duration without
+# floating-point conversion code. Keep the native engagement thresholds, round
+# travel to the nearest frame, and retain a one-frame minimum.
+
+.global tphdBlockPullDurationHook
+.type tphdBlockPullDurationHook, @function
+tphdBlockPullDurationHook:
+    lha 0, 0xa(12)
+    mulli 0, 0, 4
+    lis 10, g_tphdBlockPushSpeedQuarters@ha
+    lwz 10, g_tphdBlockPushSpeedQuarters@l(10)
+    srwi 11, 10, 1
+    add 0, 0, 11
+    divw 0, 0, 10
+    cmpwi 0, 1
+    bge 1f
+    li 0, 1
+1:
+    blr
+.size tphdBlockPullDurationHook, .-tphdBlockPullDurationHook
+
+.global tphdBlockPushDurationHook
+.type tphdBlockPushDurationHook, @function
+tphdBlockPushDurationHook:
+    lha 7, 0x4(12)
+    mulli 7, 7, 4
+    lis 11, g_tphdBlockPushSpeedQuarters@ha
+    lwz 11, g_tphdBlockPushSpeedQuarters@l(11)
+    srwi 0, 11, 1
+    add 7, 7, 0
+    divw 7, 7, 11
+    cmpwi 7, 1
+    bge 1f
+    li 7, 1
+1:
+    blr
+.size tphdBlockPushDurationHook, .-tphdBlockPushDurationHook
+
+# Obj_bm has the same kind of eased grid motion as Movebox, but its duration
+# and phase are fixed constants rather than attribute-table fields.
+.global tphdBemosDurationHook
+.type tphdBemosDurationHook, @function
+tphdBemosDurationHook:
+    li 0, 13
+    mulli 0, 0, 4
+    lis 10, g_tphdBlockPushSpeedQuarters@ha
+    lwz 10, g_tphdBlockPushSpeedQuarters@l(10)
+    srwi 11, 10, 1
+    add 0, 0, 11
+    divw 0, 0, 10
+    cmpwi 0, 1
+    bge 1f
+    li 0, 1
+1:
+    blr
+.size tphdBemosDurationHook, .-tphdBemosDurationHook
+
+.global tphdBemosPhaseHook
+.type tphdBemosPhaseHook, @function
+tphdBemosPhaseHook:
+    lis 12, g_tphdBemosMovePhase@ha
+    lfs 13, g_tphdBemosMovePhase@l(12)
+    blr
+.size tphdBemosPhaseHook, .-tphdBemosPhaseHook
+
+# daObjCwall_c::initWalk is a leaf function, so these are non-linking jump
+# hooks. Declare the native continuations once and return through CTR without
+# disturbing the actor caller's LR.
+.set _daObjCwall_initWalk_afterDurationHook, 0x026fd660
+.set _daObjCwall_initWalk_afterPhaseHook, 0x026fd674
+
+.global tphdChainWallDurationHook
+.type tphdChainWallDurationHook, @function
+tphdChainWallDurationHook:
+    li 11, 13
+    mulli 11, 11, 4
+    lis 10, g_tphdChainPullSpeedQuarters@ha
+    lwz 10, g_tphdChainPullSpeedQuarters@l(10)
+    srwi 9, 10, 1
+    add 11, 11, 9
+    divw 11, 11, 10
+    cmpwi 11, 1
+    bge 1f
+    li 11, 1
+1:
+    lis 12, _daObjCwall_initWalk_afterDurationHook@ha
+    addi 12, 12, _daObjCwall_initWalk_afterDurationHook@l
+    mtctr 12
+    bctr
+.size tphdChainWallDurationHook, .-tphdChainWallDurationHook
+
+.global tphdChainWallPhaseHook
+.type tphdChainWallPhaseHook, @function
+tphdChainWallPhaseHook:
+    li 12, 0x7fff
+    divw 12, 12, 11
+    lis 10, _daObjCwall_initWalk_afterPhaseHook@ha
+    addi 10, 10, _daObjCwall_initWalk_afterPhaseHook@l
+    mtctr 10
+    bctr
+.size tphdChainWallPhaseHook, .-tphdChainWallPhaseHook
+
+# modeWalk has already loaded the stored phase step into r9. Derive the exact
+# duration from it so changing the slider during a pull cannot desynchronize
+# the elapsed-frame calculation from the active movement.
+.global tphdChainWallElapsedHook
+.type tphdChainWallElapsedHook, @function
+tphdChainWallElapsedHook:
+    li 8, 0x7fff
+    divw 8, 8, 9
+    subf 8, 11, 8
+    blr
+.size tphdChainWallElapsedHook, .-tphdChainWallElapsedHook
+
+# Chain pulling has a separate movement limiter and animation setup for human
+# and Wolf Link. Reproduce each native value and scale only the chain-specific
+# branch. Save scratch state that the displaced instruction did not modify.
+.global tphdHumanChainMaxSpeedBlendHook
+.type tphdHumanChainMaxSpeedBlendHook, @function
+tphdHumanChainMaxSpeedBlendHook:
+    lfs 10, 0x7474(12)
+    stwu 1, -0x20(1)
+    stw 12, 8(1)
+    stfd 1, 0x10(1)
+    lis 12, g_tphdChainPullSpeedMultiplier@ha
+    lfs 1, g_tphdChainPullSpeedMultiplier@l(12)
+    fmuls 10, 10, 1
+    lfd 1, 0x10(1)
+    lwz 12, 8(1)
+    addi 1, 1, 0x20
+    blr
+.size tphdHumanChainMaxSpeedBlendHook, .-tphdHumanChainMaxSpeedBlendHook
+
+.global tphdHumanChainMaxSpeedActionHook
+.type tphdHumanChainMaxSpeedActionHook, @function
+tphdHumanChainMaxSpeedActionHook:
+    lfs 0, 0x7474(10)
+    b tphdScaleChainMaxSpeed
+.size tphdHumanChainMaxSpeedActionHook, .-tphdHumanChainMaxSpeedActionHook
+
+.global tphdWolfChainMaxSpeedActionHook
+.type tphdWolfChainMaxSpeedActionHook, @function
+tphdWolfChainMaxSpeedActionHook:
+    lfs 0, 0x7474(12)
+    b tphdScaleChainMaxSpeed
+.size tphdWolfChainMaxSpeedActionHook, .-tphdWolfChainMaxSpeedActionHook
+
+.type tphdScaleChainMaxSpeed, @function
+tphdScaleChainMaxSpeed:
+    stwu 1, -0x20(1)
+    stw 12, 8(1)
+    stfd 1, 0x10(1)
+    lis 12, g_tphdChainPullSpeedMultiplier@ha
+    lfs 1, g_tphdChainPullSpeedMultiplier@l(12)
+    fmuls 0, 0, 1
+    lfd 1, 0x10(1)
+    lwz 12, 8(1)
+    addi 1, 1, 0x20
+    blr
+.size tphdScaleChainMaxSpeed, .-tphdScaleChainMaxSpeed
+
+.global tphdHumanChainAnimationHeavyHook
+.type tphdHumanChainAnimationHeavyHook, @function
+tphdHumanChainAnimationHeavyHook:
+    lfs 1, 0x7314(9)
+    b tphdScaleChainAnimation
+.size tphdHumanChainAnimationHeavyHook, .-tphdHumanChainAnimationHeavyHook
+
+.global tphdHumanChainAnimationNormalHook
+.type tphdHumanChainAnimationNormalHook, @function
+tphdHumanChainAnimationNormalHook:
+    fmr 1, 29
+    b tphdScaleChainAnimation
+.size tphdHumanChainAnimationNormalHook, .-tphdHumanChainAnimationNormalHook
+
+.global tphdWolfChainAnimationHeavyHook
+.type tphdWolfChainAnimationHeavyHook, @function
+tphdWolfChainAnimationHeavyHook:
+    lfs 1, 0x7314(10)
+    b tphdScaleChainAnimation
+.size tphdWolfChainAnimationHeavyHook, .-tphdWolfChainAnimationHeavyHook
+
+.global tphdWolfChainAnimationNormalHook
+.type tphdWolfChainAnimationNormalHook, @function
+tphdWolfChainAnimationNormalHook:
+    fmr 1, 31
+    b tphdScaleChainAnimation
+.size tphdWolfChainAnimationNormalHook, .-tphdWolfChainAnimationNormalHook
+
+.type tphdScaleChainAnimation, @function
+tphdScaleChainAnimation:
+    stwu 1, -0x20(1)
+    stw 12, 8(1)
+    stfd 0, 0x10(1)
+    lis 12, g_tphdChainPullSpeedMultiplier@ha
+    lfs 0, g_tphdChainPullSpeedMultiplier@l(12)
+    fmuls 1, 1, 0
+    lfd 0, 0x10(1)
+    lwz 12, 8(1)
+    addi 1, 1, 0x20
+    blr
+.size tphdScaleChainAnimation, .-tphdScaleChainAnimation
+
+# Obj_Lv4Chan expects the selected curve contribution in r0. The helper needs
+# the chandelier actor (r29) and clamped Link animation frame (r5). Preserve
+# every volatile register and special register that the displaced lwz left
+# untouched, then return the helper result in r0.
+.global tphdLv4ChandelierCurveHook
+.type tphdLv4ChandelierCurveHook, @function
+tphdLv4ChandelierCurveHook:
+    # Keep the ABI linkage and eight-word parameter-save areas free for the
+    # C++ helper; saved live state starts after them.
+    stwu 1, -0x70(1)
+    mflr 0
+    stw 0, 0x04(1)
+    mfctr 0
+    stw 0, 0x28(1)
+    mfcr 0
+    stw 0, 0x2c(1)
+    mfxer 0
+    stw 0, 0x30(1)
+    stw 3, 0x34(1)
+    stw 4, 0x38(1)
+    stw 5, 0x3c(1)
+    stw 6, 0x40(1)
+    stw 7, 0x44(1)
+    stw 8, 0x48(1)
+    stw 9, 0x4c(1)
+    stw 10, 0x50(1)
+    stw 11, 0x54(1)
+    stw 12, 0x58(1)
+
+    mr 3, 29
+    mr 4, 5
+    bl tphdLv4ChandelierCurveDelta
+    stw 3, 0x5c(1)
+
+    lwz 3, 0x34(1)
+    lwz 4, 0x38(1)
+    lwz 5, 0x3c(1)
+    lwz 6, 0x40(1)
+    lwz 7, 0x44(1)
+    lwz 8, 0x48(1)
+    lwz 9, 0x4c(1)
+    lwz 10, 0x50(1)
+    lwz 11, 0x54(1)
+    lwz 12, 0x58(1)
+    lwz 0, 0x30(1)
+    mtxer 0
+    lwz 0, 0x2c(1)
+    mtcrf 0xff, 0
+    lwz 0, 0x28(1)
+    mtctr 0
+    lwz 0, 0x04(1)
+    mtlr 0
+    lwz 0, 0x5c(1)
+    addi 1, 1, 0x70
+    blr
+.size tphdLv4ChandelierCurveHook, .-tphdLv4ChandelierCurveHook
 
 # Wolf Link's ledge-ready procedure has its own animation setup instead of the
 # human hang-rate helper. Reproduce the displaced native load before applying

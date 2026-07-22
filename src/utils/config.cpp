@@ -115,7 +115,10 @@ struct Snap {
     int rupeeMode;
     float climbingSpeedMultiplier;
     float climbHeightMultiplier;
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     float blockPushSpeedMultiplier;
+    float chainPullSpeedMultiplier;
+#endif
     float crawlSpeedMultiplier;
     float rollSpeedMultiplier;
     float timeSpeedMultiplier;
@@ -206,7 +209,10 @@ static Snap gather()
     s.rupeeMode = Cheats::Difficulty::GetRupeeMode();
     s.climbingSpeedMultiplier = Cheats::QoL::GetClimbingSpeedMultiplier();
     s.climbHeightMultiplier = Cheats::QoL::GetClimbHeightMultiplier();
+#ifdef TPHD_TOOLS_EXPERIMENTAL
     s.blockPushSpeedMultiplier = Cheats::QoL::GetBlockPushSpeedMultiplier();
+    s.chainPullSpeedMultiplier = Cheats::QoL::GetChainPullSpeedMultiplier();
+#endif
     s.crawlSpeedMultiplier = Cheats::QoL::GetCrawlSpeedMultiplier();
     s.rollSpeedMultiplier = Cheats::QoL::GetRollSpeedMultiplier();
     s.timeSpeedMultiplier = Cheats::QoL::GetTimeSpeedMultiplier();
@@ -293,7 +299,10 @@ static bool snapEqual(const Snap& a, const Snap& b)
            a.rupeeMode == b.rupeeMode &&
            a.climbingSpeedMultiplier == b.climbingSpeedMultiplier &&
            a.climbHeightMultiplier == b.climbHeightMultiplier &&
+#ifdef TPHD_TOOLS_EXPERIMENTAL
            a.blockPushSpeedMultiplier == b.blockPushSpeedMultiplier &&
+           a.chainPullSpeedMultiplier == b.chainPullSpeedMultiplier &&
+#endif
            a.crawlSpeedMultiplier == b.crawlSpeedMultiplier &&
            a.rollSpeedMultiplier == b.rollSpeedMultiplier &&
            a.timeSpeedMultiplier == b.timeSpeedMultiplier &&
@@ -443,8 +452,12 @@ static char* serialize()
                                 Cheats::QoL::GetClimbingSpeedMultiplier());
         cJSON_AddNumberToObject(qol, "climbHeightMultiplier",
                                 Cheats::QoL::GetClimbHeightMultiplier());
+#ifdef TPHD_TOOLS_EXPERIMENTAL
         cJSON_AddNumberToObject(qol, "blockPushSpeedMultiplier",
                                 Cheats::QoL::GetBlockPushSpeedMultiplier());
+        cJSON_AddNumberToObject(qol, "chainPullSpeedMultiplier",
+                                Cheats::QoL::GetChainPullSpeedMultiplier());
+#endif
         cJSON_AddNumberToObject(qol, "crawlSpeedMultiplier",
                                 Cheats::QoL::GetCrawlSpeedMultiplier());
         cJSON_AddNumberToObject(qol, "rollSpeedMultiplier",
@@ -868,6 +881,7 @@ static void apply(const char* text)
             else
                 s_forceSync = true;
 
+#ifdef TPHD_TOOLS_EXPERIMENTAL
             setting = cJSON_GetObjectItemCaseSensitive(
                 qol, "blockPushSpeedMultiplier");
             if (setting && cJSON_IsNumber(setting))
@@ -875,6 +889,15 @@ static void apply(const char* text)
                     (float)setting->valuedouble);
             else
                 s_forceSync = true;
+
+            setting = cJSON_GetObjectItemCaseSensitive(
+                qol, "chainPullSpeedMultiplier");
+            if (setting && cJSON_IsNumber(setting))
+                Cheats::QoL::SetChainPullSpeedMultiplier(
+                    (float)setting->valuedouble);
+            else
+                s_forceSync = true;
+#endif
 
             setting = cJSON_GetObjectItemCaseSensitive(
                 qol, "crawlSpeedMultiplier");

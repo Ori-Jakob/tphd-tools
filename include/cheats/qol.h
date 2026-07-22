@@ -16,6 +16,8 @@ float GetClimbHeightMultiplier();
 void  SetClimbHeightMultiplier(float value);
 float GetBlockPushSpeedMultiplier();
 void  SetBlockPushSpeedMultiplier(float value);
+float GetChainPullSpeedMultiplier();
+void  SetChainPullSpeedMultiplier(float value);
 float GetCrawlSpeedMultiplier();
 void  SetCrawlSpeedMultiplier(float value);
 float GetRollSpeedMultiplier();

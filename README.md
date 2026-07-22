@@ -10,8 +10,8 @@ API and shares the same tools between Cemu and a Wii U running Aroma.
 | Wii U with Aroma | `tphd_tools.wps` | A Wii U Plugin System plugin installs its own runtime hooks |
 
 Standard builds include the practice tools, gameplay editors and modifiers, cameras, HUDs,
-and settings described below. Boss Practice and the autosplitter are compiled only when
-`EXPERIMENTAL=1` is set.
+and settings described below. Boss Practice, the autosplitter, and the block push/pull and
+chain-pull speed modifiers are available only when `EXPERIMENTAL=1` is set.
 
 > [!WARNING]
 > TPHD Tools reads and writes game memory through bindings made for TPHD v81. Using another
@@ -64,7 +64,7 @@ switch, item, dungeon-item, or key-count values after loading.
 | World Editor | Edits 786 searchable story event flags; current-area chest, switch, item, dungeon-item, and stage-event flags; dungeon key count; and the persistent state of 15 warp portals. It is opened from **Movement & World > World & Time**. |
 | Equipment modifiers | Super Clawshot, Infinite Spinner Time, adjustable Spinner speed, Remote Bombs, No Bomb Limit, Fast Iron Boots, and Always Great Spin Attack. |
 | Difficulty | Scales damage received and dealt, gives enemies infinite health, simplifies sumo, changes rupee gains or losses, removes fall damage, and controls fairy revival behavior. |
-| Movement and world | Adjusts climbing, climb height, block pushing and pulling, crawling, roll speed and distance, time of day, and clock progression. Setting clock progression to zero freezes the normal world clock. |
+| Movement and world | Adjusts climbing, climb height, crawling, roll speed and distance, time of day, and clock progression. Experimental builds also include block push/pull and chain-pull speed modifiers. Setting clock progression to zero freezes the normal world clock. |
 
 The Inventory Editor and World Editor modify the live save structures. They do not validate
 whether combinations of equipment, dungeon state, and story flags are logically reachable.
@@ -108,6 +108,7 @@ Experimental tools are absent from standard binaries, not merely hidden in the m
 | --- | --- |
 | Boss Practice | Launches the Lakebed Temple Deku Toad encounter at its opening cinematic or directly into the fight. The launcher can retain the current loadout or construct a recommended or custom temporary loadout. |
 | Auto Splitter | Loads route JSON files from `tphd_tools/splits`, displays an in-game timer and split list, evaluates memory conditions, tracks personal-best history and gold segments, and can remove gameplay load time. |
+| Block and chain speed modifiers | Scales Link's animation and the associated object movement for block push/pull and chain-pull actions. These modifiers remain experimental while their actor-specific timing paths are stabilized. |
 
 ## Controls
 
