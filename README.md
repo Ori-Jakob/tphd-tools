@@ -317,3 +317,13 @@ python tools/gen_procs_bin.py
 This repository does not currently declare a project-level license. Unless a license is
 added, no permission to copy, modify, or redistribute the project's original source should
 be assumed. Third-party code under `external/` remains subject to its own license terms.
+
+## Credits
+
+Thank you to the following people and teams, without whom this project would not be possible:
+
+- [**TPGZ Team**](https://github.com/zsrtp/tpgz)
+- [**TP Decomp Team**](https://github.com/zeldaret/tp)
+- [**GaryOderNichts (Dear ImGui fork)**](https://github.com/GaryOderNichts/imgui)
+- [**devKitPro team**](https://github.com/devkitpro) (compiler toolchain)
+- [**Aroma Team**](https://github.com/wiiu-env/Aroma) (WUPS plugin environment)
