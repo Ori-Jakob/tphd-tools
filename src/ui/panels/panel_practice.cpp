@@ -1,6 +1,7 @@
 #include "ui/panels.h"
 
 #include "tools/coordinates.h"
+#include "tools/debug_saves.h"
 #include "tools/position_editor.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
@@ -28,6 +29,7 @@ void DrawPractice()
     ImGui::SeparatorText("Save & Restore");
     Tools::SaveStates::DrawMenuItem();
     Tools::Coordinates::DrawMenuItem();
+    Tools::DebugSaves::DrawMenuItem();
 
     ImGui::SeparatorText("Timing");
     Tools::RollChecker::DrawMenuItem();

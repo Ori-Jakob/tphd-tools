@@ -2,6 +2,7 @@
 
 #include "hud/hud_game_info.h"
 #include "render/image.h"
+#include "tools/debug_saves.h"
 #include "tools/inventory_editor.h"
 #include "tools/position_editor.h"
 #include "tools/save_states.h"
@@ -59,6 +60,7 @@ void Draw(ImGuiIO& io)
     Panels::DrawControlsWindow();
     Tools::Warp::DrawWindow();
     Tools::SaveStates::DrawWindow();
+    Tools::DebugSaves::DrawWindow();
     Tools::PositionEditor::DrawWindow();
     Tools::InventoryEditor::DrawWindow();
     Tools::WorldEditor::DrawWindow();

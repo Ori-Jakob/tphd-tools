@@ -11,6 +11,7 @@
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
 #include "tools/coordinates.h"
+#include "tools/debug_saves.h"
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
@@ -131,6 +132,7 @@ void OnApplicationStart()
     Tools::ModernCamera::OnApplicationStart();
     Tools::Coordinates::OnApplicationStart();
     Tools::SaveStates::OnApplicationStart();
+    Tools::DebugSaves::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -238,6 +240,7 @@ void Tick()
     Tools::PracticeTimer::Tick(gameTools);
     Tools::Coordinates::Tick(gameTools);
     Tools::StageControl::Tick(gameTools);
+    Tools::DebugSaves::Tick();
     Tools::SaveStates::Tick(gameTools);
 
     static int s_gameOnTv = -1;
