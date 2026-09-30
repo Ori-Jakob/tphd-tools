@@ -1,0 +1,6 @@
+[Definition]
+titleIds = 000500001019E500,000500001019E600,000500001019C800
+name = "TPHD Tools"
+path = "The Legend of Zelda: Twilight Princess HD/Mods/TPHD Tools"
+description = Loads TPHD Tools into Twilight Princess HD. Practice tools, cheats and an ImGui overlay. By n0ted
+version = 7

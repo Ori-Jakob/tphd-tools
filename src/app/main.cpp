@@ -1,9 +1,14 @@
+#include "app/cemu.h"
+#include "app/hooks.h"
+#include "app/present.h"
+
+#include "core/logger.h"
 #include "core/version.h"
+
+#include "libtphd/reloc.h"
 
 #include <coreinit/debug.h>
 #include <coreinit/dynload.h>
-
-#include <rplloader/rplloader.h>
 
 namespace App {
 static const RplHost* gHost = nullptr;
@@ -29,16 +34,40 @@ static const RplTitleBlob kTitleBlob
 #define kTitles      (kTitleBlob.ids)
 #define kTitleCount  (sizeof(kTitleBlob.ids) / sizeof(kTitleBlob.ids[0]))
 
+static const char* regionName(uint64_t titleId)
+{
+    switch (titleId) {
+    case 0x000500001019E500ull: return "USA";
+    case 0x000500001019E600ull: return "EUR";
+    case 0x000500001019C800ull: return "JPN";
+    default:                    return "unknown";
+    }
+}
+
 static int OnInit(const RplHost* host)
 {
     gHost = host;
-    host->log(host, RPL_LOG_INFO, "tphd-tools %s by %s, built %s %s",
-              TPHD_TOOLS_VERSION, TPHD_TOOLS_AUTHOR, __DATE__, __TIME__);
+
+    const uint64_t titleId = host->titleId(host);
+    const uint32_t dataDelta = host->dataDelta(host);
+    TphdSetGameDataDelta(dataDelta);
+
+    Logger::SetHost(host);
+    Logger::Log("tphd-tools %s by %s, built %s %s, %s title, data delta %08X",
+                TPHD_TOOLS_VERSION, TPHD_TOOLS_AUTHOR, __DATE__, __TIME__,
+                regionName(titleId), (unsigned)dataDelta);
+
+    const bool dynHooked = RegisterDynamicHooks(host);
+    Present::Init();
+
+    host->log(host, RPL_LOG_INFO, "%u static hook(s), dynamic hooks %s",
+              (unsigned)gHookCount, dynHooked ? "ALL APPLIED" : "SOME FAILED");
     return 0;
 }
 
 static void OnDeinit()
 {
+    Present::Shutdown();
     gHost = nullptr;
 }
 
@@ -56,12 +85,17 @@ static RplManifest gManifest = {
     .flags        = RPL_FLAG_ALLOW_RELEASE,
     .onInit       = OnInit,
     .onDeinit     = OnDeinit,
-    .maxHooks     = 0,
+    .maxHooks     = 32,
+    .onReleaseForeground  = Present::OnReleaseForeground,
+    .onAcquiredForeground = Present::OnAcquiredForeground,
+    .onPadSampled         = nullptr,
 };
 }
 
 RPL_EXPORT const RplManifest* rpl_manifest()
 {
+    App::gManifest.hooks     = App::gHooks;
+    App::gManifest.hookCount = App::gHookCount;
     return &App::gManifest;
 }
 

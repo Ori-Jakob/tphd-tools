@@ -11,7 +11,6 @@ include $(DEVKITPRO)/wut/share/wut_rules
 
 TARGET     := tphd_tools
 RPLLOADER  ?= external/wii-u-rpl-loader
-LIBWUPATCH ?= $(RPLLOADER)/external/libwupatch
 CRT        := $(RPLLOADER)/crt
 
 VERSION ?=
@@ -36,8 +35,8 @@ endif
 
 DATA     := data
 SOURCES  := src/app src/core src/render src/ui src/ui/panels src/hud src/tools src/cheats \
-            external/imgui external/cjson external/libtphd/src $(LIBWUPATCH)/src $(CRT)
-INCLUDES := include $(RPLLOADER)/include $(LIBWUPATCH)/include \
+            external/imgui external/cjson external/libtphd/src $(CRT)
+INCLUDES := include $(RPLLOADER)/include \
             external/libtphd/include external/imgui external/imgui/backends/wiiu \
             external/cjson
 
@@ -49,7 +48,7 @@ CXXFLAGS := $(CFLAGS) -std=c++20 -fno-exceptions -fno-rtti
 ASFLAGS  := -g $(MACHDEP)
 LDFLAGS   = -g $(MACHDEP) -specs=$(WUT_ROOT)/share/wut.specs \
             -specs=$(TOPDIR)/$(CRT)/rplloader.specs -Wl,-Map,$(notdir $*.map) \
-            -Wl,--gc-sections -Wl,-u,rpl_manifest
+            -Wl,--gc-sections -Wl,-u,rpl_manifest -Wl,-u,rpl_cemu_entry
 
 LIBS    := -lwut -lm
 LIBDIRS := $(PORTLIBS) $(WUT_ROOT)
