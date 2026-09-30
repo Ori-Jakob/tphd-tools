@@ -30,6 +30,14 @@ void tphdDamageGivenHook();
 void tphdRupeeChangeHook();
 void tphdNoFallDamageHook();
 void tphdAlwaysFairyRevivalHook();
+void tphdStarGameClearHook();
+void tphdCanoeScoreSkipHook();
+void tphdBoatScoreGain2Hook();
+void tphdBoatScoreGain1Hook();
+void tphdTimerFreezeHook();
+void tphdGoatInstantWinHook();
+void tphdFruitComboKeepHook();
+void tphdEasySumoHook();
 }
 
 namespace App {
@@ -79,6 +87,15 @@ static const Site kSites[] = {
     { "noFallDamageB",       0x020A1C34u, 0x4BFEA1E1u, CALL, tphdNoFallDamageHook },
     { "noFallDamageC",       0x020BF018u, 0x4BFCCDFDu, CALL, tphdNoFallDamageHook },
     { "fairyRevival",        0x0203152Cu, 0x48A74F35u, CALL, tphdAlwaysFairyRevivalHook },
+    { "starGameClear",       0x024DC584u, 0x80630E0Cu, JUMP, tphdStarGameClearHook },
+    { "canoeScoreA",         0x021A37B4u, 0x4182007Cu, JUMP, tphdCanoeScoreSkipHook },
+    { "canoeScoreB",         0x021A37E8u, 0x41820048u, JUMP, tphdCanoeScoreSkipHook },
+    { "rapidsGain2",         0x0287CF1Cu, 0x39680002u, CALL, tphdBoatScoreGain2Hook },
+    { "rapidsGain1",         0x0287CF54u, 0x39680001u, CALL, tphdBoatScoreGain1Hook },
+    { "timerFreeze",         0x02AC6388u, 0x907D0118u, CALL, tphdTimerFreezeHook },
+    { "goatInstantWin",      0x024A7424u, 0x7C095040u, CALL, tphdGoatInstantWinHook },
+    { "fruitComboKeep",      0x026BEEE0u, 0x7C0B0040u, CALL, tphdFruitComboKeepHook },
+    { "easySumo",            0x02667158u, 0x83E1000Cu, CALL, tphdEasySumoHook },
 };
 
 static const uint32_t kSiteCount = sizeof(kSites) / sizeof(kSites[0]);

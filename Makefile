@@ -33,6 +33,12 @@ OPTFLAGS      := -O2
 DEBUG_DEFINES :=
 endif
 
+EXPERIMENTAL ?= 0
+ifeq ($(EXPERIMENTAL),1)
+BUILD         := $(BUILD)_experimental
+DEBUG_DEFINES += -DTPHD_TOOLS_EXPERIMENTAL=1
+endif
+
 DATA     := data
 SOURCES  := src/app src/core src/render src/ui src/ui/panels src/hud src/tools src/cheats \
             external/imgui external/cjson external/libtphd/src $(CRT)
@@ -102,7 +108,7 @@ $(BUILD):
 
 clean:
 	@echo clean ...
-	@rm -fr build build_debug .lastconfig $(TARGET).rpl $(TARGET).elf $(TARGET).lst $(TARGET).map
+	@rm -fr build build_* .lastconfig $(TARGET).rpl $(TARGET).elf $(TARGET).lst $(TARGET).map
 
 WIIU_IP  ?=
 TITLE_ID ?= 000500001019E500

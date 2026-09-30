@@ -10,6 +10,10 @@ moduleMatches = 0x1A03E108
 0x0203AC44 = _g_0203AC44:
 0x020502F4 = _g_020502F4:
 0x0208BE14 = _g_0208BE14:
+0x021A37B8 = _g_021A37B8:
+0x021A37EC = _g_021A37EC:
+0x021A3830 = _g_021A3830:
+0x024DC588 = _g_024DC588:
 0x02AA6460 = _g_02AA6460:
 
 .origin = codecave
@@ -19,7 +23,7 @@ _pk_version:
 .int 2
 
 _pk_hook_count:
-.int 33
+.int 42
 _pkh_0:
 .int _hkf_0
 _pkh_1:
@@ -86,6 +90,24 @@ _pkh_31:
 .int _hkf_31
 _pkh_32:
 .int _hkf_32
+_pkh_33:
+.int _hkf_33
+_pkh_34:
+.int _hkf_34
+_pkh_35:
+.int _hkf_35
+_pkh_36:
+.int _hkf_36
+_pkh_37:
+.int _hkf_37
+_pkh_38:
+.int _hkf_38
+_pkh_39:
+.int _hkf_39
+_pkh_40:
+.int _hkf_40
+_pkh_41:
+.int _hkf_41
 
 _rpl_state:
 .byte 0
@@ -459,6 +481,60 @@ _hkt_32:
     mtctr r11
     bctr
 
+_hkt_33:
+    lis   r11, _pkh_33@ha
+    lwz   r11, _pkh_33@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_34:
+    lis   r11, _pkh_34@ha
+    lwz   r11, _pkh_34@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_35:
+    lis   r11, _pkh_35@ha
+    lwz   r11, _pkh_35@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_36:
+    lis   r11, _pkh_36@ha
+    lwz   r11, _pkh_36@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_37:
+    lis   r11, _pkh_37@ha
+    lwz   r11, _pkh_37@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_38:
+    lis   r11, _pkh_38@ha
+    lwz   r11, _pkh_38@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_39:
+    lis   r11, _pkh_39@ha
+    lwz   r11, _pkh_39@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_40:
+    lis   r11, _pkh_40@ha
+    lwz   r11, _pkh_40@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_41:
+    lis   r11, _pkh_41@ha
+    lwz   r11, _pkh_41@l(r11)
+    mtctr r11
+    bctr
+
 _hkf_0:
     li    r3, 0
     blr
@@ -584,6 +660,44 @@ _hkf_31:
 
 _hkf_32:
     b     _g_02AA6460
+
+_hkf_33:
+    lwz   r3, 0xE0C(r3)
+    b     _g_024DC588
+
+_hkf_34:
+    beq   _g_021A3830
+    b     _g_021A37B8
+
+_hkf_35:
+    beq   _g_021A3830
+    b     _g_021A37EC
+
+_hkf_36:
+    addi  r11, r8, 2
+    blr
+
+_hkf_37:
+    addi  r11, r8, 1
+    blr
+
+_hkf_38:
+    stw   r3, 0x118(r29)
+    blr
+
+_hkf_39:
+    cmplw r9, r10
+    blr
+
+_hkf_40:
+    lis   r11, 0x1011
+    lwz   r11, -0x4284(r11)
+    cmplw r11, r0
+    blr
+
+_hkf_41:
+    lwz   r31, 0xC(r1)
+    blr
 
 counter_hook:
     stwu  r1, -0x40(r1)
@@ -793,3 +907,12 @@ kpad_done:
 0x020A1C34 = bla _hkt_30
 0x020BF018 = bla _hkt_31
 0x0203152C = bla _hkt_32
+0x024DC584 = b   _hkt_33
+0x021A37B4 = b   _hkt_34
+0x021A37E8 = b   _hkt_35
+0x0287CF1C = bla _hkt_36
+0x0287CF54 = bla _hkt_37
+0x02AC6388 = bla _hkt_38
+0x024A7424 = bla _hkt_39
+0x026BEEE0 = bla _hkt_40
+0x02667158 = bla _hkt_41

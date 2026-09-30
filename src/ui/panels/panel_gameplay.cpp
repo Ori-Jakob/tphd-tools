@@ -2,6 +2,7 @@
 
 #include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
+#include "cheats/cheat_minigames.h"
 #include "cheats/cheat_player.h"
 #include "cheats/cheats.h"
 #include "core/config.h"
@@ -184,6 +185,50 @@ static bool drawRupeeMode(const Control::Descriptor*, Control::Surface)
     return true;
 }
 
+static bool drawMinigameToggle(const Control::Descriptor* d, Control::Surface)
+{
+    const Cheats::Minigames::Toggle t = (Cheats::Minigames::Toggle)d->token;
+    bool enabled = Cheats::Minigames::IsEnabled(t);
+    const bool changed = ImGui::Checkbox(d->name, &enabled);
+    if (changed) {
+        Cheats::Minigames::SetEnabled(t, enabled);
+        Config::MarkDirty();
+    }
+    if (!ImGui::IsItemHovered())
+        return changed;
+    switch (t) {
+    case Cheats::Minigames::RAPIDS_NO_LOSS:
+        ImGui::SetTooltip("Hitting rocks and walls no longer costs a point.");
+        break;
+    case Cheats::Minigames::FRUIT_COMBO_KEEP:
+        ImGui::SetTooltip("Every fruit doubles your combo, even after switching types.");
+        break;
+    case Cheats::Minigames::EASY_SUMO:
+        ImGui::SetTooltip("Your opponent leaves themselves open.");
+        break;
+    case Cheats::Minigames::FREEZE_TIMERS:
+        ImGui::SetTooltip("Countdown timers stop. The menu never uses up time.");
+        break;
+    default:
+        break;
+    }
+    return changed;
+}
+
+static bool drawRapidsMultiplier(const Control::Descriptor* d, Control::Surface)
+{
+    int value = Cheats::Minigames::GetRapidsMultiplier();
+    ImGui::SetNextItemWidth(150.0f);
+    const bool changed = Field::SliderInt(d->name, &value, 1, 10, "%dx");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Points from each buoy. The score still stops at 99.");
+    if (changed) {
+        Cheats::Minigames::SetRapidsMultiplier(value);
+        Config::MarkDirty();
+    }
+    return changed;
+}
+
 void RegisterGameplayControls()
 {
     static const char* const kPaths[Cheats::Player::TOGGLE_COUNT] = {
@@ -253,6 +298,29 @@ void RegisterGameplayControls()
                                    "Gameplay / Difficulty / Economy", drawRupeeMultiplier,
                                    drawRupeeMode, nullptr, 0 };
     Control::Register(rupees);
+
+    static const char* const kMinigamePaths[Cheats::Minigames::TOGGLE_COUNT] = {
+        "Gameplay / Minigames / STAR Game",
+        "Gameplay / Minigames / Rapids Ride",
+        "Gameplay / Minigames / Goat Herding",
+        "Gameplay / Minigames / Fruit Pop Flight",
+        "Gameplay / Minigames / Sumo Wrestling",
+        "Gameplay / Minigames / Timers",
+    };
+    for (int i = 0; i < Cheats::Minigames::TOGGLE_COUNT; ++i) {
+        const Cheats::Minigames::Toggle t = (Cheats::Minigames::Toggle)i;
+#ifndef TPHD_TOOLS_EXPERIMENTAL
+        if (t == Cheats::Minigames::FREEZE_TIMERS)
+            continue;
+#endif
+        Control::Descriptor d = { Cheats::Minigames::ControlId(t), Cheats::Minigames::Name(t),
+                                  kMinigamePaths[i], drawMinigameToggle, nullptr, nullptr, i };
+        Control::Register(d);
+    }
+    Control::Descriptor rapids = { "gameplay.minigames.rapids_points", "Rapids Point Multiplier",
+                                   "Gameplay / Minigames / Rapids Ride", drawRapidsMultiplier,
+                                   nullptr, nullptr, 0 };
+    Control::Register(rapids);
 }
 
 static void drawPlayer(Cheats::Player::Toggle t)
@@ -337,6 +405,32 @@ static void drawDifficultyMenu()
     }
 }
 
+static void drawMinigamesMenu()
+{
+    using namespace Cheats::Minigames;
+    ImGui::SeparatorText("STAR Game");
+    Control::Draw(ControlId(STAR_INSTANT_WIN), Control::SURFACE_MENU);
+    ImGui::SeparatorText("Goat Herding");
+    Control::Draw(ControlId(GOAT_INSTANT_WIN), Control::SURFACE_MENU);
+    ImGui::SeparatorText("Rapids Ride");
+    Control::Draw(ControlId(RAPIDS_NO_LOSS), Control::SURFACE_MENU);
+    Control::Draw("gameplay.minigames.rapids_points", Control::SURFACE_MENU);
+    ImGui::SeparatorText("Fruit Pop Flight");
+    Control::Draw(ControlId(FRUIT_COMBO_KEEP), Control::SURFACE_MENU);
+    ImGui::SeparatorText("Sumo Wrestling");
+    Control::Draw(ControlId(EASY_SUMO), Control::SURFACE_MENU);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    ImGui::SeparatorText("Timers");
+    Control::Draw(ControlId(FREEZE_TIMERS), Control::SURFACE_MENU);
+#endif
+
+    ImGui::Separator();
+    if (ImGui::Button("Restore minigame defaults")) {
+        ResetToDefaults();
+        Config::MarkDirty();
+    }
+}
+
 static void drawMovementMenu()
 {
     ImGui::SeparatorText("Epona");
@@ -349,6 +443,7 @@ void DrawGameplay()
     if (ImGui::BeginMenu("Player"))            { drawPlayerMenu();   ImGui::EndMenu(); }
     if (ImGui::BeginMenu("Items & Equipment")) { drawItemsMenu();    ImGui::EndMenu(); }
     if (ImGui::BeginMenu("Difficulty"))        { drawDifficultyMenu(); ImGui::EndMenu(); }
+    if (ImGui::BeginMenu("Minigames"))         { drawMinigamesMenu(); ImGui::EndMenu(); }
     if (ImGui::BeginMenu("Movement & World"))  { drawMovementMenu(); ImGui::EndMenu(); }
 
     ImGui::Separator();
