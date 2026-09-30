@@ -1,6 +1,7 @@
 #include "ui/menu.h"
 
 #include "render/image.h"
+#include "tools/warp.h"
 #include "ui/menu_nav.h"
 #include "ui/panels.h"
 #include "ui/quick_access.h"
@@ -49,6 +50,7 @@ void Draw(ImGuiIO& io)
     drawToolbar(io);
     Panels::DrawHotkeysWindow();
     Panels::DrawControlsWindow();
+    Tools::Warp::DrawWindow();
     QuickAccess::DrawFullWindow();
     Panels::DrawResetConfirm();
 }

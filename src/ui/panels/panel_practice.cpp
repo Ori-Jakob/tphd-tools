@@ -1,5 +1,6 @@
 #include "ui/panels.h"
 
+#include "tools/warp.h"
 #include "ui/quick_access.h"
 
 #include "imgui.h"
@@ -14,6 +15,9 @@ void RegisterControls()
 void DrawPractice()
 {
     QuickAccess::DrawMenuItem();
+
+    ImGui::SeparatorText("Navigation");
+    Tools::Warp::DrawMenuItem();
 }
 }
 }
