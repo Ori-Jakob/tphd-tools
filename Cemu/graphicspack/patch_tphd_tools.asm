@@ -2,12 +2,74 @@
 moduleMatches = 0x1A03E108
 
 0x02BEF83C = _cCt_Counter_rest:
+0x0201B204 = _g_0201B204:
+0x0201B318 = _g_0201B318:
+0x02022BD8 = _g_02022BD8:
+0x0203AC18 = _g_0203AC18:
+0x0203AC28 = _g_0203AC28:
+0x0203AC44 = _g_0203AC44:
+0x020502F4 = _g_020502F4:
 
 .origin = codecave
 
 _pack_block:
 _pk_version:
-.int 1
+.int 2
+
+_pk_hook_count:
+.int 26
+_pkh_0:
+.int _hkf_0
+_pkh_1:
+.int _hkf_1
+_pkh_2:
+.int _hkf_2
+_pkh_3:
+.int _hkf_3
+_pkh_4:
+.int _hkf_4
+_pkh_5:
+.int _hkf_5
+_pkh_6:
+.int _hkf_6
+_pkh_7:
+.int _hkf_7
+_pkh_8:
+.int _hkf_8
+_pkh_9:
+.int _hkf_9
+_pkh_10:
+.int _hkf_10
+_pkh_11:
+.int _hkf_11
+_pkh_12:
+.int _hkf_12
+_pkh_13:
+.int _hkf_13
+_pkh_14:
+.int _hkf_14
+_pkh_15:
+.int _hkf_15
+_pkh_16:
+.int _hkf_16
+_pkh_17:
+.int _hkf_17
+_pkh_18:
+.int _hkf_18
+_pkh_19:
+.int _hkf_19
+_pkh_20:
+.int _hkf_20
+_pkh_21:
+.int _hkf_21
+_pkh_22:
+.int _hkf_22
+_pkh_23:
+.int _hkf_23
+_pkh_24:
+.int _hkf_24
+_pkh_25:
+.int _hkf_25
 
 _rpl_state:
 .byte 0
@@ -183,6 +245,264 @@ _rpl_resolve_done:
     addi  r1, r1, 0x30
     blr
 
+_hkt_0:
+    lis   r11, _pkh_0@ha
+    lwz   r11, _pkh_0@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_1:
+    lis   r11, _pkh_1@ha
+    lwz   r11, _pkh_1@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_2:
+    lis   r11, _pkh_2@ha
+    lwz   r11, _pkh_2@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_3:
+    lis   r11, _pkh_3@ha
+    lwz   r11, _pkh_3@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_4:
+    lis   r11, _pkh_4@ha
+    lwz   r11, _pkh_4@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_5:
+    lis   r11, _pkh_5@ha
+    lwz   r11, _pkh_5@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_6:
+    lis   r11, _pkh_6@ha
+    lwz   r11, _pkh_6@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_7:
+    lis   r11, _pkh_7@ha
+    lwz   r11, _pkh_7@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_8:
+    lis   r11, _pkh_8@ha
+    lwz   r11, _pkh_8@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_9:
+    lis   r11, _pkh_9@ha
+    lwz   r11, _pkh_9@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_10:
+    lis   r11, _pkh_10@ha
+    lwz   r11, _pkh_10@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_11:
+    lis   r11, _pkh_11@ha
+    lwz   r11, _pkh_11@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_12:
+    lis   r11, _pkh_12@ha
+    lwz   r11, _pkh_12@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_13:
+    lis   r11, _pkh_13@ha
+    lwz   r11, _pkh_13@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_14:
+    lis   r11, _pkh_14@ha
+    lwz   r11, _pkh_14@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_15:
+    lis   r11, _pkh_15@ha
+    lwz   r11, _pkh_15@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_16:
+    lis   r11, _pkh_16@ha
+    lwz   r11, _pkh_16@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_17:
+    lis   r11, _pkh_17@ha
+    lwz   r11, _pkh_17@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_18:
+    lis   r11, _pkh_18@ha
+    lwz   r11, _pkh_18@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_19:
+    lis   r11, _pkh_19@ha
+    lwz   r11, _pkh_19@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_20:
+    lis   r11, _pkh_20@ha
+    lwz   r11, _pkh_20@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_21:
+    lis   r11, _pkh_21@ha
+    lwz   r11, _pkh_21@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_22:
+    lis   r11, _pkh_22@ha
+    lwz   r11, _pkh_22@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_23:
+    lis   r11, _pkh_23@ha
+    lwz   r11, _pkh_23@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_24:
+    lis   r11, _pkh_24@ha
+    lwz   r11, _pkh_24@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_25:
+    lis   r11, _pkh_25@ha
+    lwz   r11, _pkh_25@l(r11)
+    mtctr r11
+    bctr
+
+_hkf_0:
+    li    r3, 0
+    blr
+
+_hkf_1:
+    lfs   f30, 0x73F0(r4)
+    blr
+
+_hkf_2:
+    lfs   f31, 0x73F0(r12)
+    blr
+
+_hkf_3:
+    lis   r11, 0x1000
+    lfs   f30, 0x73BC(r11)
+    blr
+
+_hkf_4:
+    lfs   f29, 0x77A0(r7)
+    blr
+
+_hkf_5:
+    lfs   f31, 0x7480(r4)
+    blr
+
+_hkf_6:
+    lfs   f13, 0x7480(r5)
+    blr
+
+_hkf_7:
+    lis   r11, 0x1000
+    lfs   f1, 0x77A0(r11)
+    blr
+
+_hkf_8:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+_hkf_9:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+_hkf_10:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+_hkf_11:
+    addi  r11, r7, -1
+    blr
+
+_hkf_12:
+    lfs   f1, 0x751C(r12)
+    blr
+
+_hkf_13:
+    addi  r30, r30, -1
+    blr
+
+_hkf_14:
+    bge   _g_020502F4
+    blr
+
+_hkf_15:
+    li    r3, 0
+    b     _g_0201B318
+
+_hkf_16:
+    b     _g_0201B204
+
+_hkf_17:
+    b     _g_02022BD8
+
+_hkf_18:
+    b     _g_02022BD8
+
+_hkf_19:
+    b     _g_02022BD8
+
+_hkf_20:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+_hkf_21:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+_hkf_22:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+_hkf_23:
+    stfs  f30, 0x34F4(r30)
+    blr
+
+_hkf_24:
+    beq   _g_0203AC28
+    b     _g_0203AC18
+
+_hkf_25:
+    beq   _g_0203AC44
+    b     _g_0203AC28
+
 counter_hook:
     stwu  r1, -0x40(r1)
     mflr  r0
@@ -357,3 +677,30 @@ kpad_done:
 0x02BFAE38 = bla vpad_read_hook
 0x02BFB94C = bla kpad_read_hook
 0x02BFCEAC = bla kpad_read_hook
+
+0x0202B12C = bla _hkt_0
+0x020592D0 = bla _hkt_1
+0x020592E8 = bla _hkt_2
+0x020592F0 = bla _hkt_3
+0x020592F8 = bla _hkt_4
+0x0205932C = bla _hkt_5
+0x020423B8 = bla _hkt_6
+0x0209CF84 = bla _hkt_7
+0x02059C94 = bla _hkt_8
+0x02059D34 = bla _hkt_9
+0x02059DC4 = bla _hkt_10
+0x0288D8AC = bla _hkt_11
+0x020B3128 = bla _hkt_12
+0x0248802C = bla _hkt_13
+0x02050C5C = bla _hkt_14
+0x0201B314 = b   _hkt_15
+0x02050EB0 = bla _hkt_16
+0x02023648 = bla _hkt_17
+0x02023884 = bla _hkt_18
+0x0202BDDC = bla _hkt_19
+0x020639D8 = bla _hkt_20
+0x020639F0 = bla _hkt_21
+0x02063A34 = bla _hkt_22
+0x02063A44 = bla _hkt_23
+0x0203AC14 = b   _hkt_24
+0x0203AC24 = b   _hkt_25

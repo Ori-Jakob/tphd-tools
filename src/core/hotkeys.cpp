@@ -21,6 +21,8 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_ZR | Input::BTN_A,                                  true,  SCOPE_GLOBAL },
     { "Quick Transform",  nullptr,    "quickTransformCombo",
       Input::BTN_ZR | Input::BTN_Y,                                  false, SCOPE_GLOBAL },
+    { "Detonate bombs",   nullptr,    "detonateBombsCombo",
+      Input::BTN_ZR | Input::BTN_L3,                                 false, SCOPE_GLOBAL },
 };
 
 static uint32_t s_bindings[HOTKEY_COUNT];

@@ -1,4 +1,5 @@
 #include "app/cemu.h"
+#include "app/code_hooks.h"
 #include "app/present.h"
 
 #include <coreinit/debug.h>
@@ -267,13 +268,22 @@ void buildHost()
 
 struct PackBlock {
     uint32_t version;
+    uint32_t hookCount;
+    uint32_t hooks[1];
 };
+
+bool s_hooksPublished = false;
 
 void notePackBlock(void* blockPtr)
 {
-    const PackBlock* block = (const PackBlock*)blockPtr;
-    if (block)
-        s_packVersion = block->version;
+    PackBlock* block = (PackBlock*)blockPtr;
+    if (!block)
+        return;
+    s_packVersion = block->version;
+    if (!s_hooksPublished && block->version >= 2) {
+        s_hooksPublished = true;
+        CodeHooks::Publish(block->hooks, block->hookCount);
+    }
 }
 
 bool ensureReady()

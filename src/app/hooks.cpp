@@ -1,5 +1,6 @@
 #include "app/hooks.h"
 #include "app/cemu.h"
+#include "app/code_hooks.h"
 #include "app/present.h"
 
 #include <gx2/context.h>
@@ -34,7 +35,7 @@ bool RegisterDynamicHooks(const RplHost* host)
         host->log(host, RPL_LOG_INFO, "hooks come from the Cemu graphics pack");
         return true;
     }
-    return true;
+    return CodeHooks::Install(host);
 }
 
 const RplHook gHooks[] = {
