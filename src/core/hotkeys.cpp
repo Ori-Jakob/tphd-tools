@@ -21,6 +21,8 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_ZR | Input::BTN_A,                                  true,  SCOPE_GLOBAL },
     { "Quick Transform",  nullptr,    "quickTransformCombo",
       Input::BTN_ZR | Input::BTN_Y,                                  false, SCOPE_GLOBAL },
+    { "Fly Cam",          "Camera & HUD", "flyCamCombo",
+      Input::BTN_ZL | Input::BTN_ZR | Input::BTN_L3 | Input::BTN_R3, false, SCOPE_GLOBAL },
     { "Detonate bombs",   nullptr,    "detonateBombsCombo",
       Input::BTN_ZR | Input::BTN_L3,                                 false, SCOPE_GLOBAL },
     { "Timer start/stop", "Practice", "timerToggleCombo",

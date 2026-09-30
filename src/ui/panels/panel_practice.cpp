@@ -13,6 +13,7 @@ namespace Panels {
 void RegisterControls()
 {
     RegisterGameplayControls();
+    RegisterCameraControls();
     RegisterHudControls();
     Tools::RollChecker::RegisterControls();
     Tools::PracticeTimer::RegisterControls();

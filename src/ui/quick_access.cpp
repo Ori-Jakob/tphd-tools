@@ -344,6 +344,7 @@ static const char* const kDefaultItems[] = {
     "gameplay.player.invincibility",
     "gameplay.equipment.spinner_speed",
     "gameplay.equipment.super_clawshot",
+    "camera.fly_cam",
 };
 
 void ResetToDefaults()

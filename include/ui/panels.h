@@ -5,10 +5,12 @@ namespace Panels {
 void RegisterControls();
 void RegisterGameplayControls();
 void RegisterHudControls();
+void RegisterCameraControls();
 
 void DrawPractice();
 void DrawGameplay();
 void DrawCameraHud();
+void DrawCameraMenuItems();
 void DrawSettings();
 void DrawResetConfirm();
 

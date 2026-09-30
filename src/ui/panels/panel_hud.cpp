@@ -66,6 +66,8 @@ static void drawHudSection()
 
 void DrawCameraHud()
 {
+    ImGui::SeparatorText("Camera");
+    DrawCameraMenuItems();
     drawHudSection();
 }
 }

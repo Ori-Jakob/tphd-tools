@@ -10,6 +10,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
+#include "tools/flycam.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/init_toast.h"
@@ -70,6 +71,7 @@ static bool blockWanted(uint32_t held, bool touchOnWidget, bool touching)
 {
     const bool block = overlayOwnsInput() || Osk::IsOpen() || Watermark::IsInteracting() ||
                        touchOnWidget || Hotkeys::OverlayComboHeld(held) ||
+                       Tools::FlyCam::WantsInputBlock() ||
                        (!overlayOwnsInput() && (Cheats::WantsInputBlock(held) ||
                                                 Tools::PracticeTimer::WantsInputBlock(held)));
     if (!touching)
@@ -119,6 +121,7 @@ void OnApplicationStart()
     Hud::GameInfo::OnApplicationStart();
     Tools::RollChecker::OnApplicationStart();
     Tools::PracticeTimer::OnApplicationStart();
+    Tools::FlyCam::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -128,6 +131,7 @@ void OnApplicationEnd()
         Config::Flush();
     s_started = false;
     s_menuOpen = false;
+    Tools::FlyCam::OnApplicationEnd();
     Renderer::ResetDeviceObjects();
     Notifications::Clear();
 }
@@ -187,7 +191,8 @@ static void updateFreeze()
         dEvt_setEventRunning(true);
         s_frozeGame = true;
     } else if (s_frozeGame) {
-        dEvt_setEventRunning(false);
+        if (!Tools::FlyCam::IsActive())
+            dEvt_setEventRunning(false);
         s_frozeGame = false;
     }
 }
@@ -210,9 +215,12 @@ void Tick()
     Input::SetBlockGameInput(blockWantedNow());
     Hotkeys::Tick();
     Rebind::Tick();
+
+    const bool toolsActive = !overlayOwnsInput() && !Rebind::IsActive();
+    Tools::FlyCam::Tick(toolsActive);
     updateFreeze();
 
-    const bool gameTools = !overlayOwnsInput() && !Rebind::IsActive();
+    const bool gameTools = toolsActive && !Tools::FlyCam::IsActive();
     Cheats::Tick(gameTools);
     Tools::RollChecker::Tick(gameTools);
     Tools::PracticeTimer::Tick(gameTools);
