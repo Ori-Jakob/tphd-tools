@@ -4,6 +4,7 @@
 #include "tools/inventory_editor.h"
 #include "tools/position_editor.h"
 #include "tools/warp.h"
+#include "tools/world_editor.h"
 #include "ui/menu_nav.h"
 #include "ui/panels.h"
 #include "ui/quick_access.h"
@@ -55,6 +56,7 @@ void Draw(ImGuiIO& io)
     Tools::Warp::DrawWindow();
     Tools::PositionEditor::DrawWindow();
     Tools::InventoryEditor::DrawWindow();
+    Tools::WorldEditor::DrawWindow();
     QuickAccess::DrawFullWindow();
     Panels::DrawResetConfirm();
 }

@@ -9,6 +9,7 @@
 #include "core/config.h"
 #include "core/hotkeys.h"
 #include "tools/inventory_editor.h"
+#include "tools/world_editor.h"
 #include "ui/notifications.h"
 #include "ui/ui_control.h"
 #include "ui/ui_field.h"
@@ -537,6 +538,7 @@ static void drawMovementMenu()
     drawRateControl(ROLL_SPEED);
 
     ImGui::SeparatorText("World & Time");
+    Tools::WorldEditor::DrawMenuItem();
     Control::Draw("gameplay.world.time_of_day", Control::SURFACE_MENU);
     drawRateControl(TIME_SPEED);
 
