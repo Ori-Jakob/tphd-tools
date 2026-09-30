@@ -2,8 +2,11 @@
 #include "app/hooks.h"
 #include "app/present.h"
 
+#include "core/input.h"
 #include "core/logger.h"
 #include "core/version.h"
+#include "ui/notifications.h"
+#include "ui/overlay.h"
 
 #include "libtphd/reloc.h"
 
@@ -58,7 +61,9 @@ static int OnInit(const RplHost* host)
                 regionName(titleId), (unsigned)dataDelta);
 
     const bool dynHooked = RegisterDynamicHooks(host);
+    Input::SetHost(host);
     Present::Init();
+    Ui::Overlay::OnApplicationStart();
 
     host->log(host, RPL_LOG_INFO, "%u static hook(s), dynamic hooks %s",
               (unsigned)gHookCount, dynHooked ? "ALL APPLIED" : "SOME FAILED");
@@ -68,6 +73,9 @@ static int OnInit(const RplHost* host)
 static void OnDeinit()
 {
     Present::Shutdown();
+    Ui::Overlay::OnApplicationEnd();
+    Input::OnApplicationEnd();
+    Notifications::Clear();
     gHost = nullptr;
 }
 
@@ -88,7 +96,7 @@ static RplManifest gManifest = {
     .maxHooks     = 32,
     .onReleaseForeground  = Present::OnReleaseForeground,
     .onAcquiredForeground = Present::OnAcquiredForeground,
-    .onPadSampled         = nullptr,
+    .onPadSampled         = Ui::Overlay::OnPadSampled,
 };
 }
 

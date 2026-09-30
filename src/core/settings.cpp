@@ -1,0 +1,38 @@
+#include "core/settings.h"
+
+#include "core/hotkeys.h"
+#include "core/rebind.h"
+#include "ui/menu_nav.h"
+#include "ui/quick_access.h"
+
+namespace Config {
+Settings g_settings;
+
+void ResetToDefaults()
+{
+    Settings& s = g_settings;
+    s.drawnScreen     = DRAWN_SCREEN_BOTH;
+    s.uiScale         = 1.0f;
+    s.hudOnGameScreen = true;
+    s.hudToTv         = false;
+    s.overlayOpacity  = 1.0f;
+    s.boldLetters     = true;
+    s.freezeOnMenu    = false;
+
+    s.toastsEnabled   = true;
+    s.toastSeconds    = 3.0f;
+
+    s.showInitToast   = true;
+
+    s.watermarkEnabled = true;
+    s.watermarkX       = 0.012f;
+    s.watermarkY       = 0.020f;
+    s.watermarkOpacity = 0.35f;
+    s.watermarkSize    = 128.0f;
+
+    Rebind::Cancel();
+    Hotkeys::ResetToDefaults();
+    Ui::Nav::ResetBindings();
+    Ui::QuickAccess::ResetToDefaults();
+}
+}
