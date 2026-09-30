@@ -5,6 +5,7 @@ moduleMatches = 0x1A03E108
 0x0201B204 = _g_0201B204:
 0x0201B318 = _g_0201B318:
 0x02022BD8 = _g_02022BD8:
+0x0202D628 = _g_0202D628:
 0x0203AC18 = _g_0203AC18:
 0x0203AC28 = _g_0203AC28:
 0x0203AC44 = _g_0203AC44:
@@ -14,6 +15,13 @@ moduleMatches = 0x1A03E108
 0x021A37EC = _g_021A37EC:
 0x021A3830 = _g_021A3830:
 0x024DC588 = _g_024DC588:
+0x026FD660 = _g_026FD660:
+0x026FD674 = _g_026FD674:
+0x02A18A50 = _g_02A18A50:
+0x02A58588 = _g_02A58588:
+0x02A58B58 = _g_02A58B58:
+0x02A594B4 = _g_02A594B4:
+0x02A67D1C = _g_02A67D1C:
 0x02AA6460 = _g_02AA6460:
 
 .origin = codecave
@@ -23,7 +31,7 @@ _pk_version:
 .int 2
 
 _pk_hook_count:
-.int 42
+.int 79
 _pkh_0:
 .int _hkf_0
 _pkh_1:
@@ -108,6 +116,80 @@ _pkh_40:
 .int _hkf_40
 _pkh_41:
 .int _hkf_41
+_pkh_42:
+.int _hkf_42
+_pkh_43:
+.int _hkf_43
+_pkh_44:
+.int _hkf_44
+_pkh_45:
+.int _hkf_45
+_pkh_46:
+.int _hkf_46
+_pkh_47:
+.int _hkf_47
+_pkh_48:
+.int _hkf_48
+_pkh_49:
+.int _hkf_49
+_pkh_50:
+.int _hkf_50
+_pkh_51:
+.int _hkf_51
+_pkh_52:
+.int _hkf_52
+_pkh_53:
+.int _hkf_53
+_pkh_54:
+.int _hkf_54
+_pkh_55:
+.int _hkf_55
+_pkh_56:
+.int _hkf_56
+_pkh_57:
+.int _hkf_57
+_pkh_58:
+.int _hkf_58
+_pkh_59:
+.int _hkf_59
+_pkh_60:
+.int _hkf_60
+_pkh_61:
+.int _hkf_61
+_pkh_62:
+.int _hkf_62
+_pkh_63:
+.int _hkf_63
+_pkh_64:
+.int _hkf_64
+_pkh_65:
+.int _hkf_65
+_pkh_66:
+.int _hkf_66
+_pkh_67:
+.int _hkf_67
+_pkh_68:
+.int _hkf_68
+_pkh_69:
+.int _hkf_69
+_pkh_70:
+.int _hkf_70
+_pkh_71:
+.int _hkf_71
+_pkh_72:
+.int _hkf_72
+_pkh_73:
+.int _hkf_73
+_pkh_74:
+.int _hkf_74
+_pkh_75:
+.int _hkf_75
+_pkh_76:
+.int _hkf_76
+_pkh_77:
+.int _hkf_77
+_pkh_78:
+.int _hkf_78
 
 _rpl_state:
 .byte 0
@@ -535,6 +617,228 @@ _hkt_41:
     mtctr r11
     bctr
 
+_hkt_42:
+    lis   r11, _pkh_42@ha
+    lwz   r11, _pkh_42@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_43:
+    lis   r11, _pkh_43@ha
+    lwz   r11, _pkh_43@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_44:
+    lis   r11, _pkh_44@ha
+    lwz   r11, _pkh_44@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_45:
+    lis   r11, _pkh_45@ha
+    lwz   r11, _pkh_45@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_46:
+    lis   r11, _pkh_46@ha
+    lwz   r11, _pkh_46@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_47:
+    lis   r11, _pkh_47@ha
+    lwz   r11, _pkh_47@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_48:
+    lis   r11, _pkh_48@ha
+    lwz   r11, _pkh_48@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_49:
+    lis   r11, _pkh_49@ha
+    lwz   r11, _pkh_49@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_50:
+    lis   r11, _pkh_50@ha
+    lwz   r11, _pkh_50@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_51:
+    lis   r11, _pkh_51@ha
+    lwz   r11, _pkh_51@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_52:
+    lis   r11, _pkh_52@ha
+    lwz   r11, _pkh_52@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_53:
+    lis   r11, _pkh_53@ha
+    lwz   r11, _pkh_53@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_54:
+    lis   r11, _pkh_54@ha
+    lwz   r11, _pkh_54@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_55:
+    lis   r11, _pkh_55@ha
+    lwz   r11, _pkh_55@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_56:
+    lis   r11, _pkh_56@ha
+    lwz   r11, _pkh_56@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_57:
+    lis   r11, _pkh_57@ha
+    lwz   r11, _pkh_57@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_58:
+    lis   r11, _pkh_58@ha
+    lwz   r11, _pkh_58@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_59:
+    lis   r11, _pkh_59@ha
+    lwz   r11, _pkh_59@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_60:
+    lis   r11, _pkh_60@ha
+    lwz   r11, _pkh_60@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_61:
+    lis   r11, _pkh_61@ha
+    lwz   r11, _pkh_61@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_62:
+    lis   r11, _pkh_62@ha
+    lwz   r11, _pkh_62@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_63:
+    lis   r11, _pkh_63@ha
+    lwz   r11, _pkh_63@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_64:
+    lis   r11, _pkh_64@ha
+    lwz   r11, _pkh_64@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_65:
+    lis   r11, _pkh_65@ha
+    lwz   r11, _pkh_65@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_66:
+    lis   r11, _pkh_66@ha
+    lwz   r11, _pkh_66@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_67:
+    lis   r11, _pkh_67@ha
+    lwz   r11, _pkh_67@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_68:
+    lis   r11, _pkh_68@ha
+    lwz   r11, _pkh_68@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_69:
+    lis   r11, _pkh_69@ha
+    lwz   r11, _pkh_69@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_70:
+    lis   r11, _pkh_70@ha
+    lwz   r11, _pkh_70@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_71:
+    lis   r11, _pkh_71@ha
+    lwz   r11, _pkh_71@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_72:
+    lis   r11, _pkh_72@ha
+    lwz   r11, _pkh_72@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_73:
+    lis   r11, _pkh_73@ha
+    lwz   r11, _pkh_73@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_74:
+    lis   r11, _pkh_74@ha
+    lwz   r11, _pkh_74@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_75:
+    lis   r11, _pkh_75@ha
+    lwz   r11, _pkh_75@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_76:
+    lis   r11, _pkh_76@ha
+    lwz   r11, _pkh_76@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_77:
+    lis   r11, _pkh_77@ha
+    lwz   r11, _pkh_77@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_78:
+    lis   r11, _pkh_78@ha
+    lwz   r11, _pkh_78@l(r11)
+    mtctr r11
+    bctr
+
 _hkf_0:
     li    r3, 0
     blr
@@ -697,6 +1001,152 @@ _hkf_40:
 
 _hkf_41:
     lwz   r31, 0xC(r1)
+    blr
+
+_hkf_42:
+    blr
+
+_hkf_43:
+    blr
+
+_hkf_44:
+    blr
+
+_hkf_45:
+    fadds f31, f23, f22
+    blr
+
+_hkf_46:
+    fadds f31, f23, f22
+    blr
+
+_hkf_47:
+    fadds f31, f23, f22
+    blr
+
+_hkf_48:
+    fadds f31, f23, f22
+    blr
+
+_hkf_49:
+    fsubs f6, f11, f23
+    blr
+
+_hkf_50:
+    blr
+
+_hkf_51:
+    lwz   r0, 0x574(r31)
+    blr
+
+_hkf_52:
+    lfs   f8, 0x1248(r30)
+    blr
+
+_hkf_53:
+    lfs   f10, 0x1248(r30)
+    blr
+
+_hkf_54:
+    stwu  r1, -0x30(r1)
+    b     _g_02A58588
+
+_hkf_55:
+    mflr  r0
+    b     _g_02A58B58
+
+_hkf_56:
+    mflr  r0
+    b     _g_02A594B4
+
+_hkf_57:
+    mflr  r0
+    b     _g_02A67D1C
+
+_hkf_58:
+    b     _g_02A18A50
+
+_hkf_59:
+    lfs   f1, 0x7090(r10)
+    blr
+
+_hkf_60:
+    lfs   f1, 0x4(r5)
+    b     _g_0202D628
+
+_hkf_61:
+    lis   r11, 0x1000
+    lfs   f1, 0x7014(r11)
+    blr
+
+_hkf_62:
+    blr
+
+_hkf_63:
+    lha   r0, 0xA(r12)
+    blr
+
+_hkf_64:
+    lha   r7, 0x4(r12)
+    blr
+
+_hkf_65:
+    li    r0, 13
+    blr
+
+_hkf_66:
+    lfs   f13, -0x3068(r12)
+    blr
+
+_hkf_67:
+    li    r11, 13
+    b     _g_026FD660
+
+_hkf_68:
+    li    r12, 2520
+    b     _g_026FD674
+
+_hkf_69:
+    lha   r11, 0xF18(r29)
+    subfic r8, r11, 13
+    blr
+
+_hkf_70:
+    lfs   f10, 0x7474(r12)
+    blr
+
+_hkf_71:
+    lfs   f0, 0x7474(r10)
+    blr
+
+_hkf_72:
+    lfs   f0, 0x7474(r12)
+    blr
+
+_hkf_73:
+    lfs   f1, 0x7314(r9)
+    blr
+
+_hkf_74:
+    fmr   f1, f29
+    blr
+
+_hkf_75:
+    lfs   f1, 0x7314(r10)
+    blr
+
+_hkf_76:
+    fmr   f1, f31
+    blr
+
+_hkf_77:
+    lis   r11, 0x1007
+    lwz   r0, -0x3074(r11)
+    blr
+
+_hkf_78:
+    addis r11, r10, 0x1007
+    lwz   r0, -0x3074(r11)
     blr
 
 counter_hook:
@@ -916,3 +1366,40 @@ kpad_done:
 0x024A7424 = bla _hkt_39
 0x026BEEE0 = bla _hkt_40
 0x02667158 = bla _hkt_41
+0x0203F5D8 = b   _hkt_42
+0x020A8EE0 = b   _hkt_43
+0x020A6658 = b   _hkt_44
+0x02033FDC = bla _hkt_45
+0x02034064 = bla _hkt_46
+0x020340E8 = bla _hkt_47
+0x02034164 = bla _hkt_48
+0x0203443C = bla _hkt_49
+0x02053684 = b   _hkt_50
+0x0204D1FC = bla _hkt_51
+0x02974A60 = bla _hkt_52
+0x02974CE0 = bla _hkt_53
+0x02A58584 = b   _hkt_54
+0x02A58B54 = b   _hkt_55
+0x02A594B0 = b   _hkt_56
+0x02A67D18 = b   _hkt_57
+0x02A67990 = bla _hkt_58
+0x0203FF7C = bla _hkt_59
+0x0202D624 = b   _hkt_60
+0x020A6348 = bla _hkt_61
+0x02095820 = b   _hkt_62
+0x027D11F4 = bla _hkt_63
+0x027D1254 = bla _hkt_64
+0x026C515C = bla _hkt_65
+0x026C5160 = bla _hkt_66
+0x026FD65C = b   _hkt_67
+0x026FD670 = b   _hkt_68
+0x026FD8A0 = bla _hkt_69
+0x0202C30C = bla _hkt_70
+0x02041CDC = bla _hkt_71
+0x020523DC = bla _hkt_72
+0x0202C458 = bla _hkt_73
+0x0202C474 = bla _hkt_74
+0x02051B08 = bla _hkt_75
+0x02051B4C = bla _hkt_76
+0x02795234 = bla _hkt_77
+0x0279525C = bla _hkt_78

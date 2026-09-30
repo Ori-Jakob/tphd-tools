@@ -3,6 +3,7 @@
 #include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_minigames.h"
+#include "cheats/cheat_movement.h"
 #include "cheats/cheat_player.h"
 #include "cheats/cheats.h"
 #include "core/config.h"
@@ -229,6 +230,62 @@ static bool drawRapidsMultiplier(const Control::Descriptor* d, Control::Surface)
     return changed;
 }
 
+static bool drawRate(const Control::Descriptor* d, Control::Surface)
+{
+    using namespace Cheats::Movement;
+    const Rate r = (Rate)d->token;
+    float value = GetRate(r);
+    ImGui::SetNextItemWidth(210.0f);
+    const bool changed = Field::SliderFloat(d->name, &value, RateMin(r), RateMax(r), "%.2fx");
+    if (ImGui::IsItemHovered()) {
+        switch (r) {
+        case CLIMB_SPEED:  ImGui::SetTooltip("Ladders, vines and walls."); break;
+        case CLIMB_HEIGHT: ImGui::SetTooltip("How high Link can grab a ledge."); break;
+        case CRAWL_SPEED:  ImGui::SetTooltip("Human and wolf crawling."); break;
+        case TIME_SPEED:   ImGui::SetTooltip("0x stops the clock."); break;
+        default: break;
+        }
+    }
+    if (changed) {
+        SetRate(r, value);
+        Config::MarkDirty();
+    }
+    return changed;
+}
+
+static bool drawTimeOfDay(const Control::Descriptor* d, Control::Surface)
+{
+    static float s_edit = 0.0f;
+    static bool  s_editing = false;
+    if (!s_editing)
+        s_edit = Cheats::Movement::GetTimeOfDay();
+    ImGui::SetNextItemWidth(210.0f);
+    const bool changed = Field::SliderFloat(d->name, &s_edit, 0.0f, 359.75f, "%.2f",
+                                            ImGuiSliderFlags_AlwaysClamp);
+    s_editing = ImGui::IsItemActive() || Field::IsSteeringSlider();
+    if (changed)
+        Cheats::Movement::SetTimeOfDay(s_edit);
+    int minutes = (int)(s_edit * 4.0f + 0.5f);
+    if (minutes > 1439)
+        minutes = 1439;
+    ImGui::SameLine();
+    ImGui::TextDisabled("%02d:%02d", minutes / 60, minutes % 60);
+    return changed;
+}
+
+static bool drawInstantText(const Control::Descriptor* d, Control::Surface)
+{
+    bool enabled = Cheats::Movement::InstantTextEnabled();
+    const bool changed = ImGui::Checkbox(d->name, &enabled);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Text shows at once and boxes advance while you hold B, cutscenes included.");
+    if (changed) {
+        Cheats::Movement::SetInstantTextEnabled(enabled);
+        Config::MarkDirty();
+    }
+    return changed;
+}
+
 void RegisterGameplayControls()
 {
     static const char* const kPaths[Cheats::Player::TOGGLE_COUNT] = {
@@ -321,6 +378,28 @@ void RegisterGameplayControls()
                                    "Gameplay / Minigames / Rapids Ride", drawRapidsMultiplier,
                                    nullptr, nullptr, 0 };
     Control::Register(rapids);
+
+    for (int i = 0; i < Cheats::Movement::RATE_COUNT; ++i) {
+        const Cheats::Movement::Rate r = (Cheats::Movement::Rate)i;
+#ifndef TPHD_TOOLS_EXPERIMENTAL
+        if (r == Cheats::Movement::BLOCK_SPEED || r == Cheats::Movement::CHAIN_SPEED)
+            continue;
+#endif
+        const char* path = r == Cheats::Movement::TIME_SPEED
+                               ? "Gameplay / Movement & World / World & Time"
+                               : "Gameplay / Movement & World / Movement";
+        Control::Descriptor d = { Cheats::Movement::RateControlId(r), Cheats::Movement::RateName(r),
+                                  path, drawRate, nullptr, nullptr, i };
+        Control::Register(d);
+    }
+    Control::Descriptor timeOfDay = { "gameplay.world.time_of_day", "Time of Day",
+                                      "Gameplay / Movement & World / World & Time",
+                                      drawTimeOfDay, nullptr, nullptr, 0 };
+    Control::Register(timeOfDay);
+    Control::Descriptor instantText = { "gameplay.world.instant_text", "Hold B for Instant Text",
+                                        "Gameplay / Movement & World / Dialogue",
+                                        drawInstantText, nullptr, nullptr, 0 };
+    Control::Register(instantText);
 }
 
 static void drawPlayer(Cheats::Player::Toggle t)
@@ -431,11 +510,40 @@ static void drawMinigamesMenu()
     }
 }
 
+static void drawRateControl(Cheats::Movement::Rate r)
+{
+    Control::Draw(Cheats::Movement::RateControlId(r), Control::SURFACE_MENU);
+}
+
 static void drawMovementMenu()
 {
+    using namespace Cheats::Movement;
     ImGui::SeparatorText("Epona");
     drawPlayer(Cheats::Player::EPONA_DASHES);
     drawPlayer(Cheats::Player::EPONA_DASH_SPEED);
+
+    ImGui::SeparatorText("Movement");
+    drawRateControl(CLIMB_SPEED);
+    drawRateControl(CLIMB_HEIGHT);
+#ifdef TPHD_TOOLS_EXPERIMENTAL
+    drawRateControl(BLOCK_SPEED);
+    drawRateControl(CHAIN_SPEED);
+#endif
+    drawRateControl(CRAWL_SPEED);
+    drawRateControl(ROLL_SPEED);
+
+    ImGui::SeparatorText("World & Time");
+    Control::Draw("gameplay.world.time_of_day", Control::SURFACE_MENU);
+    drawRateControl(TIME_SPEED);
+
+    ImGui::SeparatorText("Dialogue");
+    Control::Draw("gameplay.world.instant_text", Control::SURFACE_MENU);
+
+    ImGui::Separator();
+    if (ImGui::Button("Restore movement defaults")) {
+        ResetToDefaults();
+        Config::MarkDirty();
+    }
 }
 
 void DrawGameplay()

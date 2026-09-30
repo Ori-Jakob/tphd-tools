@@ -3,6 +3,7 @@
 #include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_minigames.h"
+#include "cheats/cheat_movement.h"
 #include "cheats/cheat_player.h"
 
 namespace Cheats {
@@ -12,6 +13,12 @@ void Tick(bool acceptInput)
     Equipment::Tick(acceptInput);
     Difficulty::Tick();
     Minigames::Tick(!acceptInput);
+    Movement::Tick();
+}
+
+void OnApplicationStart()
+{
+    Movement::OnApplicationStart();
 }
 
 bool WantsInputBlock(uint32_t held)
@@ -25,5 +32,6 @@ void ResetToDefaults()
     Equipment::ResetToDefaults();
     Difficulty::ResetToDefaults();
     Minigames::ResetToDefaults();
+    Movement::ResetToDefaults();
 }
 }

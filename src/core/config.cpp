@@ -3,6 +3,7 @@
 #include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_minigames.h"
+#include "cheats/cheat_movement.h"
 #include "cheats/cheat_player.h"
 #include "core/config_schema.h"
 #include "core/hotkeys.h"
@@ -260,6 +261,7 @@ static const Section kSections[] = {
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },
     { Cheats::Minigames::LoadConfig, Cheats::Minigames::SaveConfig },
+    { Cheats::Movement::LoadConfig, Cheats::Movement::SaveConfig },
 };
 
 static void applyJson(const char* text)

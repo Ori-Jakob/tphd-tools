@@ -110,6 +110,7 @@ void OnApplicationStart()
     Menu::OnApplicationStart();
     Config::OnApplicationStart();
     Osk::OnApplicationStart();
+    Cheats::OnApplicationStart();
     Notifications::Clear();
 }
 
