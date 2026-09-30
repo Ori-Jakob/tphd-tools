@@ -1,0 +1,3 @@
+[submodule "external/wii-u-rpl-loader"]
+	path = external/wii-u-rpl-loader
+	url = https://github.com/Ori-Jakob/wii-u-rpl-loader.git
