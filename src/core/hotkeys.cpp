@@ -29,6 +29,10 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_A | Input::BTN_LEFT,                                false, SCOPE_GLOBAL },
     { "Timer reset",      nullptr,    "timerResetCombo",
       Input::BTN_A | Input::BTN_RIGHT,                               false, SCOPE_GLOBAL },
+    { "Save coordinates", nullptr,    "saveCoordinatesCombo",
+      Input::BTN_ZR | Input::BTN_LEFT,                               false, SCOPE_GLOBAL },
+    { "Load coordinates", nullptr,    "loadCoordinatesCombo",
+      Input::BTN_ZR | Input::BTN_RIGHT,                              false, SCOPE_GLOBAL },
 };
 
 static uint32_t s_bindings[HOTKEY_COUNT];

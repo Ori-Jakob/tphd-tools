@@ -1,5 +1,6 @@
 #include "ui/panels.h"
 
+#include "tools/coordinates.h"
 #include "tools/position_editor.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
@@ -22,6 +23,9 @@ void RegisterControls()
 void DrawPractice()
 {
     QuickAccess::DrawMenuItem();
+
+    ImGui::SeparatorText("Save & Restore");
+    Tools::Coordinates::DrawMenuItem();
 
     ImGui::SeparatorText("Timing");
     Tools::RollChecker::DrawMenuItem();

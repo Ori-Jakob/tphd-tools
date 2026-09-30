@@ -12,6 +12,7 @@
 #include "core/storage.h"
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
+#include "tools/coordinates.h"
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
@@ -269,6 +270,7 @@ static const Section kSections[] = {
     { Tools::PracticeTimer::LoadConfig, Tools::PracticeTimer::SaveConfig },
     { Tools::FlyCam::LoadConfig, Tools::FlyCam::SaveConfig },
     { Tools::ModernCamera::LoadConfig, Tools::ModernCamera::SaveConfig },
+    { Tools::Coordinates::LoadConfig, Tools::Coordinates::SaveConfig },
     { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },

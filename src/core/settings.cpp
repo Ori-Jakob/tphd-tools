@@ -5,6 +5,7 @@
 #include "core/rebind.h"
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
+#include "tools/coordinates.h"
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
@@ -48,5 +49,6 @@ void ResetToDefaults()
     Tools::PracticeTimer::ResetToDefaults();
     Tools::FlyCam::ResetToDefaults();
     Tools::ModernCamera::ResetToDefaults();
+    Tools::Coordinates::ResetToDefaults();
 }
 }

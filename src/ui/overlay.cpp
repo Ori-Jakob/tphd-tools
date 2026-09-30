@@ -10,6 +10,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
+#include "tools/coordinates.h"
 #include "tools/flycam.h"
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
@@ -74,7 +75,8 @@ static bool blockWanted(uint32_t held, bool touchOnWidget, bool touching)
                        touchOnWidget || Hotkeys::OverlayComboHeld(held) ||
                        Tools::FlyCam::WantsInputBlock() ||
                        (!overlayOwnsInput() && (Cheats::WantsInputBlock(held) ||
-                                                Tools::PracticeTimer::WantsInputBlock(held)));
+                                                Tools::PracticeTimer::WantsInputBlock(held) ||
+                                                Tools::Coordinates::WantsInputBlock(held)));
     if (!touching)
         s_touchSwallowed = false;
     else if (block)
@@ -124,6 +126,7 @@ void OnApplicationStart()
     Tools::PracticeTimer::OnApplicationStart();
     Tools::FlyCam::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
+    Tools::Coordinates::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -228,6 +231,7 @@ void Tick()
     Cheats::Tick(gameTools);
     Tools::RollChecker::Tick(gameTools);
     Tools::PracticeTimer::Tick(gameTools);
+    Tools::Coordinates::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;
