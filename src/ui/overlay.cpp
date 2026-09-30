@@ -11,6 +11,7 @@
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
 #include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/init_toast.h"
@@ -122,6 +123,7 @@ void OnApplicationStart()
     Tools::RollChecker::OnApplicationStart();
     Tools::PracticeTimer::OnApplicationStart();
     Tools::FlyCam::OnApplicationStart();
+    Tools::ModernCamera::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -132,6 +134,7 @@ void OnApplicationEnd()
     s_started = false;
     s_menuOpen = false;
     Tools::FlyCam::OnApplicationEnd();
+    Tools::ModernCamera::OnApplicationEnd();
     Renderer::ResetDeviceObjects();
     Notifications::Clear();
 }
@@ -217,6 +220,7 @@ void Tick()
     Rebind::Tick();
 
     const bool toolsActive = !overlayOwnsInput() && !Rebind::IsActive();
+    Tools::ModernCamera::Tick(toolsActive);
     Tools::FlyCam::Tick(toolsActive);
     updateFreeze();
 

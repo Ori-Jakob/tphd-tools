@@ -6,6 +6,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/menu_nav.h"
@@ -46,5 +47,6 @@ void ResetToDefaults()
     Tools::RollChecker::ResetToDefaults();
     Tools::PracticeTimer::ResetToDefaults();
     Tools::FlyCam::ResetToDefaults();
+    Tools::ModernCamera::ResetToDefaults();
 }
 }

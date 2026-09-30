@@ -13,6 +13,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "tools/flycam.h"
+#include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/menu_nav.h"
@@ -267,6 +268,7 @@ static const Section kSections[] = {
     { Tools::RollChecker::LoadConfig, Tools::RollChecker::SaveConfig },
     { Tools::PracticeTimer::LoadConfig, Tools::PracticeTimer::SaveConfig },
     { Tools::FlyCam::LoadConfig, Tools::FlyCam::SaveConfig },
+    { Tools::ModernCamera::LoadConfig, Tools::ModernCamera::SaveConfig },
     { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },
