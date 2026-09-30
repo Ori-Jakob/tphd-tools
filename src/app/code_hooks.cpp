@@ -97,12 +97,16 @@ static const Site kSites[] = {
     { "clawshotShootF1a",    0x02059C94u, 0xC02A73BCu, CALL, tphdClawshotShootSpeedF1Hook },
     { "clawshotShootF1b",    0x02059D34u, 0xC02A73BCu, CALL, tphdClawshotShootSpeedF1Hook },
     { "clawshotShootF1c",    0x02059DC4u, 0xC02A73BCu, CALL, tphdClawshotShootSpeedF1Hook },
+
     { "spinnerTime",         0x0288D8ACu, 0x3967FFFFu, CALL, tphdInfiniteSpinnerTimeHook },
     { "spinnerSpeed",        0x020B3128u, 0xC02C751Cu, CALL, tphdSpinnerSpeedHook },
+
     { "remoteBombFuse",      0x0248802Cu, 0x3BDEFFFFu, CALL, tphdRemoteBombFuseHook },
     { "noBombLimit",         0x02050C5Cu, 0x4080F698u, CALL, tphdUnrestrictedBombsHook },
+
     { "unrestrictedItems",   0x0201B314u, 0x38600000u, JUMP, tphdUnrestrictedItemsHook },
     { "unrestrictedSword",   0x02050EB0u, 0x4BFCA355u, CALL, tphdUnrestrictedSwordHook },
+
     { "ironBootsAnimeA",     0x02023648u, 0x4BFFF591u, CALL, tphdFastIronBootsAnimeHook },
     { "ironBootsAnimeB",     0x02023884u, 0x4BFFF355u, CALL, tphdFastIronBootsAnimeHook },
     { "ironBootsAnimeC",     0x0202BDDCu, 0x4BFF6DFDu, CALL, tphdFastIronBootsAnimeHook },
@@ -110,8 +114,10 @@ static const Site kSites[] = {
     { "ironBootsSpeedB",     0x020639F0u, 0xD1BE34F4u, CALL, tphdFastIronBootsStoreF13Hook },
     { "ironBootsSpeedC",     0x02063A34u, 0xD1BE34F4u, CALL, tphdFastIronBootsStoreF13Hook },
     { "ironBootsSpeedD",     0x02063A44u, 0xD3DE34F4u, CALL, tphdFastIronBootsStoreF30Hook },
+
     { "greatSpinSkill",      0x0203AC14u, 0x41820014u, JUMP, tphdAlwaysGreatSpinSkillHook },
     { "greatSpinHealth",     0x0203AC24u, 0x41820020u, JUMP, tphdAlwaysGreatSpinHealthHook },
+
     { "damageReceived",      0x02A1C664u, 0xED29402Au, CALL, tphdDamageReceivedHook },
     { "damageGiven",         0x02904118u, 0x7D074050u, CALL, tphdDamageGivenHook },
     { "rupeeChange",         0x02A1DB74u, 0x819F6280u, CALL, tphdRupeeChangeHook },
@@ -119,6 +125,7 @@ static const Site kSites[] = {
     { "noFallDamageB",       0x020A1C34u, 0x4BFEA1E1u, CALL, tphdNoFallDamageHook },
     { "noFallDamageC",       0x020BF018u, 0x4BFCCDFDu, CALL, tphdNoFallDamageHook },
     { "fairyRevival",        0x0203152Cu, 0x48A74F35u, CALL, tphdAlwaysFairyRevivalHook },
+
     { "starGameClear",       0x024DC584u, 0x80630E0Cu, JUMP, tphdStarGameClearHook },
     { "canoeScoreA",         0x021A37B4u, 0x4182007Cu, JUMP, tphdCanoeScoreSkipHook },
     { "canoeScoreB",         0x021A37E8u, 0x41820048u, JUMP, tphdCanoeScoreSkipHook },
@@ -128,6 +135,7 @@ static const Site kSites[] = {
     { "goatInstantWin",      0x024A7424u, 0x7C095040u, CALL, tphdGoatInstantWinHook },
     { "fruitComboKeep",      0x026BEEE0u, 0x7C0B0040u, CALL, tphdFruitComboKeepHook },
     { "easySumo",            0x02667158u, 0x83E1000Cu, CALL, tphdEasySumoHook },
+
     { "climbSpeedLadder",    0x0203F5D8u, 0x4E800020u, JUMP, tphdClimbingSpeedReturnHook },
     { "climbSpeedWall",      0x020A8EE0u, 0x4E800020u, JUMP, tphdClimbingSpeedReturnHook },
     { "climbSpeedShimmy",    0x020A6658u, 0x4E800020u, JUMP, tphdClimbingSpeedReturnHook },
@@ -136,23 +144,29 @@ static const Site kSites[] = {
     { "climbProbeC",         0x020340E8u, 0xEFF7B02Au, CALL, tphdClimbProbeHeightHook },
     { "climbProbeD",         0x02034164u, 0xEFF7B02Au, CALL, tphdClimbProbeHeightHook },
     { "climbDelta",          0x0203443Cu, 0xECCBB828u, CALL, tphdClimbDeltaHeightHook },
+
     { "crawlSpeed",          0x02053684u, 0x4E800020u, JUMP, tphdCrawlSpeedReturnHook },
     { "rollSpeed",           0x0204D1FCu, 0x801F0574u, CALL, tphdRollFrontSpeedHook },
+
     { "timeRate",            0x02974A60u, 0xC11E1248u, CALL, tphdTimeRateHook },
     { "timeRateAlt",         0x02974CE0u, 0xC15E1248u, CALL, tphdAlternateTimeRateHook },
+
     { "textDoBegin",         0x02A58584u, 0x9421FFD0u, JUMP, tphdDoBeginInstantTextHook },
     { "textDoIsReady",       0x02A58B54u, 0x7C0802A6u, JUMP, tphdDoIsReadyInstantTextHook },
     { "textDoTag",           0x02A594B0u, 0x7C0802A6u, JUMP, tphdDoTagInstantTextHook },
     { "textIsSend",          0x02A67D18u, 0x7C0802A6u, JUMP, tphdIsSendInstantTextHook },
     { "textOutnowAccept",    0x02A67990u, 0x4BFB10C1u, CALL, tphdInstantTextOutnowAcceptHook },
+
     { "ledgeWolfAnime",      0x0203FF7Cu, 0xC02A7090u, CALL_EXP, tphdWolfClimbAnimationHook },
     { "ledgeWolfParam",      0x0202D624u, 0xC0250004u, JUMP_EXP, tphdWolfClimbParamHook },
     { "ledgeHumanAnime",     0x020A6348u, 0xC02B7014u, CALL_EXP, tphdHumanLedgeClimbAnimationHook },
+
     { "blockPushRate",       0x02095820u, 0x4E800020u, JUMP_EXP, tphdBlockPushSpeedReturnHook },
     { "blockPull",           0x027D11F4u, 0xA80C000Au, CALL_EXP, tphdBlockPullDurationHook },
     { "blockPush",           0x027D1254u, 0xA8EC0004u, CALL_EXP, tphdBlockPushDurationHook },
     { "bemosDuration",       0x026C515Cu, 0x3800000Du, CALL_EXP, tphdBemosDurationHook },
     { "bemosPhase",          0x026C5160u, 0xC1ACCF98u, CALL_EXP, tphdBemosPhaseHook },
+
     { "chainWallDuration",   0x026FD65Cu, 0x3960000Du, JUMP_EXP, tphdChainWallDurationHook },
     { "chainWallPhase",      0x026FD670u, 0x398009D8u, JUMP_EXP, tphdChainWallPhaseHook },
     { "chainWallElapsed",    0x026FD8A0u, 0x210B000Du, CALL_EXP, tphdChainWallElapsedHook },
@@ -163,8 +177,10 @@ static const Site kSites[] = {
     { "chainAnimHuman",      0x0202C474u, 0xFC20E890u, CALL_EXP, tphdHumanChainAnimationNormalHook },
     { "chainAnimWolfHeavy",  0x02051B08u, 0xC02A7314u, CALL_EXP, tphdWolfChainAnimationHeavyHook },
     { "chainAnimWolf",       0x02051B4Cu, 0xFC20F890u, CALL_EXP, tphdWolfChainAnimationNormalHook },
+
     { "chandelierA",         0x02795234u, 0x800BCF8Cu, CALL_EXP, tphdLv4ChandelierCurveHook },
     { "chandelierB",         0x0279525Cu, 0x800BCF8Cu, CALL_EXP, tphdLv4ChandelierCurveHook },
+
     { "cameraNextTypeA",     0x028DF9A8u, 0x7C651B78u, CALL, tphdCameraNextTypeHook },
     { "cameraNextTypeB",     0x028DF9D4u, 0x7C651B78u, CALL, tphdCameraNextTypeHook },
 };

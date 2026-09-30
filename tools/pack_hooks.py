@@ -12,6 +12,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(ROOT, 'src', 'app', 'code_hooks.cpp')
 PACK = os.path.join(ROOT, 'Cemu', 'graphicspack', 'patch_tphd_tools.asm')
 
+REST_LABEL = '0x02BEF83C = _cCt_Counter_rest:\n'
+TABLE_START = '_pk_version:\n.int 2\n'
+TABLE_END = '\n_rpl_state:'
+CODE_START = 'kpad_done:\n    lwz   r3, 0x0c(r1)\n    lwz   r0, 0x24(r1)\n    mtlr  r0\n    addi  r1, r1, 0x30\n    blr\n'
+PATCH_START = '0x02BEF838 = b   counter_hook\n'
+PATCH_END = '0x02BFCEAC = bla kpad_read_hook\n'
+
 INVERSE = {
     'beq': 'bne', 'bne': 'beq', 'blt': 'bge', 'bge': 'blt',
     'bgt': 'ble', 'ble': 'bgt', 'bso': 'bns', 'bns': 'bso',
@@ -84,13 +91,26 @@ class Rpx:
         return insns
 
 
-def load_sites():
+def snake(name):
+    return re.sub(r'(?<=[a-z0-9])([A-Z])', r'_\1', name).lower()
+
+
+def load_groups():
     src = open(HOOKS).read()
     body = src[src.index('static const Site kSites[] = {'):]
     body = body[:body.index('};')]
     pattern = r'\{\s*"(\w+)",\s*0x([0-9A-Fa-f]+)u,\s*0x([0-9A-Fa-f]+)u,\s*(CALL|JUMP)(?:_EXP)?,'
-    return [(m.group(1), int(m.group(2), 16), int(m.group(3), 16), m.group(4))
-            for m in re.finditer(pattern, body)]
+    groups = [[]]
+    for line in body.splitlines()[1:]:
+        if not line.strip():
+            if groups[-1]:
+                groups.append([])
+            continue
+        m = re.search(pattern, line)
+        if m:
+            groups[-1].append((snake(m.group(1)), int(m.group(2), 16), int(m.group(3), 16),
+                               m.group(4)))
+    return [g for g in groups if g]
 
 
 class Generator:
@@ -98,16 +118,15 @@ class Generator:
         self.rpx = rpx
         self.labels = {}
 
-    def label(self, target):
-        name = '_g_%08X' % target
-        self.labels[target] = name
-        return name
+    def label(self, target, name):
+        return self.labels.setdefault(target, name)
 
-    def operands(self, mnem, ops):
+    def operands(self, name, mnem, ops):
         if mnem.startswith('b') and mnem not in ('blr', 'bctr', 'bctrl', 'blrl'):
             parts = [p.strip() for p in ops.split(',')]
             if parts[-1].startswith('0x'):
-                parts[-1] = self.label(int(parts[-1], 16))
+                kind = 'call' if mnem == 'bl' else 'target'
+                parts[-1] = self.label(int(parts[-1], 16), '_%s_%s' % (name, kind))
             return mnem.rstrip('-+'), ', '.join(parts)
 
         def hexdisp(m):
@@ -124,9 +143,9 @@ class Generator:
             return any('r11' in p for p in parts)
         return any(re.search(r'\br11\b', p) for p in parts[1:])
 
-    def r11_source(self, addr):
+    def r11_source(self, name, addr):
         chain = []
-        for a, mnem, ops in reversed(self.rpx.disasm(addr - 4 * 24, 24)):
+        for _, mnem, ops in reversed(self.rpx.disasm(addr - 4 * 24, 24)):
             parts = [p.strip() for p in ops.split(',')]
             if not parts or parts[0] != 'r11':
                 continue
@@ -134,76 +153,92 @@ class Generator:
                 chain.append('    lis   r11, 0x%X' % (int(parts[1], 0) & 0xFFFF))
                 return list(reversed(chain))
             if mnem in ('lwz', 'lhz', 'lbz', 'lha') and '(r11)' in ops and not chain:
-                m, o = self.operands(mnem, ops)
+                m, o = self.operands(name, mnem, ops)
                 chain.append('    %-5s %s' % (m, o))
                 continue
             break
         raise SystemExit('cannot rebuild r11 before %08X; add an override' % addr)
 
-    def fallback(self, index, addr, shape):
+    def native(self, name, addr, shape):
         if addr in OVERRIDES:
             return OVERRIDES[addr]
         _, mnem, ops = self.rpx.disasm(addr, 1)[0]
-        mnem, ops = self.operands(mnem, ops)
+        mnem, ops = self.operands(name, mnem, ops)
+        def rest():
+            if shape == 'CALL':
+                return '    blr'
+            return '    b     %s' % self.label(addr + 4, '_%s_rest' % name)
         if mnem in INVERSE:
             parts = [p.strip() for p in ops.split(',')]
-            skip = '_hkf_%d_skip' % index
-            inverse = ', '.join(parts[:-1] + [skip])
-            after = '    blr' if shape == 'CALL' else '    b     %s' % self.label(addr + 4)
-            return ['    %-5s %s' % (INVERSE[mnem], inverse), '    b     %s' % parts[-1],
-                    skip + ':', after]
+            skip = '%s_skip' % name
+            return ['    %-5s %s' % (INVERSE[mnem], ', '.join(parts[:-1] + [skip])),
+                    '    b     %s' % parts[-1], skip + ':', rest()]
         if mnem == 'bl':
             if shape == 'JUMP':
                 raise SystemExit('JUMP hook over a bl at %08X' % addr)
             return ['    b     %s' % ops]
         if mnem == 'blr':
             return ['    blr']
-        lines = self.r11_source(addr) if self.reads_r11(mnem, ops) else []
+        lines = self.r11_source(name, addr) if self.reads_r11(mnem, ops) else []
         lines.append('    %-5s %s' % (mnem, ops) if ops else '    %s' % mnem)
-        lines.append('    blr' if shape == 'CALL' else '    b     %s' % self.label(addr + 4))
+        lines.append(rest())
         return lines
 
-    def build(self, sites):
-        table, tramps, falls, patches = [], [], [], []
-        for i, (name, addr, expected, shape) in enumerate(sites):
-            live = self.rpx.word(addr)
-            if live != expected:
-                raise SystemExit('%s: %08X holds %08X, code_hooks.cpp expects %08X' %
-                                 (name, addr, live, expected))
-            table.append('_pkh_%d:\n.int _hkf_%d' % (i, i))
-            tramps.append('_hkt_%d:\n    lis   r11, _pkh_%d@ha\n    lwz   r11, _pkh_%d@l(r11)\n'
-                          '    mtctr r11\n    bctr' % (i, i, i))
-            falls.append('_hkf_%d:\n%s' % (i, '\n'.join(self.fallback(i, addr, shape))))
-            patches.append('0x%08X = %s _hkt_%d' % (addr, 'bla' if shape == 'CALL' else 'b  ', i))
+    def build(self, groups):
+        count = sum(len(g) for g in groups)
+        table = ['_pk_hook_count:', '.int %d' % count]
+        code, patches = [], []
+        for group in groups:
+            table.append('')
+            patches.append('')
+            for name, addr, expected, shape in group:
+                live = self.rpx.word(addr)
+                if live != expected:
+                    raise SystemExit('%s: %08X holds %08X, code_hooks.cpp expects %08X' %
+                                     (name, addr, live, expected))
+                table += ['_pk_%s:' % name, '.int %s_native' % name]
+                code += ['', '%s_hook:' % name,
+                         '    lis   r11, _pk_%s@ha' % name,
+                         '    lwz   r11, _pk_%s@l(r11)' % name,
+                         '    mtctr r11',
+                         '    bctr',
+                         '%s_native:' % name] + self.native(name, addr, shape)
+                patches.append('0x%08X = %s %s_hook' % (addr, 'bla' if shape == 'CALL' else 'b  ', name))
         labels = ['0x%08X = %s:' % (t, n) for t, n in sorted(self.labels.items())]
-        return labels, table, tramps, falls, patches
+        return labels, table, code, patches
 
 
-def splice(labels, table, tramps, falls, patches, count):
+def cut(text, start, end):
+    a = text.index(start) + len(start)
+    b = text.index(end, a) if end else len(text)
+    return text[:a], text[b:]
+
+
+def splice(labels, table, code, patches):
     asm = open(PACK).read().replace('\r\n', '\n')
-    asm = re.sub(r'^0x[0-9A-F]{8} = _g_[0-9A-F]{8}:\n', '', asm, flags=re.M)
-    asm = re.sub(r'_pk_hook_count:\n.*?(?=\n_rpl_state:)', '', asm, flags=re.S)
-    asm = re.sub(r'_hkt_0:\n.*?(?=\ncounter_hook:)', '', asm, flags=re.S)
-    asm = re.sub(r'^0x[0-9A-F]{8} = (?:bla|b  ) _hkt_\d+\n', '', asm, flags=re.M)
-    asm = re.sub(r'\n{3,}', '\n\n', asm)
 
-    anchor = '0x02BEF83C = _cCt_Counter_rest:\n'
-    asm = asm.replace(anchor, anchor + ''.join(l + '\n' for l in labels))
-    block = '_pk_hook_count:\n.int %d\n%s' % (count, '\n'.join(table))
-    asm = asm.replace('\n_rpl_state:', '\n' + block + '\n\n_rpl_state:', 1)
-    code = '\n\n'.join(tramps) + '\n\n' + '\n\n'.join(falls)
-    asm = asm.replace('\ncounter_hook:', '\n' + code + '\n\ncounter_hook:', 1)
-    asm = asm.rstrip('\n') + '\n\n' + '\n'.join(patches) + '\n'
+    head, rest = cut(asm, REST_LABEL, '\n.origin = codecave')
+    asm = head + ''.join(l + '\n' for l in labels) + rest
+
+    head, rest = cut(asm, TABLE_START, TABLE_END)
+    asm = head + '\n' + '\n'.join(table) + '\n' + rest
+
+    head, rest = cut(asm, CODE_START, PATCH_START)
+    asm = head + '\n'.join(code) + '\n\n' + rest
+
+    head, _ = cut(asm, PATCH_END, None)
+    asm = head + '\n'.join(patches) + '\n'
+
     open(PACK, 'w', newline='\n').write(re.sub(r'\n{3,}', '\n\n', asm))
 
 
 def main():
     if len(sys.argv) != 2:
         raise SystemExit('usage: pack_hooks.py <path to Zelda.rpx>')
-    sites = load_sites()
-    labels, table, tramps, falls, patches = Generator(Rpx(sys.argv[1])).build(sites)
-    splice(labels, table, tramps, falls, patches, len(sites))
-    print('%d hook sites written to %s' % (len(sites), os.path.relpath(PACK, ROOT)))
+    groups = load_groups()
+    labels, table, code, patches = Generator(Rpx(sys.argv[1])).build(groups)
+    splice(labels, table, code, patches)
+    print('%d hook sites written to %s' % (sum(len(g) for g in groups), os.path.relpath(PACK, ROOT)))
 
 
 if __name__ == '__main__':

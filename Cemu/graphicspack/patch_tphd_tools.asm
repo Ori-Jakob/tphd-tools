@@ -2,27 +2,27 @@
 moduleMatches = 0x1A03E108
 
 0x02BEF83C = _cCt_Counter_rest:
-0x0201B204 = _g_0201B204:
-0x0201B318 = _g_0201B318:
-0x02022BD8 = _g_02022BD8:
-0x0202D628 = _g_0202D628:
-0x0203AC18 = _g_0203AC18:
-0x0203AC28 = _g_0203AC28:
-0x0203AC44 = _g_0203AC44:
-0x020502F4 = _g_020502F4:
-0x0208BE14 = _g_0208BE14:
-0x021A37B8 = _g_021A37B8:
-0x021A37EC = _g_021A37EC:
-0x021A3830 = _g_021A3830:
-0x024DC588 = _g_024DC588:
-0x026FD660 = _g_026FD660:
-0x026FD674 = _g_026FD674:
-0x02A18A50 = _g_02A18A50:
-0x02A58588 = _g_02A58588:
-0x02A58B58 = _g_02A58B58:
-0x02A594B4 = _g_02A594B4:
-0x02A67D1C = _g_02A67D1C:
-0x02AA6460 = _g_02AA6460:
+0x0201B204 = _unrestricted_sword_call:
+0x0201B318 = _unrestricted_items_rest:
+0x02022BD8 = _iron_boots_anime_a_call:
+0x0202D628 = _ledge_wolf_param_rest:
+0x0203AC18 = _great_spin_skill_rest:
+0x0203AC28 = _great_spin_skill_target:
+0x0203AC44 = _great_spin_health_target:
+0x020502F4 = _no_bomb_limit_target:
+0x0208BE14 = _no_fall_damage_a_call:
+0x021A37B8 = _canoe_score_a_rest:
+0x021A37EC = _canoe_score_b_rest:
+0x021A3830 = _canoe_score_a_target:
+0x024DC588 = _star_game_clear_rest:
+0x026FD660 = _chain_wall_duration_rest:
+0x026FD674 = _chain_wall_phase_rest:
+0x02A18A50 = _text_outnow_accept_call:
+0x02A58588 = _text_do_begin_rest:
+0x02A58B58 = _text_do_is_ready_rest:
+0x02A594B4 = _text_do_tag_rest:
+0x02A67D1C = _text_is_send_rest:
+0x02AA6460 = _fairy_revival_call:
 
 .origin = codecave
 
@@ -32,168 +32,185 @@ _pk_version:
 
 _pk_hook_count:
 .int 81
-_pkh_0:
-.int _hkf_0
-_pkh_1:
-.int _hkf_1
-_pkh_2:
-.int _hkf_2
-_pkh_3:
-.int _hkf_3
-_pkh_4:
-.int _hkf_4
-_pkh_5:
-.int _hkf_5
-_pkh_6:
-.int _hkf_6
-_pkh_7:
-.int _hkf_7
-_pkh_8:
-.int _hkf_8
-_pkh_9:
-.int _hkf_9
-_pkh_10:
-.int _hkf_10
-_pkh_11:
-.int _hkf_11
-_pkh_12:
-.int _hkf_12
-_pkh_13:
-.int _hkf_13
-_pkh_14:
-.int _hkf_14
-_pkh_15:
-.int _hkf_15
-_pkh_16:
-.int _hkf_16
-_pkh_17:
-.int _hkf_17
-_pkh_18:
-.int _hkf_18
-_pkh_19:
-.int _hkf_19
-_pkh_20:
-.int _hkf_20
-_pkh_21:
-.int _hkf_21
-_pkh_22:
-.int _hkf_22
-_pkh_23:
-.int _hkf_23
-_pkh_24:
-.int _hkf_24
-_pkh_25:
-.int _hkf_25
-_pkh_26:
-.int _hkf_26
-_pkh_27:
-.int _hkf_27
-_pkh_28:
-.int _hkf_28
-_pkh_29:
-.int _hkf_29
-_pkh_30:
-.int _hkf_30
-_pkh_31:
-.int _hkf_31
-_pkh_32:
-.int _hkf_32
-_pkh_33:
-.int _hkf_33
-_pkh_34:
-.int _hkf_34
-_pkh_35:
-.int _hkf_35
-_pkh_36:
-.int _hkf_36
-_pkh_37:
-.int _hkf_37
-_pkh_38:
-.int _hkf_38
-_pkh_39:
-.int _hkf_39
-_pkh_40:
-.int _hkf_40
-_pkh_41:
-.int _hkf_41
-_pkh_42:
-.int _hkf_42
-_pkh_43:
-.int _hkf_43
-_pkh_44:
-.int _hkf_44
-_pkh_45:
-.int _hkf_45
-_pkh_46:
-.int _hkf_46
-_pkh_47:
-.int _hkf_47
-_pkh_48:
-.int _hkf_48
-_pkh_49:
-.int _hkf_49
-_pkh_50:
-.int _hkf_50
-_pkh_51:
-.int _hkf_51
-_pkh_52:
-.int _hkf_52
-_pkh_53:
-.int _hkf_53
-_pkh_54:
-.int _hkf_54
-_pkh_55:
-.int _hkf_55
-_pkh_56:
-.int _hkf_56
-_pkh_57:
-.int _hkf_57
-_pkh_58:
-.int _hkf_58
-_pkh_59:
-.int _hkf_59
-_pkh_60:
-.int _hkf_60
-_pkh_61:
-.int _hkf_61
-_pkh_62:
-.int _hkf_62
-_pkh_63:
-.int _hkf_63
-_pkh_64:
-.int _hkf_64
-_pkh_65:
-.int _hkf_65
-_pkh_66:
-.int _hkf_66
-_pkh_67:
-.int _hkf_67
-_pkh_68:
-.int _hkf_68
-_pkh_69:
-.int _hkf_69
-_pkh_70:
-.int _hkf_70
-_pkh_71:
-.int _hkf_71
-_pkh_72:
-.int _hkf_72
-_pkh_73:
-.int _hkf_73
-_pkh_74:
-.int _hkf_74
-_pkh_75:
-.int _hkf_75
-_pkh_76:
-.int _hkf_76
-_pkh_77:
-.int _hkf_77
-_pkh_78:
-.int _hkf_78
-_pkh_79:
-.int _hkf_79
-_pkh_80:
-.int _hkf_80
+
+_pk_clawshot_failure:
+.int clawshot_failure_native
+_pk_clawshot_boss_shoot:
+.int clawshot_boss_shoot_native
+_pk_clawshot_return:
+.int clawshot_return_native
+_pk_clawshot_shoot_f30:
+.int clawshot_shoot_f30_native
+_pk_clawshot_range_f29:
+.int clawshot_range_f29_native
+_pk_clawshot_pull_f31:
+.int clawshot_pull_f31_native
+_pk_clawshot_pull_f13:
+.int clawshot_pull_f13_native
+_pk_clawshot_range_f1:
+.int clawshot_range_f1_native
+_pk_clawshot_shoot_f1a:
+.int clawshot_shoot_f1a_native
+_pk_clawshot_shoot_f1b:
+.int clawshot_shoot_f1b_native
+_pk_clawshot_shoot_f1c:
+.int clawshot_shoot_f1c_native
+
+_pk_spinner_time:
+.int spinner_time_native
+_pk_spinner_speed:
+.int spinner_speed_native
+
+_pk_remote_bomb_fuse:
+.int remote_bomb_fuse_native
+_pk_no_bomb_limit:
+.int no_bomb_limit_native
+
+_pk_unrestricted_items:
+.int unrestricted_items_native
+_pk_unrestricted_sword:
+.int unrestricted_sword_native
+
+_pk_iron_boots_anime_a:
+.int iron_boots_anime_a_native
+_pk_iron_boots_anime_b:
+.int iron_boots_anime_b_native
+_pk_iron_boots_anime_c:
+.int iron_boots_anime_c_native
+_pk_iron_boots_speed_a:
+.int iron_boots_speed_a_native
+_pk_iron_boots_speed_b:
+.int iron_boots_speed_b_native
+_pk_iron_boots_speed_c:
+.int iron_boots_speed_c_native
+_pk_iron_boots_speed_d:
+.int iron_boots_speed_d_native
+
+_pk_great_spin_skill:
+.int great_spin_skill_native
+_pk_great_spin_health:
+.int great_spin_health_native
+
+_pk_damage_received:
+.int damage_received_native
+_pk_damage_given:
+.int damage_given_native
+_pk_rupee_change:
+.int rupee_change_native
+_pk_no_fall_damage_a:
+.int no_fall_damage_a_native
+_pk_no_fall_damage_b:
+.int no_fall_damage_b_native
+_pk_no_fall_damage_c:
+.int no_fall_damage_c_native
+_pk_fairy_revival:
+.int fairy_revival_native
+
+_pk_star_game_clear:
+.int star_game_clear_native
+_pk_canoe_score_a:
+.int canoe_score_a_native
+_pk_canoe_score_b:
+.int canoe_score_b_native
+_pk_rapids_gain2:
+.int rapids_gain2_native
+_pk_rapids_gain1:
+.int rapids_gain1_native
+_pk_timer_freeze:
+.int timer_freeze_native
+_pk_goat_instant_win:
+.int goat_instant_win_native
+_pk_fruit_combo_keep:
+.int fruit_combo_keep_native
+_pk_easy_sumo:
+.int easy_sumo_native
+
+_pk_climb_speed_ladder:
+.int climb_speed_ladder_native
+_pk_climb_speed_wall:
+.int climb_speed_wall_native
+_pk_climb_speed_shimmy:
+.int climb_speed_shimmy_native
+_pk_climb_probe_a:
+.int climb_probe_a_native
+_pk_climb_probe_b:
+.int climb_probe_b_native
+_pk_climb_probe_c:
+.int climb_probe_c_native
+_pk_climb_probe_d:
+.int climb_probe_d_native
+_pk_climb_delta:
+.int climb_delta_native
+
+_pk_crawl_speed:
+.int crawl_speed_native
+_pk_roll_speed:
+.int roll_speed_native
+
+_pk_time_rate:
+.int time_rate_native
+_pk_time_rate_alt:
+.int time_rate_alt_native
+
+_pk_text_do_begin:
+.int text_do_begin_native
+_pk_text_do_is_ready:
+.int text_do_is_ready_native
+_pk_text_do_tag:
+.int text_do_tag_native
+_pk_text_is_send:
+.int text_is_send_native
+_pk_text_outnow_accept:
+.int text_outnow_accept_native
+
+_pk_ledge_wolf_anime:
+.int ledge_wolf_anime_native
+_pk_ledge_wolf_param:
+.int ledge_wolf_param_native
+_pk_ledge_human_anime:
+.int ledge_human_anime_native
+
+_pk_block_push_rate:
+.int block_push_rate_native
+_pk_block_pull:
+.int block_pull_native
+_pk_block_push:
+.int block_push_native
+_pk_bemos_duration:
+.int bemos_duration_native
+_pk_bemos_phase:
+.int bemos_phase_native
+
+_pk_chain_wall_duration:
+.int chain_wall_duration_native
+_pk_chain_wall_phase:
+.int chain_wall_phase_native
+_pk_chain_wall_elapsed:
+.int chain_wall_elapsed_native
+_pk_chain_max_blend:
+.int chain_max_blend_native
+_pk_chain_max_human:
+.int chain_max_human_native
+_pk_chain_max_wolf:
+.int chain_max_wolf_native
+_pk_chain_anim_human_heavy:
+.int chain_anim_human_heavy_native
+_pk_chain_anim_human:
+.int chain_anim_human_native
+_pk_chain_anim_wolf_heavy:
+.int chain_anim_wolf_heavy_native
+_pk_chain_anim_wolf:
+.int chain_anim_wolf_native
+
+_pk_chandelier_a:
+.int chandelier_a_native
+_pk_chandelier_b:
+.int chandelier_b_native
+
+_pk_camera_next_type_a:
+.int camera_next_type_a_native
+_pk_camera_next_type_b:
+.int camera_next_type_b_native
 
 _rpl_state:
 .byte 0
@@ -369,820 +386,6 @@ _rpl_resolve_done:
     addi  r1, r1, 0x30
     blr
 
-_hkt_0:
-    lis   r11, _pkh_0@ha
-    lwz   r11, _pkh_0@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_1:
-    lis   r11, _pkh_1@ha
-    lwz   r11, _pkh_1@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_2:
-    lis   r11, _pkh_2@ha
-    lwz   r11, _pkh_2@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_3:
-    lis   r11, _pkh_3@ha
-    lwz   r11, _pkh_3@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_4:
-    lis   r11, _pkh_4@ha
-    lwz   r11, _pkh_4@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_5:
-    lis   r11, _pkh_5@ha
-    lwz   r11, _pkh_5@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_6:
-    lis   r11, _pkh_6@ha
-    lwz   r11, _pkh_6@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_7:
-    lis   r11, _pkh_7@ha
-    lwz   r11, _pkh_7@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_8:
-    lis   r11, _pkh_8@ha
-    lwz   r11, _pkh_8@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_9:
-    lis   r11, _pkh_9@ha
-    lwz   r11, _pkh_9@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_10:
-    lis   r11, _pkh_10@ha
-    lwz   r11, _pkh_10@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_11:
-    lis   r11, _pkh_11@ha
-    lwz   r11, _pkh_11@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_12:
-    lis   r11, _pkh_12@ha
-    lwz   r11, _pkh_12@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_13:
-    lis   r11, _pkh_13@ha
-    lwz   r11, _pkh_13@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_14:
-    lis   r11, _pkh_14@ha
-    lwz   r11, _pkh_14@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_15:
-    lis   r11, _pkh_15@ha
-    lwz   r11, _pkh_15@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_16:
-    lis   r11, _pkh_16@ha
-    lwz   r11, _pkh_16@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_17:
-    lis   r11, _pkh_17@ha
-    lwz   r11, _pkh_17@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_18:
-    lis   r11, _pkh_18@ha
-    lwz   r11, _pkh_18@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_19:
-    lis   r11, _pkh_19@ha
-    lwz   r11, _pkh_19@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_20:
-    lis   r11, _pkh_20@ha
-    lwz   r11, _pkh_20@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_21:
-    lis   r11, _pkh_21@ha
-    lwz   r11, _pkh_21@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_22:
-    lis   r11, _pkh_22@ha
-    lwz   r11, _pkh_22@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_23:
-    lis   r11, _pkh_23@ha
-    lwz   r11, _pkh_23@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_24:
-    lis   r11, _pkh_24@ha
-    lwz   r11, _pkh_24@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_25:
-    lis   r11, _pkh_25@ha
-    lwz   r11, _pkh_25@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_26:
-    lis   r11, _pkh_26@ha
-    lwz   r11, _pkh_26@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_27:
-    lis   r11, _pkh_27@ha
-    lwz   r11, _pkh_27@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_28:
-    lis   r11, _pkh_28@ha
-    lwz   r11, _pkh_28@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_29:
-    lis   r11, _pkh_29@ha
-    lwz   r11, _pkh_29@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_30:
-    lis   r11, _pkh_30@ha
-    lwz   r11, _pkh_30@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_31:
-    lis   r11, _pkh_31@ha
-    lwz   r11, _pkh_31@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_32:
-    lis   r11, _pkh_32@ha
-    lwz   r11, _pkh_32@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_33:
-    lis   r11, _pkh_33@ha
-    lwz   r11, _pkh_33@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_34:
-    lis   r11, _pkh_34@ha
-    lwz   r11, _pkh_34@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_35:
-    lis   r11, _pkh_35@ha
-    lwz   r11, _pkh_35@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_36:
-    lis   r11, _pkh_36@ha
-    lwz   r11, _pkh_36@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_37:
-    lis   r11, _pkh_37@ha
-    lwz   r11, _pkh_37@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_38:
-    lis   r11, _pkh_38@ha
-    lwz   r11, _pkh_38@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_39:
-    lis   r11, _pkh_39@ha
-    lwz   r11, _pkh_39@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_40:
-    lis   r11, _pkh_40@ha
-    lwz   r11, _pkh_40@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_41:
-    lis   r11, _pkh_41@ha
-    lwz   r11, _pkh_41@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_42:
-    lis   r11, _pkh_42@ha
-    lwz   r11, _pkh_42@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_43:
-    lis   r11, _pkh_43@ha
-    lwz   r11, _pkh_43@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_44:
-    lis   r11, _pkh_44@ha
-    lwz   r11, _pkh_44@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_45:
-    lis   r11, _pkh_45@ha
-    lwz   r11, _pkh_45@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_46:
-    lis   r11, _pkh_46@ha
-    lwz   r11, _pkh_46@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_47:
-    lis   r11, _pkh_47@ha
-    lwz   r11, _pkh_47@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_48:
-    lis   r11, _pkh_48@ha
-    lwz   r11, _pkh_48@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_49:
-    lis   r11, _pkh_49@ha
-    lwz   r11, _pkh_49@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_50:
-    lis   r11, _pkh_50@ha
-    lwz   r11, _pkh_50@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_51:
-    lis   r11, _pkh_51@ha
-    lwz   r11, _pkh_51@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_52:
-    lis   r11, _pkh_52@ha
-    lwz   r11, _pkh_52@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_53:
-    lis   r11, _pkh_53@ha
-    lwz   r11, _pkh_53@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_54:
-    lis   r11, _pkh_54@ha
-    lwz   r11, _pkh_54@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_55:
-    lis   r11, _pkh_55@ha
-    lwz   r11, _pkh_55@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_56:
-    lis   r11, _pkh_56@ha
-    lwz   r11, _pkh_56@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_57:
-    lis   r11, _pkh_57@ha
-    lwz   r11, _pkh_57@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_58:
-    lis   r11, _pkh_58@ha
-    lwz   r11, _pkh_58@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_59:
-    lis   r11, _pkh_59@ha
-    lwz   r11, _pkh_59@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_60:
-    lis   r11, _pkh_60@ha
-    lwz   r11, _pkh_60@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_61:
-    lis   r11, _pkh_61@ha
-    lwz   r11, _pkh_61@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_62:
-    lis   r11, _pkh_62@ha
-    lwz   r11, _pkh_62@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_63:
-    lis   r11, _pkh_63@ha
-    lwz   r11, _pkh_63@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_64:
-    lis   r11, _pkh_64@ha
-    lwz   r11, _pkh_64@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_65:
-    lis   r11, _pkh_65@ha
-    lwz   r11, _pkh_65@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_66:
-    lis   r11, _pkh_66@ha
-    lwz   r11, _pkh_66@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_67:
-    lis   r11, _pkh_67@ha
-    lwz   r11, _pkh_67@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_68:
-    lis   r11, _pkh_68@ha
-    lwz   r11, _pkh_68@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_69:
-    lis   r11, _pkh_69@ha
-    lwz   r11, _pkh_69@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_70:
-    lis   r11, _pkh_70@ha
-    lwz   r11, _pkh_70@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_71:
-    lis   r11, _pkh_71@ha
-    lwz   r11, _pkh_71@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_72:
-    lis   r11, _pkh_72@ha
-    lwz   r11, _pkh_72@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_73:
-    lis   r11, _pkh_73@ha
-    lwz   r11, _pkh_73@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_74:
-    lis   r11, _pkh_74@ha
-    lwz   r11, _pkh_74@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_75:
-    lis   r11, _pkh_75@ha
-    lwz   r11, _pkh_75@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_76:
-    lis   r11, _pkh_76@ha
-    lwz   r11, _pkh_76@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_77:
-    lis   r11, _pkh_77@ha
-    lwz   r11, _pkh_77@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_78:
-    lis   r11, _pkh_78@ha
-    lwz   r11, _pkh_78@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_79:
-    lis   r11, _pkh_79@ha
-    lwz   r11, _pkh_79@l(r11)
-    mtctr r11
-    bctr
-
-_hkt_80:
-    lis   r11, _pkh_80@ha
-    lwz   r11, _pkh_80@l(r11)
-    mtctr r11
-    bctr
-
-_hkf_0:
-    li    r3, 0
-    blr
-
-_hkf_1:
-    lfs   f30, 0x73F0(r4)
-    blr
-
-_hkf_2:
-    lfs   f31, 0x73F0(r12)
-    blr
-
-_hkf_3:
-    lis   r11, 0x1000
-    lfs   f30, 0x73BC(r11)
-    blr
-
-_hkf_4:
-    lfs   f29, 0x77A0(r7)
-    blr
-
-_hkf_5:
-    lfs   f31, 0x7480(r4)
-    blr
-
-_hkf_6:
-    lfs   f13, 0x7480(r5)
-    blr
-
-_hkf_7:
-    lis   r11, 0x1000
-    lfs   f1, 0x77A0(r11)
-    blr
-
-_hkf_8:
-    lfs   f1, 0x73BC(r10)
-    blr
-
-_hkf_9:
-    lfs   f1, 0x73BC(r10)
-    blr
-
-_hkf_10:
-    lfs   f1, 0x73BC(r10)
-    blr
-
-_hkf_11:
-    addi  r11, r7, -1
-    blr
-
-_hkf_12:
-    lfs   f1, 0x751C(r12)
-    blr
-
-_hkf_13:
-    addi  r30, r30, -1
-    blr
-
-_hkf_14:
-    blt   _hkf_14_skip
-    b     _g_020502F4
-_hkf_14_skip:
-    blr
-
-_hkf_15:
-    li    r3, 0
-    b     _g_0201B318
-
-_hkf_16:
-    b     _g_0201B204
-
-_hkf_17:
-    b     _g_02022BD8
-
-_hkf_18:
-    b     _g_02022BD8
-
-_hkf_19:
-    b     _g_02022BD8
-
-_hkf_20:
-    stfs  f13, 0x34F4(r30)
-    blr
-
-_hkf_21:
-    stfs  f13, 0x34F4(r30)
-    blr
-
-_hkf_22:
-    stfs  f13, 0x34F4(r30)
-    blr
-
-_hkf_23:
-    stfs  f30, 0x34F4(r30)
-    blr
-
-_hkf_24:
-    bne   _hkf_24_skip
-    b     _g_0203AC28
-_hkf_24_skip:
-    b     _g_0203AC18
-
-_hkf_25:
-    bne   _hkf_25_skip
-    b     _g_0203AC44
-_hkf_25_skip:
-    b     _g_0203AC28
-
-_hkf_26:
-    fadds f9, f9, f8
-    blr
-
-_hkf_27:
-    subf  r8, r7, r8
-    blr
-
-_hkf_28:
-    lwz   r12, 0x6280(r31)
-    blr
-
-_hkf_29:
-    b     _g_0208BE14
-
-_hkf_30:
-    b     _g_0208BE14
-
-_hkf_31:
-    b     _g_0208BE14
-
-_hkf_32:
-    b     _g_02AA6460
-
-_hkf_33:
-    lwz   r3, 0xE0C(r3)
-    b     _g_024DC588
-
-_hkf_34:
-    bne   _hkf_34_skip
-    b     _g_021A3830
-_hkf_34_skip:
-    b     _g_021A37B8
-
-_hkf_35:
-    bne   _hkf_35_skip
-    b     _g_021A3830
-_hkf_35_skip:
-    b     _g_021A37EC
-
-_hkf_36:
-    addi  r11, r8, 2
-    blr
-
-_hkf_37:
-    addi  r11, r8, 1
-    blr
-
-_hkf_38:
-    stw   r3, 0x118(r29)
-    blr
-
-_hkf_39:
-    cmplw r9, r10
-    blr
-
-_hkf_40:
-    lis   r11, 0x1011
-    lwz   r11, -0x4284(r11)
-    cmplw r11, r0
-    blr
-
-_hkf_41:
-    lwz   r31, 0xC(r1)
-    blr
-
-_hkf_42:
-    blr
-
-_hkf_43:
-    blr
-
-_hkf_44:
-    blr
-
-_hkf_45:
-    fadds f31, f23, f22
-    blr
-
-_hkf_46:
-    fadds f31, f23, f22
-    blr
-
-_hkf_47:
-    fadds f31, f23, f22
-    blr
-
-_hkf_48:
-    fadds f31, f23, f22
-    blr
-
-_hkf_49:
-    fsubs f6, f11, f23
-    blr
-
-_hkf_50:
-    blr
-
-_hkf_51:
-    lwz   r0, 0x574(r31)
-    blr
-
-_hkf_52:
-    lfs   f8, 0x1248(r30)
-    blr
-
-_hkf_53:
-    lfs   f10, 0x1248(r30)
-    blr
-
-_hkf_54:
-    stwu  r1, -0x30(r1)
-    b     _g_02A58588
-
-_hkf_55:
-    mflr  r0
-    b     _g_02A58B58
-
-_hkf_56:
-    mflr  r0
-    b     _g_02A594B4
-
-_hkf_57:
-    mflr  r0
-    b     _g_02A67D1C
-
-_hkf_58:
-    b     _g_02A18A50
-
-_hkf_59:
-    lfs   f1, 0x7090(r10)
-    blr
-
-_hkf_60:
-    lfs   f1, 0x4(r5)
-    b     _g_0202D628
-
-_hkf_61:
-    lis   r11, 0x1000
-    lfs   f1, 0x7014(r11)
-    blr
-
-_hkf_62:
-    blr
-
-_hkf_63:
-    lha   r0, 0xA(r12)
-    blr
-
-_hkf_64:
-    lha   r7, 0x4(r12)
-    blr
-
-_hkf_65:
-    li    r0, 13
-    blr
-
-_hkf_66:
-    lfs   f13, -0x3068(r12)
-    blr
-
-_hkf_67:
-    li    r11, 13
-    b     _g_026FD660
-
-_hkf_68:
-    li    r12, 2520
-    b     _g_026FD674
-
-_hkf_69:
-    lha   r11, 0xF18(r29)
-    subfic r8, r11, 13
-    blr
-
-_hkf_70:
-    lfs   f10, 0x7474(r12)
-    blr
-
-_hkf_71:
-    lfs   f0, 0x7474(r10)
-    blr
-
-_hkf_72:
-    lfs   f0, 0x7474(r12)
-    blr
-
-_hkf_73:
-    lfs   f1, 0x7314(r9)
-    blr
-
-_hkf_74:
-    fmr   f1, f29
-    blr
-
-_hkf_75:
-    lfs   f1, 0x7314(r10)
-    blr
-
-_hkf_76:
-    fmr   f1, f31
-    blr
-
-_hkf_77:
-    lis   r11, 0x1007
-    lwz   r0, -0x3074(r11)
-    blr
-
-_hkf_78:
-    addis r11, r10, 0x1007
-    lwz   r0, -0x3074(r11)
-    blr
-
-_hkf_79:
-    mr    r5, r3
-    blr
-
-_hkf_80:
-    mr    r5, r3
-    blr
-
 counter_hook:
     stwu  r1, -0x40(r1)
     mflr  r0
@@ -1331,6 +534,739 @@ kpad_done:
     addi  r1, r1, 0x30
     blr
 
+clawshot_failure_hook:
+    lis   r11, _pk_clawshot_failure@ha
+    lwz   r11, _pk_clawshot_failure@l(r11)
+    mtctr r11
+    bctr
+clawshot_failure_native:
+    li    r3, 0
+    blr
+
+clawshot_boss_shoot_hook:
+    lis   r11, _pk_clawshot_boss_shoot@ha
+    lwz   r11, _pk_clawshot_boss_shoot@l(r11)
+    mtctr r11
+    bctr
+clawshot_boss_shoot_native:
+    lfs   f30, 0x73F0(r4)
+    blr
+
+clawshot_return_hook:
+    lis   r11, _pk_clawshot_return@ha
+    lwz   r11, _pk_clawshot_return@l(r11)
+    mtctr r11
+    bctr
+clawshot_return_native:
+    lfs   f31, 0x73F0(r12)
+    blr
+
+clawshot_shoot_f30_hook:
+    lis   r11, _pk_clawshot_shoot_f30@ha
+    lwz   r11, _pk_clawshot_shoot_f30@l(r11)
+    mtctr r11
+    bctr
+clawshot_shoot_f30_native:
+    lis   r11, 0x1000
+    lfs   f30, 0x73BC(r11)
+    blr
+
+clawshot_range_f29_hook:
+    lis   r11, _pk_clawshot_range_f29@ha
+    lwz   r11, _pk_clawshot_range_f29@l(r11)
+    mtctr r11
+    bctr
+clawshot_range_f29_native:
+    lfs   f29, 0x77A0(r7)
+    blr
+
+clawshot_pull_f31_hook:
+    lis   r11, _pk_clawshot_pull_f31@ha
+    lwz   r11, _pk_clawshot_pull_f31@l(r11)
+    mtctr r11
+    bctr
+clawshot_pull_f31_native:
+    lfs   f31, 0x7480(r4)
+    blr
+
+clawshot_pull_f13_hook:
+    lis   r11, _pk_clawshot_pull_f13@ha
+    lwz   r11, _pk_clawshot_pull_f13@l(r11)
+    mtctr r11
+    bctr
+clawshot_pull_f13_native:
+    lfs   f13, 0x7480(r5)
+    blr
+
+clawshot_range_f1_hook:
+    lis   r11, _pk_clawshot_range_f1@ha
+    lwz   r11, _pk_clawshot_range_f1@l(r11)
+    mtctr r11
+    bctr
+clawshot_range_f1_native:
+    lis   r11, 0x1000
+    lfs   f1, 0x77A0(r11)
+    blr
+
+clawshot_shoot_f1a_hook:
+    lis   r11, _pk_clawshot_shoot_f1a@ha
+    lwz   r11, _pk_clawshot_shoot_f1a@l(r11)
+    mtctr r11
+    bctr
+clawshot_shoot_f1a_native:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+clawshot_shoot_f1b_hook:
+    lis   r11, _pk_clawshot_shoot_f1b@ha
+    lwz   r11, _pk_clawshot_shoot_f1b@l(r11)
+    mtctr r11
+    bctr
+clawshot_shoot_f1b_native:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+clawshot_shoot_f1c_hook:
+    lis   r11, _pk_clawshot_shoot_f1c@ha
+    lwz   r11, _pk_clawshot_shoot_f1c@l(r11)
+    mtctr r11
+    bctr
+clawshot_shoot_f1c_native:
+    lfs   f1, 0x73BC(r10)
+    blr
+
+spinner_time_hook:
+    lis   r11, _pk_spinner_time@ha
+    lwz   r11, _pk_spinner_time@l(r11)
+    mtctr r11
+    bctr
+spinner_time_native:
+    addi  r11, r7, -1
+    blr
+
+spinner_speed_hook:
+    lis   r11, _pk_spinner_speed@ha
+    lwz   r11, _pk_spinner_speed@l(r11)
+    mtctr r11
+    bctr
+spinner_speed_native:
+    lfs   f1, 0x751C(r12)
+    blr
+
+remote_bomb_fuse_hook:
+    lis   r11, _pk_remote_bomb_fuse@ha
+    lwz   r11, _pk_remote_bomb_fuse@l(r11)
+    mtctr r11
+    bctr
+remote_bomb_fuse_native:
+    addi  r30, r30, -1
+    blr
+
+no_bomb_limit_hook:
+    lis   r11, _pk_no_bomb_limit@ha
+    lwz   r11, _pk_no_bomb_limit@l(r11)
+    mtctr r11
+    bctr
+no_bomb_limit_native:
+    blt   no_bomb_limit_skip
+    b     _no_bomb_limit_target
+no_bomb_limit_skip:
+    blr
+
+unrestricted_items_hook:
+    lis   r11, _pk_unrestricted_items@ha
+    lwz   r11, _pk_unrestricted_items@l(r11)
+    mtctr r11
+    bctr
+unrestricted_items_native:
+    li    r3, 0
+    b     _unrestricted_items_rest
+
+unrestricted_sword_hook:
+    lis   r11, _pk_unrestricted_sword@ha
+    lwz   r11, _pk_unrestricted_sword@l(r11)
+    mtctr r11
+    bctr
+unrestricted_sword_native:
+    b     _unrestricted_sword_call
+
+iron_boots_anime_a_hook:
+    lis   r11, _pk_iron_boots_anime_a@ha
+    lwz   r11, _pk_iron_boots_anime_a@l(r11)
+    mtctr r11
+    bctr
+iron_boots_anime_a_native:
+    b     _iron_boots_anime_a_call
+
+iron_boots_anime_b_hook:
+    lis   r11, _pk_iron_boots_anime_b@ha
+    lwz   r11, _pk_iron_boots_anime_b@l(r11)
+    mtctr r11
+    bctr
+iron_boots_anime_b_native:
+    b     _iron_boots_anime_a_call
+
+iron_boots_anime_c_hook:
+    lis   r11, _pk_iron_boots_anime_c@ha
+    lwz   r11, _pk_iron_boots_anime_c@l(r11)
+    mtctr r11
+    bctr
+iron_boots_anime_c_native:
+    b     _iron_boots_anime_a_call
+
+iron_boots_speed_a_hook:
+    lis   r11, _pk_iron_boots_speed_a@ha
+    lwz   r11, _pk_iron_boots_speed_a@l(r11)
+    mtctr r11
+    bctr
+iron_boots_speed_a_native:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+iron_boots_speed_b_hook:
+    lis   r11, _pk_iron_boots_speed_b@ha
+    lwz   r11, _pk_iron_boots_speed_b@l(r11)
+    mtctr r11
+    bctr
+iron_boots_speed_b_native:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+iron_boots_speed_c_hook:
+    lis   r11, _pk_iron_boots_speed_c@ha
+    lwz   r11, _pk_iron_boots_speed_c@l(r11)
+    mtctr r11
+    bctr
+iron_boots_speed_c_native:
+    stfs  f13, 0x34F4(r30)
+    blr
+
+iron_boots_speed_d_hook:
+    lis   r11, _pk_iron_boots_speed_d@ha
+    lwz   r11, _pk_iron_boots_speed_d@l(r11)
+    mtctr r11
+    bctr
+iron_boots_speed_d_native:
+    stfs  f30, 0x34F4(r30)
+    blr
+
+great_spin_skill_hook:
+    lis   r11, _pk_great_spin_skill@ha
+    lwz   r11, _pk_great_spin_skill@l(r11)
+    mtctr r11
+    bctr
+great_spin_skill_native:
+    bne   great_spin_skill_skip
+    b     _great_spin_skill_target
+great_spin_skill_skip:
+    b     _great_spin_skill_rest
+
+great_spin_health_hook:
+    lis   r11, _pk_great_spin_health@ha
+    lwz   r11, _pk_great_spin_health@l(r11)
+    mtctr r11
+    bctr
+great_spin_health_native:
+    bne   great_spin_health_skip
+    b     _great_spin_health_target
+great_spin_health_skip:
+    b     _great_spin_skill_target
+
+damage_received_hook:
+    lis   r11, _pk_damage_received@ha
+    lwz   r11, _pk_damage_received@l(r11)
+    mtctr r11
+    bctr
+damage_received_native:
+    fadds f9, f9, f8
+    blr
+
+damage_given_hook:
+    lis   r11, _pk_damage_given@ha
+    lwz   r11, _pk_damage_given@l(r11)
+    mtctr r11
+    bctr
+damage_given_native:
+    subf  r8, r7, r8
+    blr
+
+rupee_change_hook:
+    lis   r11, _pk_rupee_change@ha
+    lwz   r11, _pk_rupee_change@l(r11)
+    mtctr r11
+    bctr
+rupee_change_native:
+    lwz   r12, 0x6280(r31)
+    blr
+
+no_fall_damage_a_hook:
+    lis   r11, _pk_no_fall_damage_a@ha
+    lwz   r11, _pk_no_fall_damage_a@l(r11)
+    mtctr r11
+    bctr
+no_fall_damage_a_native:
+    b     _no_fall_damage_a_call
+
+no_fall_damage_b_hook:
+    lis   r11, _pk_no_fall_damage_b@ha
+    lwz   r11, _pk_no_fall_damage_b@l(r11)
+    mtctr r11
+    bctr
+no_fall_damage_b_native:
+    b     _no_fall_damage_a_call
+
+no_fall_damage_c_hook:
+    lis   r11, _pk_no_fall_damage_c@ha
+    lwz   r11, _pk_no_fall_damage_c@l(r11)
+    mtctr r11
+    bctr
+no_fall_damage_c_native:
+    b     _no_fall_damage_a_call
+
+fairy_revival_hook:
+    lis   r11, _pk_fairy_revival@ha
+    lwz   r11, _pk_fairy_revival@l(r11)
+    mtctr r11
+    bctr
+fairy_revival_native:
+    b     _fairy_revival_call
+
+star_game_clear_hook:
+    lis   r11, _pk_star_game_clear@ha
+    lwz   r11, _pk_star_game_clear@l(r11)
+    mtctr r11
+    bctr
+star_game_clear_native:
+    lwz   r3, 0xE0C(r3)
+    b     _star_game_clear_rest
+
+canoe_score_a_hook:
+    lis   r11, _pk_canoe_score_a@ha
+    lwz   r11, _pk_canoe_score_a@l(r11)
+    mtctr r11
+    bctr
+canoe_score_a_native:
+    bne   canoe_score_a_skip
+    b     _canoe_score_a_target
+canoe_score_a_skip:
+    b     _canoe_score_a_rest
+
+canoe_score_b_hook:
+    lis   r11, _pk_canoe_score_b@ha
+    lwz   r11, _pk_canoe_score_b@l(r11)
+    mtctr r11
+    bctr
+canoe_score_b_native:
+    bne   canoe_score_b_skip
+    b     _canoe_score_a_target
+canoe_score_b_skip:
+    b     _canoe_score_b_rest
+
+rapids_gain2_hook:
+    lis   r11, _pk_rapids_gain2@ha
+    lwz   r11, _pk_rapids_gain2@l(r11)
+    mtctr r11
+    bctr
+rapids_gain2_native:
+    addi  r11, r8, 2
+    blr
+
+rapids_gain1_hook:
+    lis   r11, _pk_rapids_gain1@ha
+    lwz   r11, _pk_rapids_gain1@l(r11)
+    mtctr r11
+    bctr
+rapids_gain1_native:
+    addi  r11, r8, 1
+    blr
+
+timer_freeze_hook:
+    lis   r11, _pk_timer_freeze@ha
+    lwz   r11, _pk_timer_freeze@l(r11)
+    mtctr r11
+    bctr
+timer_freeze_native:
+    stw   r3, 0x118(r29)
+    blr
+
+goat_instant_win_hook:
+    lis   r11, _pk_goat_instant_win@ha
+    lwz   r11, _pk_goat_instant_win@l(r11)
+    mtctr r11
+    bctr
+goat_instant_win_native:
+    cmplw r9, r10
+    blr
+
+fruit_combo_keep_hook:
+    lis   r11, _pk_fruit_combo_keep@ha
+    lwz   r11, _pk_fruit_combo_keep@l(r11)
+    mtctr r11
+    bctr
+fruit_combo_keep_native:
+    lis   r11, 0x1011
+    lwz   r11, -0x4284(r11)
+    cmplw r11, r0
+    blr
+
+easy_sumo_hook:
+    lis   r11, _pk_easy_sumo@ha
+    lwz   r11, _pk_easy_sumo@l(r11)
+    mtctr r11
+    bctr
+easy_sumo_native:
+    lwz   r31, 0xC(r1)
+    blr
+
+climb_speed_ladder_hook:
+    lis   r11, _pk_climb_speed_ladder@ha
+    lwz   r11, _pk_climb_speed_ladder@l(r11)
+    mtctr r11
+    bctr
+climb_speed_ladder_native:
+    blr
+
+climb_speed_wall_hook:
+    lis   r11, _pk_climb_speed_wall@ha
+    lwz   r11, _pk_climb_speed_wall@l(r11)
+    mtctr r11
+    bctr
+climb_speed_wall_native:
+    blr
+
+climb_speed_shimmy_hook:
+    lis   r11, _pk_climb_speed_shimmy@ha
+    lwz   r11, _pk_climb_speed_shimmy@l(r11)
+    mtctr r11
+    bctr
+climb_speed_shimmy_native:
+    blr
+
+climb_probe_a_hook:
+    lis   r11, _pk_climb_probe_a@ha
+    lwz   r11, _pk_climb_probe_a@l(r11)
+    mtctr r11
+    bctr
+climb_probe_a_native:
+    fadds f31, f23, f22
+    blr
+
+climb_probe_b_hook:
+    lis   r11, _pk_climb_probe_b@ha
+    lwz   r11, _pk_climb_probe_b@l(r11)
+    mtctr r11
+    bctr
+climb_probe_b_native:
+    fadds f31, f23, f22
+    blr
+
+climb_probe_c_hook:
+    lis   r11, _pk_climb_probe_c@ha
+    lwz   r11, _pk_climb_probe_c@l(r11)
+    mtctr r11
+    bctr
+climb_probe_c_native:
+    fadds f31, f23, f22
+    blr
+
+climb_probe_d_hook:
+    lis   r11, _pk_climb_probe_d@ha
+    lwz   r11, _pk_climb_probe_d@l(r11)
+    mtctr r11
+    bctr
+climb_probe_d_native:
+    fadds f31, f23, f22
+    blr
+
+climb_delta_hook:
+    lis   r11, _pk_climb_delta@ha
+    lwz   r11, _pk_climb_delta@l(r11)
+    mtctr r11
+    bctr
+climb_delta_native:
+    fsubs f6, f11, f23
+    blr
+
+crawl_speed_hook:
+    lis   r11, _pk_crawl_speed@ha
+    lwz   r11, _pk_crawl_speed@l(r11)
+    mtctr r11
+    bctr
+crawl_speed_native:
+    blr
+
+roll_speed_hook:
+    lis   r11, _pk_roll_speed@ha
+    lwz   r11, _pk_roll_speed@l(r11)
+    mtctr r11
+    bctr
+roll_speed_native:
+    lwz   r0, 0x574(r31)
+    blr
+
+time_rate_hook:
+    lis   r11, _pk_time_rate@ha
+    lwz   r11, _pk_time_rate@l(r11)
+    mtctr r11
+    bctr
+time_rate_native:
+    lfs   f8, 0x1248(r30)
+    blr
+
+time_rate_alt_hook:
+    lis   r11, _pk_time_rate_alt@ha
+    lwz   r11, _pk_time_rate_alt@l(r11)
+    mtctr r11
+    bctr
+time_rate_alt_native:
+    lfs   f10, 0x1248(r30)
+    blr
+
+text_do_begin_hook:
+    lis   r11, _pk_text_do_begin@ha
+    lwz   r11, _pk_text_do_begin@l(r11)
+    mtctr r11
+    bctr
+text_do_begin_native:
+    stwu  r1, -0x30(r1)
+    b     _text_do_begin_rest
+
+text_do_is_ready_hook:
+    lis   r11, _pk_text_do_is_ready@ha
+    lwz   r11, _pk_text_do_is_ready@l(r11)
+    mtctr r11
+    bctr
+text_do_is_ready_native:
+    mflr  r0
+    b     _text_do_is_ready_rest
+
+text_do_tag_hook:
+    lis   r11, _pk_text_do_tag@ha
+    lwz   r11, _pk_text_do_tag@l(r11)
+    mtctr r11
+    bctr
+text_do_tag_native:
+    mflr  r0
+    b     _text_do_tag_rest
+
+text_is_send_hook:
+    lis   r11, _pk_text_is_send@ha
+    lwz   r11, _pk_text_is_send@l(r11)
+    mtctr r11
+    bctr
+text_is_send_native:
+    mflr  r0
+    b     _text_is_send_rest
+
+text_outnow_accept_hook:
+    lis   r11, _pk_text_outnow_accept@ha
+    lwz   r11, _pk_text_outnow_accept@l(r11)
+    mtctr r11
+    bctr
+text_outnow_accept_native:
+    b     _text_outnow_accept_call
+
+ledge_wolf_anime_hook:
+    lis   r11, _pk_ledge_wolf_anime@ha
+    lwz   r11, _pk_ledge_wolf_anime@l(r11)
+    mtctr r11
+    bctr
+ledge_wolf_anime_native:
+    lfs   f1, 0x7090(r10)
+    blr
+
+ledge_wolf_param_hook:
+    lis   r11, _pk_ledge_wolf_param@ha
+    lwz   r11, _pk_ledge_wolf_param@l(r11)
+    mtctr r11
+    bctr
+ledge_wolf_param_native:
+    lfs   f1, 0x4(r5)
+    b     _ledge_wolf_param_rest
+
+ledge_human_anime_hook:
+    lis   r11, _pk_ledge_human_anime@ha
+    lwz   r11, _pk_ledge_human_anime@l(r11)
+    mtctr r11
+    bctr
+ledge_human_anime_native:
+    lis   r11, 0x1000
+    lfs   f1, 0x7014(r11)
+    blr
+
+block_push_rate_hook:
+    lis   r11, _pk_block_push_rate@ha
+    lwz   r11, _pk_block_push_rate@l(r11)
+    mtctr r11
+    bctr
+block_push_rate_native:
+    blr
+
+block_pull_hook:
+    lis   r11, _pk_block_pull@ha
+    lwz   r11, _pk_block_pull@l(r11)
+    mtctr r11
+    bctr
+block_pull_native:
+    lha   r0, 0xA(r12)
+    blr
+
+block_push_hook:
+    lis   r11, _pk_block_push@ha
+    lwz   r11, _pk_block_push@l(r11)
+    mtctr r11
+    bctr
+block_push_native:
+    lha   r7, 0x4(r12)
+    blr
+
+bemos_duration_hook:
+    lis   r11, _pk_bemos_duration@ha
+    lwz   r11, _pk_bemos_duration@l(r11)
+    mtctr r11
+    bctr
+bemos_duration_native:
+    li    r0, 13
+    blr
+
+bemos_phase_hook:
+    lis   r11, _pk_bemos_phase@ha
+    lwz   r11, _pk_bemos_phase@l(r11)
+    mtctr r11
+    bctr
+bemos_phase_native:
+    lfs   f13, -0x3068(r12)
+    blr
+
+chain_wall_duration_hook:
+    lis   r11, _pk_chain_wall_duration@ha
+    lwz   r11, _pk_chain_wall_duration@l(r11)
+    mtctr r11
+    bctr
+chain_wall_duration_native:
+    li    r11, 13
+    b     _chain_wall_duration_rest
+
+chain_wall_phase_hook:
+    lis   r11, _pk_chain_wall_phase@ha
+    lwz   r11, _pk_chain_wall_phase@l(r11)
+    mtctr r11
+    bctr
+chain_wall_phase_native:
+    li    r12, 2520
+    b     _chain_wall_phase_rest
+
+chain_wall_elapsed_hook:
+    lis   r11, _pk_chain_wall_elapsed@ha
+    lwz   r11, _pk_chain_wall_elapsed@l(r11)
+    mtctr r11
+    bctr
+chain_wall_elapsed_native:
+    lha   r11, 0xF18(r29)
+    subfic r8, r11, 13
+    blr
+
+chain_max_blend_hook:
+    lis   r11, _pk_chain_max_blend@ha
+    lwz   r11, _pk_chain_max_blend@l(r11)
+    mtctr r11
+    bctr
+chain_max_blend_native:
+    lfs   f10, 0x7474(r12)
+    blr
+
+chain_max_human_hook:
+    lis   r11, _pk_chain_max_human@ha
+    lwz   r11, _pk_chain_max_human@l(r11)
+    mtctr r11
+    bctr
+chain_max_human_native:
+    lfs   f0, 0x7474(r10)
+    blr
+
+chain_max_wolf_hook:
+    lis   r11, _pk_chain_max_wolf@ha
+    lwz   r11, _pk_chain_max_wolf@l(r11)
+    mtctr r11
+    bctr
+chain_max_wolf_native:
+    lfs   f0, 0x7474(r12)
+    blr
+
+chain_anim_human_heavy_hook:
+    lis   r11, _pk_chain_anim_human_heavy@ha
+    lwz   r11, _pk_chain_anim_human_heavy@l(r11)
+    mtctr r11
+    bctr
+chain_anim_human_heavy_native:
+    lfs   f1, 0x7314(r9)
+    blr
+
+chain_anim_human_hook:
+    lis   r11, _pk_chain_anim_human@ha
+    lwz   r11, _pk_chain_anim_human@l(r11)
+    mtctr r11
+    bctr
+chain_anim_human_native:
+    fmr   f1, f29
+    blr
+
+chain_anim_wolf_heavy_hook:
+    lis   r11, _pk_chain_anim_wolf_heavy@ha
+    lwz   r11, _pk_chain_anim_wolf_heavy@l(r11)
+    mtctr r11
+    bctr
+chain_anim_wolf_heavy_native:
+    lfs   f1, 0x7314(r10)
+    blr
+
+chain_anim_wolf_hook:
+    lis   r11, _pk_chain_anim_wolf@ha
+    lwz   r11, _pk_chain_anim_wolf@l(r11)
+    mtctr r11
+    bctr
+chain_anim_wolf_native:
+    fmr   f1, f31
+    blr
+
+chandelier_a_hook:
+    lis   r11, _pk_chandelier_a@ha
+    lwz   r11, _pk_chandelier_a@l(r11)
+    mtctr r11
+    bctr
+chandelier_a_native:
+    lis   r11, 0x1007
+    lwz   r0, -0x3074(r11)
+    blr
+
+chandelier_b_hook:
+    lis   r11, _pk_chandelier_b@ha
+    lwz   r11, _pk_chandelier_b@l(r11)
+    mtctr r11
+    bctr
+chandelier_b_native:
+    addis r11, r10, 0x1007
+    lwz   r0, -0x3074(r11)
+    blr
+
+camera_next_type_a_hook:
+    lis   r11, _pk_camera_next_type_a@ha
+    lwz   r11, _pk_camera_next_type_a@l(r11)
+    mtctr r11
+    bctr
+camera_next_type_a_native:
+    mr    r5, r3
+    blr
+
+camera_next_type_b_hook:
+    lis   r11, _pk_camera_next_type_b@ha
+    lwz   r11, _pk_camera_next_type_b@l(r11)
+    mtctr r11
+    bctr
+camera_next_type_b_native:
+    mr    r5, r3
+    blr
+
 0x02BEF838 = b   counter_hook
 
 0x02BDE730 = bla copy_hook
@@ -1358,84 +1294,100 @@ kpad_done:
 0x02BFB94C = bla kpad_read_hook
 0x02BFCEAC = bla kpad_read_hook
 
-0x0202B12C = bla _hkt_0
-0x020592D0 = bla _hkt_1
-0x020592E8 = bla _hkt_2
-0x020592F0 = bla _hkt_3
-0x020592F8 = bla _hkt_4
-0x0205932C = bla _hkt_5
-0x020423B8 = bla _hkt_6
-0x0209CF84 = bla _hkt_7
-0x02059C94 = bla _hkt_8
-0x02059D34 = bla _hkt_9
-0x02059DC4 = bla _hkt_10
-0x0288D8AC = bla _hkt_11
-0x020B3128 = bla _hkt_12
-0x0248802C = bla _hkt_13
-0x02050C5C = bla _hkt_14
-0x0201B314 = b   _hkt_15
-0x02050EB0 = bla _hkt_16
-0x02023648 = bla _hkt_17
-0x02023884 = bla _hkt_18
-0x0202BDDC = bla _hkt_19
-0x020639D8 = bla _hkt_20
-0x020639F0 = bla _hkt_21
-0x02063A34 = bla _hkt_22
-0x02063A44 = bla _hkt_23
-0x0203AC14 = b   _hkt_24
-0x0203AC24 = b   _hkt_25
-0x02A1C664 = bla _hkt_26
-0x02904118 = bla _hkt_27
-0x02A1DB74 = bla _hkt_28
-0x0208C398 = bla _hkt_29
-0x020A1C34 = bla _hkt_30
-0x020BF018 = bla _hkt_31
-0x0203152C = bla _hkt_32
-0x024DC584 = b   _hkt_33
-0x021A37B4 = b   _hkt_34
-0x021A37E8 = b   _hkt_35
-0x0287CF1C = bla _hkt_36
-0x0287CF54 = bla _hkt_37
-0x02AC6388 = bla _hkt_38
-0x024A7424 = bla _hkt_39
-0x026BEEE0 = bla _hkt_40
-0x02667158 = bla _hkt_41
-0x0203F5D8 = b   _hkt_42
-0x020A8EE0 = b   _hkt_43
-0x020A6658 = b   _hkt_44
-0x02033FDC = bla _hkt_45
-0x02034064 = bla _hkt_46
-0x020340E8 = bla _hkt_47
-0x02034164 = bla _hkt_48
-0x0203443C = bla _hkt_49
-0x02053684 = b   _hkt_50
-0x0204D1FC = bla _hkt_51
-0x02974A60 = bla _hkt_52
-0x02974CE0 = bla _hkt_53
-0x02A58584 = b   _hkt_54
-0x02A58B54 = b   _hkt_55
-0x02A594B0 = b   _hkt_56
-0x02A67D18 = b   _hkt_57
-0x02A67990 = bla _hkt_58
-0x0203FF7C = bla _hkt_59
-0x0202D624 = b   _hkt_60
-0x020A6348 = bla _hkt_61
-0x02095820 = b   _hkt_62
-0x027D11F4 = bla _hkt_63
-0x027D1254 = bla _hkt_64
-0x026C515C = bla _hkt_65
-0x026C5160 = bla _hkt_66
-0x026FD65C = b   _hkt_67
-0x026FD670 = b   _hkt_68
-0x026FD8A0 = bla _hkt_69
-0x0202C30C = bla _hkt_70
-0x02041CDC = bla _hkt_71
-0x020523DC = bla _hkt_72
-0x0202C458 = bla _hkt_73
-0x0202C474 = bla _hkt_74
-0x02051B08 = bla _hkt_75
-0x02051B4C = bla _hkt_76
-0x02795234 = bla _hkt_77
-0x0279525C = bla _hkt_78
-0x028DF9A8 = bla _hkt_79
-0x028DF9D4 = bla _hkt_80
+0x0202B12C = bla clawshot_failure_hook
+0x020592D0 = bla clawshot_boss_shoot_hook
+0x020592E8 = bla clawshot_return_hook
+0x020592F0 = bla clawshot_shoot_f30_hook
+0x020592F8 = bla clawshot_range_f29_hook
+0x0205932C = bla clawshot_pull_f31_hook
+0x020423B8 = bla clawshot_pull_f13_hook
+0x0209CF84 = bla clawshot_range_f1_hook
+0x02059C94 = bla clawshot_shoot_f1a_hook
+0x02059D34 = bla clawshot_shoot_f1b_hook
+0x02059DC4 = bla clawshot_shoot_f1c_hook
+
+0x0288D8AC = bla spinner_time_hook
+0x020B3128 = bla spinner_speed_hook
+
+0x0248802C = bla remote_bomb_fuse_hook
+0x02050C5C = bla no_bomb_limit_hook
+
+0x0201B314 = b   unrestricted_items_hook
+0x02050EB0 = bla unrestricted_sword_hook
+
+0x02023648 = bla iron_boots_anime_a_hook
+0x02023884 = bla iron_boots_anime_b_hook
+0x0202BDDC = bla iron_boots_anime_c_hook
+0x020639D8 = bla iron_boots_speed_a_hook
+0x020639F0 = bla iron_boots_speed_b_hook
+0x02063A34 = bla iron_boots_speed_c_hook
+0x02063A44 = bla iron_boots_speed_d_hook
+
+0x0203AC14 = b   great_spin_skill_hook
+0x0203AC24 = b   great_spin_health_hook
+
+0x02A1C664 = bla damage_received_hook
+0x02904118 = bla damage_given_hook
+0x02A1DB74 = bla rupee_change_hook
+0x0208C398 = bla no_fall_damage_a_hook
+0x020A1C34 = bla no_fall_damage_b_hook
+0x020BF018 = bla no_fall_damage_c_hook
+0x0203152C = bla fairy_revival_hook
+
+0x024DC584 = b   star_game_clear_hook
+0x021A37B4 = b   canoe_score_a_hook
+0x021A37E8 = b   canoe_score_b_hook
+0x0287CF1C = bla rapids_gain2_hook
+0x0287CF54 = bla rapids_gain1_hook
+0x02AC6388 = bla timer_freeze_hook
+0x024A7424 = bla goat_instant_win_hook
+0x026BEEE0 = bla fruit_combo_keep_hook
+0x02667158 = bla easy_sumo_hook
+
+0x0203F5D8 = b   climb_speed_ladder_hook
+0x020A8EE0 = b   climb_speed_wall_hook
+0x020A6658 = b   climb_speed_shimmy_hook
+0x02033FDC = bla climb_probe_a_hook
+0x02034064 = bla climb_probe_b_hook
+0x020340E8 = bla climb_probe_c_hook
+0x02034164 = bla climb_probe_d_hook
+0x0203443C = bla climb_delta_hook
+
+0x02053684 = b   crawl_speed_hook
+0x0204D1FC = bla roll_speed_hook
+
+0x02974A60 = bla time_rate_hook
+0x02974CE0 = bla time_rate_alt_hook
+
+0x02A58584 = b   text_do_begin_hook
+0x02A58B54 = b   text_do_is_ready_hook
+0x02A594B0 = b   text_do_tag_hook
+0x02A67D18 = b   text_is_send_hook
+0x02A67990 = bla text_outnow_accept_hook
+
+0x0203FF7C = bla ledge_wolf_anime_hook
+0x0202D624 = b   ledge_wolf_param_hook
+0x020A6348 = bla ledge_human_anime_hook
+
+0x02095820 = b   block_push_rate_hook
+0x027D11F4 = bla block_pull_hook
+0x027D1254 = bla block_push_hook
+0x026C515C = bla bemos_duration_hook
+0x026C5160 = bla bemos_phase_hook
+
+0x026FD65C = b   chain_wall_duration_hook
+0x026FD670 = b   chain_wall_phase_hook
+0x026FD8A0 = bla chain_wall_elapsed_hook
+0x0202C30C = bla chain_max_blend_hook
+0x02041CDC = bla chain_max_human_hook
+0x020523DC = bla chain_max_wolf_hook
+0x0202C458 = bla chain_anim_human_heavy_hook
+0x0202C474 = bla chain_anim_human_hook
+0x02051B08 = bla chain_anim_wolf_heavy_hook
+0x02051B4C = bla chain_anim_wolf_hook
+
+0x02795234 = bla chandelier_a_hook
+0x0279525C = bla chandelier_b_hook
+
+0x028DF9A8 = bla camera_next_type_a_hook
+0x028DF9D4 = bla camera_next_type_b_hook
