@@ -18,6 +18,7 @@
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
+#include "tools/save_states.h"
 #include "ui/menu_nav.h"
 #include "ui/quick_access.h"
 #include "ui/window_state.h"
@@ -272,6 +273,7 @@ static const Section kSections[] = {
     { Tools::FlyCam::LoadConfig, Tools::FlyCam::SaveConfig },
     { Tools::ModernCamera::LoadConfig, Tools::ModernCamera::SaveConfig },
     { Tools::Coordinates::LoadConfig, Tools::Coordinates::SaveConfig },
+    { Tools::SaveStates::LoadConfig, Tools::SaveStates::SaveConfig },
     { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },

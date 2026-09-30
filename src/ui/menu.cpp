@@ -4,6 +4,7 @@
 #include "render/image.h"
 #include "tools/inventory_editor.h"
 #include "tools/position_editor.h"
+#include "tools/save_states.h"
 #include "tools/warp.h"
 #include "tools/world_editor.h"
 #include "ui/menu_nav.h"
@@ -57,6 +58,7 @@ void Draw(ImGuiIO& io)
     Panels::DrawHotkeysWindow();
     Panels::DrawControlsWindow();
     Tools::Warp::DrawWindow();
+    Tools::SaveStates::DrawWindow();
     Tools::PositionEditor::DrawWindow();
     Tools::InventoryEditor::DrawWindow();
     Tools::WorldEditor::DrawWindow();

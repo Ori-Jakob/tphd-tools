@@ -37,6 +37,8 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_ZR | Input::BTN_LEFT,                               false, SCOPE_GLOBAL },
     { "Load coordinates", nullptr,    "loadCoordinatesCombo",
       Input::BTN_ZR | Input::BTN_RIGHT,                              false, SCOPE_GLOBAL },
+    { "Reload last state", nullptr,   "saveStateReloadCombo",
+      Input::BTN_ZL | Input::BTN_ZR | Input::BTN_PLUS,               false, SCOPE_GLOBAL },
 };
 
 static uint32_t s_bindings[HOTKEY_COUNT];

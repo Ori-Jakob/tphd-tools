@@ -15,6 +15,7 @@
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
+#include "tools/save_states.h"
 #include "tools/stage_control.h"
 #include "ui/init_toast.h"
 #include "ui/menu.h"
@@ -77,7 +78,8 @@ static bool blockWanted(uint32_t held, bool touchOnWidget, bool touching)
                        Tools::FlyCam::WantsInputBlock() ||
                        (!overlayOwnsInput() && (Cheats::WantsInputBlock(held) ||
                                                 Tools::PracticeTimer::WantsInputBlock(held) ||
-                                                Tools::Coordinates::WantsInputBlock(held)));
+                                                Tools::Coordinates::WantsInputBlock(held) ||
+                                                Tools::SaveStates::WantsInputBlock(held)));
     if (!touching)
         s_touchSwallowed = false;
     else if (block)
@@ -128,6 +130,7 @@ void OnApplicationStart()
     Tools::FlyCam::OnApplicationStart();
     Tools::ModernCamera::OnApplicationStart();
     Tools::Coordinates::OnApplicationStart();
+    Tools::SaveStates::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -139,6 +142,7 @@ void OnApplicationEnd()
     s_menuOpen = false;
     Tools::FlyCam::OnApplicationEnd();
     Tools::ModernCamera::OnApplicationEnd();
+    Tools::SaveStates::OnApplicationEnd();
     Renderer::ResetDeviceObjects();
     Notifications::Clear();
 }
@@ -234,6 +238,7 @@ void Tick()
     Tools::PracticeTimer::Tick(gameTools);
     Tools::Coordinates::Tick(gameTools);
     Tools::StageControl::Tick(gameTools);
+    Tools::SaveStates::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;

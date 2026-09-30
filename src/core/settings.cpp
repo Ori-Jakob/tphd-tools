@@ -10,6 +10,7 @@
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
+#include "tools/save_states.h"
 #include "ui/menu_nav.h"
 #include "ui/quick_access.h"
 
@@ -53,5 +54,6 @@ void ResetToDefaults()
     Tools::FlyCam::ResetToDefaults();
     Tools::ModernCamera::ResetToDefaults();
     Tools::Coordinates::ResetToDefaults();
+    Tools::SaveStates::ResetToDefaults();
 }
 }
