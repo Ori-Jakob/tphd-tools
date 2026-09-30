@@ -12,6 +12,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(ROOT, 'src', 'app', 'code_hooks.cpp')
 PACK = os.path.join(ROOT, 'Cemu', 'graphicspack', 'patch_tphd_tools.asm')
 
+INVERSE = {
+    'beq': 'bne', 'bne': 'beq', 'blt': 'bge', 'bge': 'blt',
+    'bgt': 'ble', 'ble': 'bgt', 'bso': 'bns', 'bns': 'bso',
+}
+
 OVERRIDES = {
     0x026FD8A0: ['    lha   r11, 0xF18(r29)', '    subfic r8, r11, 13', '    blr'],
     0x0279525C: ['    addis r11, r10, 0x1007', '    lwz   r0, -0x3074(r11)', '    blr'],
@@ -135,11 +140,18 @@ class Generator:
             break
         raise SystemExit('cannot rebuild r11 before %08X; add an override' % addr)
 
-    def fallback(self, addr, shape):
+    def fallback(self, index, addr, shape):
         if addr in OVERRIDES:
             return OVERRIDES[addr]
         _, mnem, ops = self.rpx.disasm(addr, 1)[0]
         mnem, ops = self.operands(mnem, ops)
+        if mnem in INVERSE:
+            parts = [p.strip() for p in ops.split(',')]
+            skip = '_hkf_%d_skip' % index
+            inverse = ', '.join(parts[:-1] + [skip])
+            after = '    blr' if shape == 'CALL' else '    b     %s' % self.label(addr + 4)
+            return ['    %-5s %s' % (INVERSE[mnem], inverse), '    b     %s' % parts[-1],
+                    skip + ':', after]
         if mnem == 'bl':
             if shape == 'JUMP':
                 raise SystemExit('JUMP hook over a bl at %08X' % addr)
@@ -161,7 +173,7 @@ class Generator:
             table.append('_pkh_%d:\n.int _hkf_%d' % (i, i))
             tramps.append('_hkt_%d:\n    lis   r11, _pkh_%d@ha\n    lwz   r11, _pkh_%d@l(r11)\n'
                           '    mtctr r11\n    bctr' % (i, i, i))
-            falls.append('_hkf_%d:\n%s' % (i, '\n'.join(self.fallback(addr, shape))))
+            falls.append('_hkf_%d:\n%s' % (i, '\n'.join(self.fallback(i, addr, shape))))
             patches.append('0x%08X = %s _hkt_%d' % (addr, 'bla' if shape == 'CALL' else 'b  ', i))
         labels = ['0x%08X = %s:' % (t, n) for t, n in sorted(self.labels.items())]
         return labels, table, tramps, falls, patches

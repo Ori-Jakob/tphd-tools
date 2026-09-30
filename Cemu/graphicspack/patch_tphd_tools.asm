@@ -914,7 +914,9 @@ _hkf_13:
     blr
 
 _hkf_14:
-    bge   _g_020502F4
+    blt   _hkf_14_skip
+    b     _g_020502F4
+_hkf_14_skip:
     blr
 
 _hkf_15:
@@ -950,11 +952,15 @@ _hkf_23:
     blr
 
 _hkf_24:
-    beq   _g_0203AC28
+    bne   _hkf_24_skip
+    b     _g_0203AC28
+_hkf_24_skip:
     b     _g_0203AC18
 
 _hkf_25:
-    beq   _g_0203AC44
+    bne   _hkf_25_skip
+    b     _g_0203AC44
+_hkf_25_skip:
     b     _g_0203AC28
 
 _hkf_26:
@@ -986,11 +992,15 @@ _hkf_33:
     b     _g_024DC588
 
 _hkf_34:
-    beq   _g_021A3830
+    bne   _hkf_34_skip
+    b     _g_021A3830
+_hkf_34_skip:
     b     _g_021A37B8
 
 _hkf_35:
-    beq   _g_021A3830
+    bne   _hkf_35_skip
+    b     _g_021A3830
+_hkf_35_skip:
     b     _g_021A37EC
 
 _hkf_36:
