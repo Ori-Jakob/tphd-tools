@@ -10,6 +10,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
+#include "tools/roll_checker.h"
 #include "ui/init_toast.h"
 #include "ui/menu.h"
 #include "ui/menu_nav.h"
@@ -114,6 +115,7 @@ void OnApplicationStart()
     Osk::OnApplicationStart();
     Cheats::OnApplicationStart();
     Hud::GameInfo::OnApplicationStart();
+    Tools::RollChecker::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -209,6 +211,7 @@ void Tick()
 
     const bool gameTools = !overlayOwnsInput() && !Rebind::IsActive();
     Cheats::Tick(gameTools);
+    Tools::RollChecker::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;
@@ -259,6 +262,7 @@ bool PrepareFrame(float logicalWidth, float logicalHeight)
     if (!InitToast::IsActive() || ownsInput) {
         Hud::GameInfo::DrawWindow(s_menuOpen);
         Hud::InputViewer::DrawWindow(s_menuOpen);
+        Tools::RollChecker::DrawWindow(s_menuOpen);
         QuickAccess::DrawPageWindow(s_menuOpen);
     }
 
