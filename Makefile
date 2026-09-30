@@ -36,7 +36,7 @@ endif
 
 DATA     := data
 SOURCES  := src/app src/core src/render src/ui src/ui/panels src/hud src/tools src/cheats \
-            external/imgui external/cjson $(LIBWUPATCH)/src $(CRT)
+            external/imgui external/cjson external/libtphd/src $(LIBWUPATCH)/src $(CRT)
 INCLUDES := include $(RPLLOADER)/include $(LIBWUPATCH)/include \
             external/libtphd/include external/imgui external/imgui/backends/wiiu \
             external/cjson
