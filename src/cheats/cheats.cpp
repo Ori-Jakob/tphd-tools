@@ -1,5 +1,6 @@
 #include "cheats/cheats.h"
 
+#include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_player.h"
 
@@ -8,6 +9,7 @@ void Tick(bool acceptInput)
 {
     Player::Tick(acceptInput);
     Equipment::Tick(acceptInput);
+    Difficulty::Tick();
 }
 
 bool WantsInputBlock(uint32_t held)
@@ -19,5 +21,6 @@ void ResetToDefaults()
 {
     Player::ResetToDefaults();
     Equipment::ResetToDefaults();
+    Difficulty::ResetToDefaults();
 }
 }

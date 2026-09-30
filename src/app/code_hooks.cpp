@@ -25,6 +25,11 @@ void tphdFastIronBootsStoreF13Hook();
 void tphdFastIronBootsStoreF30Hook();
 void tphdAlwaysGreatSpinSkillHook();
 void tphdAlwaysGreatSpinHealthHook();
+void tphdDamageReceivedHook();
+void tphdDamageGivenHook();
+void tphdRupeeChangeHook();
+void tphdNoFallDamageHook();
+void tphdAlwaysFairyRevivalHook();
 }
 
 namespace App {
@@ -67,6 +72,13 @@ static const Site kSites[] = {
     { "ironBootsSpeedD",     0x02063A44u, 0xD3DE34F4u, CALL, tphdFastIronBootsStoreF30Hook },
     { "greatSpinSkill",      0x0203AC14u, 0x41820014u, JUMP, tphdAlwaysGreatSpinSkillHook },
     { "greatSpinHealth",     0x0203AC24u, 0x41820020u, JUMP, tphdAlwaysGreatSpinHealthHook },
+    { "damageReceived",      0x02A1C664u, 0xED29402Au, CALL, tphdDamageReceivedHook },
+    { "damageGiven",         0x02904118u, 0x7D074050u, CALL, tphdDamageGivenHook },
+    { "rupeeChange",         0x02A1DB74u, 0x819F6280u, CALL, tphdRupeeChangeHook },
+    { "noFallDamageA",       0x0208C398u, 0x4BFFFA7Du, CALL, tphdNoFallDamageHook },
+    { "noFallDamageB",       0x020A1C34u, 0x4BFEA1E1u, CALL, tphdNoFallDamageHook },
+    { "noFallDamageC",       0x020BF018u, 0x4BFCCDFDu, CALL, tphdNoFallDamageHook },
+    { "fairyRevival",        0x0203152Cu, 0x48A74F35u, CALL, tphdAlwaysFairyRevivalHook },
 };
 
 static const uint32_t kSiteCount = sizeof(kSites) / sizeof(kSites[0]);

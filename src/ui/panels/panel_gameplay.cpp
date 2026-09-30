@@ -1,5 +1,6 @@
 #include "ui/panels.h"
 
+#include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_player.h"
 #include "cheats/cheats.h"
@@ -115,6 +116,74 @@ static bool drawSpinnerSpeed(const Control::Descriptor* d, Control::Surface)
     return true;
 }
 
+static bool drawDifficultyToggle(const Control::Descriptor* d, Control::Surface)
+{
+    const Cheats::Difficulty::Toggle t = (Cheats::Difficulty::Toggle)d->token;
+    bool enabled = Cheats::Difficulty::IsEnabled(t);
+    const bool changed = ImGui::Checkbox(d->name, &enabled);
+    if (changed) {
+        Cheats::Difficulty::SetEnabled(t, enabled);
+        Config::MarkDirty();
+    }
+    if (t == Cheats::Difficulty::RUPEES_ONLY_INCREASE && ImGui::IsItemHovered())
+        ImGui::SetTooltip("Losing rupees gives you that many instead.");
+    else if (t == Cheats::Difficulty::ALWAYS_FAIRY_REVIVAL && ImGui::IsItemHovered())
+        ImGui::SetTooltip("Revives you even without a fairy.");
+    return changed;
+}
+
+static bool drawQuarterSlider(const char* label, float value, float lo, float hi,
+                              void (*set)(float), const char* tooltip)
+{
+    ImGui::SetNextItemWidth(150.0f);
+    const bool changed = Field::SliderFloat(label, &value, lo, hi, "%.2fx");
+    if (tooltip && ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", tooltip);
+    if (changed) {
+        set(value);
+        Config::MarkDirty();
+    }
+    return changed;
+}
+
+static bool drawDamageReceived(const Control::Descriptor* d, Control::Surface)
+{
+    return drawQuarterSlider(d->name, Cheats::Difficulty::GetDamageReceived(), 0.25f, 80.0f,
+                             Cheats::Difficulty::SetDamageReceived, nullptr);
+}
+
+static bool drawDamageGiven(const Control::Descriptor* d, Control::Surface)
+{
+    return drawQuarterSlider(d->name, Cheats::Difficulty::GetDamageGiven(), 0.25f, 10.0f,
+                             Cheats::Difficulty::SetDamageGiven,
+                             "Even a low setting still deals some damage.");
+}
+
+static bool drawRupeeMultiplier(const Control::Descriptor* d, Control::Surface)
+{
+    int value = Cheats::Difficulty::GetRupeeMultiplier();
+    ImGui::SetNextItemWidth(150.0f);
+    if (!Field::SliderInt(d->name, &value, 1, 10, "%dx"))
+        return false;
+    Cheats::Difficulty::SetRupeeMultiplier(value);
+    Config::MarkDirty();
+    return true;
+}
+
+static bool drawRupeeMode(const Control::Descriptor*, Control::Surface)
+{
+    int mode = Cheats::Difficulty::GetRupeeMode();
+    const int before = mode;
+    static const char* const kModes[] = { "Acquiring", "Spending", "Both" };
+    ImGui::SetNextItemWidth(150.0f);
+    ImGui::Combo("Affects", &mode, kModes, 3);
+    if (mode == before)
+        return false;
+    Cheats::Difficulty::SetRupeeMode(mode);
+    Config::MarkDirty();
+    return true;
+}
+
 void RegisterGameplayControls()
 {
     static const char* const kPaths[Cheats::Player::TOGGLE_COUNT] = {
@@ -159,6 +228,31 @@ void RegisterGameplayControls()
                                     "Gameplay / Items & Equipment / Equipment Modifiers",
                                     drawSpinnerSpeed, nullptr, nullptr, 0 };
     Control::Register(spinner);
+
+    static const char* const kDifficultyPaths[Cheats::Difficulty::TOGGLE_COUNT] = {
+        "Gameplay / Difficulty / Economy",
+        "Gameplay / Difficulty / Combat",
+        "Gameplay / Difficulty / Survival",
+        "Gameplay / Difficulty / Survival",
+    };
+    for (int i = 0; i < Cheats::Difficulty::TOGGLE_COUNT; ++i) {
+        const Cheats::Difficulty::Toggle t = (Cheats::Difficulty::Toggle)i;
+        Control::Descriptor d = { Cheats::Difficulty::ControlId(t), Cheats::Difficulty::Name(t),
+                                  kDifficultyPaths[i], drawDifficultyToggle, nullptr, nullptr, i };
+        Control::Register(d);
+    }
+    Control::Descriptor received = { "gameplay.difficulty.damage_received", "Damage Received",
+                                     "Gameplay / Difficulty / Combat", drawDamageReceived,
+                                     nullptr, nullptr, 0 };
+    Control::Register(received);
+    Control::Descriptor given = { "gameplay.difficulty.damage_given", "Damage Given",
+                                  "Gameplay / Difficulty / Combat", drawDamageGiven,
+                                  nullptr, nullptr, 0 };
+    Control::Register(given);
+    Control::Descriptor rupees = { "gameplay.difficulty.rupee_multiplier", "Rupee Multiplier",
+                                   "Gameplay / Difficulty / Economy", drawRupeeMultiplier,
+                                   drawRupeeMode, nullptr, 0 };
+    Control::Register(rupees);
 }
 
 static void drawPlayer(Cheats::Player::Toggle t)
@@ -222,6 +316,27 @@ static void drawItemsMenu()
     }
 }
 
+static void drawDifficultyMenu()
+{
+    using namespace Cheats::Difficulty;
+    ImGui::SeparatorText("Combat");
+    Control::Draw("gameplay.difficulty.damage_received", Control::SURFACE_MENU);
+    Control::Draw("gameplay.difficulty.damage_given", Control::SURFACE_MENU);
+    Control::Draw(ControlId(INFINITE_ENEMY_HEALTH), Control::SURFACE_MENU);
+    ImGui::SeparatorText("Economy");
+    Control::Draw("gameplay.difficulty.rupee_multiplier", Control::SURFACE_MENU);
+    Control::Draw(ControlId(RUPEES_ONLY_INCREASE), Control::SURFACE_MENU);
+    ImGui::SeparatorText("Survival");
+    Control::Draw(ControlId(NO_FALL_DAMAGE), Control::SURFACE_MENU);
+    Control::Draw(ControlId(ALWAYS_FAIRY_REVIVAL), Control::SURFACE_MENU);
+
+    ImGui::Separator();
+    if (ImGui::Button("Restore difficulty defaults")) {
+        ResetToDefaults();
+        Config::MarkDirty();
+    }
+}
+
 static void drawMovementMenu()
 {
     ImGui::SeparatorText("Epona");
@@ -233,6 +348,7 @@ void DrawGameplay()
 {
     if (ImGui::BeginMenu("Player"))            { drawPlayerMenu();   ImGui::EndMenu(); }
     if (ImGui::BeginMenu("Items & Equipment")) { drawItemsMenu();    ImGui::EndMenu(); }
+    if (ImGui::BeginMenu("Difficulty"))        { drawDifficultyMenu(); ImGui::EndMenu(); }
     if (ImGui::BeginMenu("Movement & World"))  { drawMovementMenu(); ImGui::EndMenu(); }
 
     ImGui::Separator();

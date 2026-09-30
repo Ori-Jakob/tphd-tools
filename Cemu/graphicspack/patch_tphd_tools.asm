@@ -9,6 +9,8 @@ moduleMatches = 0x1A03E108
 0x0203AC28 = _g_0203AC28:
 0x0203AC44 = _g_0203AC44:
 0x020502F4 = _g_020502F4:
+0x0208BE14 = _g_0208BE14:
+0x02AA6460 = _g_02AA6460:
 
 .origin = codecave
 
@@ -17,7 +19,7 @@ _pk_version:
 .int 2
 
 _pk_hook_count:
-.int 26
+.int 33
 _pkh_0:
 .int _hkf_0
 _pkh_1:
@@ -70,6 +72,20 @@ _pkh_24:
 .int _hkf_24
 _pkh_25:
 .int _hkf_25
+_pkh_26:
+.int _hkf_26
+_pkh_27:
+.int _hkf_27
+_pkh_28:
+.int _hkf_28
+_pkh_29:
+.int _hkf_29
+_pkh_30:
+.int _hkf_30
+_pkh_31:
+.int _hkf_31
+_pkh_32:
+.int _hkf_32
 
 _rpl_state:
 .byte 0
@@ -401,6 +417,48 @@ _hkt_25:
     mtctr r11
     bctr
 
+_hkt_26:
+    lis   r11, _pkh_26@ha
+    lwz   r11, _pkh_26@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_27:
+    lis   r11, _pkh_27@ha
+    lwz   r11, _pkh_27@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_28:
+    lis   r11, _pkh_28@ha
+    lwz   r11, _pkh_28@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_29:
+    lis   r11, _pkh_29@ha
+    lwz   r11, _pkh_29@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_30:
+    lis   r11, _pkh_30@ha
+    lwz   r11, _pkh_30@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_31:
+    lis   r11, _pkh_31@ha
+    lwz   r11, _pkh_31@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_32:
+    lis   r11, _pkh_32@ha
+    lwz   r11, _pkh_32@l(r11)
+    mtctr r11
+    bctr
+
 _hkf_0:
     li    r3, 0
     blr
@@ -502,6 +560,30 @@ _hkf_24:
 _hkf_25:
     beq   _g_0203AC44
     b     _g_0203AC28
+
+_hkf_26:
+    fadds f9, f9, f8
+    blr
+
+_hkf_27:
+    subf  r8, r7, r8
+    blr
+
+_hkf_28:
+    lwz   r12, 0x6280(r31)
+    blr
+
+_hkf_29:
+    b     _g_0208BE14
+
+_hkf_30:
+    b     _g_0208BE14
+
+_hkf_31:
+    b     _g_0208BE14
+
+_hkf_32:
+    b     _g_02AA6460
 
 counter_hook:
     stwu  r1, -0x40(r1)
@@ -704,3 +786,10 @@ kpad_done:
 0x02063A44 = bla _hkt_23
 0x0203AC14 = b   _hkt_24
 0x0203AC24 = b   _hkt_25
+0x02A1C664 = bla _hkt_26
+0x02904118 = bla _hkt_27
+0x02A1DB74 = bla _hkt_28
+0x0208C398 = bla _hkt_29
+0x020A1C34 = bla _hkt_30
+0x020BF018 = bla _hkt_31
+0x0203152C = bla _hkt_32
