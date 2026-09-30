@@ -31,7 +31,7 @@ _pk_version:
 .int 2
 
 _pk_hook_count:
-.int 79
+.int 81
 _pkh_0:
 .int _hkf_0
 _pkh_1:
@@ -190,6 +190,10 @@ _pkh_77:
 .int _hkf_77
 _pkh_78:
 .int _hkf_78
+_pkh_79:
+.int _hkf_79
+_pkh_80:
+.int _hkf_80
 
 _rpl_state:
 .byte 0
@@ -839,6 +843,18 @@ _hkt_78:
     mtctr r11
     bctr
 
+_hkt_79:
+    lis   r11, _pkh_79@ha
+    lwz   r11, _pkh_79@l(r11)
+    mtctr r11
+    bctr
+
+_hkt_80:
+    lis   r11, _pkh_80@ha
+    lwz   r11, _pkh_80@l(r11)
+    mtctr r11
+    bctr
+
 _hkf_0:
     li    r3, 0
     blr
@@ -1149,6 +1165,14 @@ _hkf_78:
     lwz   r0, -0x3074(r11)
     blr
 
+_hkf_79:
+    mr    r5, r3
+    blr
+
+_hkf_80:
+    mr    r5, r3
+    blr
+
 counter_hook:
     stwu  r1, -0x40(r1)
     mflr  r0
@@ -1403,3 +1427,5 @@ kpad_done:
 0x02051B4C = bla _hkt_76
 0x02795234 = bla _hkt_77
 0x0279525C = bla _hkt_78
+0x028DF9A8 = bla _hkt_79
+0x028DF9D4 = bla _hkt_80

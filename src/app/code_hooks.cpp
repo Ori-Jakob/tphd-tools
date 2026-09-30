@@ -69,6 +69,7 @@ void tphdHumanChainAnimationNormalHook();
 void tphdWolfChainAnimationHeavyHook();
 void tphdWolfChainAnimationNormalHook();
 void tphdLv4ChandelierCurveHook();
+void tphdCameraNextTypeHook();
 }
 
 namespace App {
@@ -164,6 +165,8 @@ static const Site kSites[] = {
     { "chainAnimWolf",       0x02051B4Cu, 0xFC20F890u, CALL_EXP, tphdWolfChainAnimationNormalHook },
     { "chandelierA",         0x02795234u, 0x800BCF8Cu, CALL_EXP, tphdLv4ChandelierCurveHook },
     { "chandelierB",         0x0279525Cu, 0x800BCF8Cu, CALL_EXP, tphdLv4ChandelierCurveHook },
+    { "cameraNextTypeA",     0x028DF9A8u, 0x7C651B78u, CALL, tphdCameraNextTypeHook },
+    { "cameraNextTypeB",     0x028DF9D4u, 0x7C651B78u, CALL, tphdCameraNextTypeHook },
 };
 
 static const uint32_t kSiteCount = sizeof(kSites) / sizeof(kSites[0]);

@@ -1,5 +1,6 @@
 #include "ui/panels.h"
 
+#include "cheats/cheat_camera.h"
 #include "core/config.h"
 #include "core/hotkeys.h"
 #include "tools/flycam.h"
@@ -132,6 +133,37 @@ static bool drawInvert(const Control::Descriptor* d, Control::Surface surface)
     return changed;
 }
 
+static bool drawFreeFixedCamera(const Control::Descriptor* d, Control::Surface)
+{
+    bool enabled = Cheats::Camera::FreeFixedCameraEnabled();
+    const bool changed = ImGui::Checkbox(d->name, &enabled);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Uses the follow camera where the view is normally locked.");
+    if (changed) {
+        Cheats::Camera::SetFreeFixedCameraEnabled(enabled);
+        Config::MarkDirty();
+    }
+    return changed;
+}
+
+static bool drawFreeFixedScope(const Control::Descriptor*, Control::Surface)
+{
+    int scope = Cheats::Camera::GetScope();
+    const int before = scope;
+    static const char* const kScopes[] = { "Camera regions", "Regions and rooms", "Everywhere" };
+    ImGui::BeginDisabled(!Cheats::Camera::FreeFixedCameraEnabled());
+    ImGui::SetNextItemWidth(190.0f);
+    ImGui::Combo("Applies to", &scope, kScopes, Cheats::Camera::SCOPE_COUNT);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Cutscene cameras are never changed.");
+    ImGui::EndDisabled();
+    if (scope == before)
+        return false;
+    Cheats::Camera::SetScope(scope);
+    Config::MarkDirty();
+    return true;
+}
+
 void RegisterCameraControls()
 {
     static const Control::Descriptor kControls[] = {
@@ -154,6 +186,11 @@ void RegisterCameraControls()
     };
     for (const Control::Descriptor& d : kControls)
         Control::Register(d);
+
+    Control::Descriptor freeFixed = { "camera.fixed.free", "Free Camera In Fixed-Camera Areas",
+                                      "Camera & HUD / Camera Modifiers", drawFreeFixedCamera,
+                                      drawFreeFixedScope, nullptr, 0 };
+    Control::Register(freeFixed);
 }
 
 void DrawCameraMenuItems()
@@ -170,6 +207,9 @@ void DrawCameraMenuItems()
         Control::Draw("camera.modern.invert_y", Control::SURFACE_MENU);
         ImGui::EndMenu();
     }
+
+    ImGui::SeparatorText("Camera Modifiers");
+    Control::Draw("camera.fixed.free", Control::SURFACE_MENU);
 }
 }
 }

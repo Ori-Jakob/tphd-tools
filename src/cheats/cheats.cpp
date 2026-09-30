@@ -1,5 +1,6 @@
 #include "cheats/cheats.h"
 
+#include "cheats/cheat_camera.h"
 #include "cheats/cheat_difficulty.h"
 #include "cheats/cheat_equipment.h"
 #include "cheats/cheat_minigames.h"
@@ -14,6 +15,7 @@ void Tick(bool acceptInput)
     Difficulty::Tick();
     Minigames::Tick(!acceptInput);
     Movement::Tick();
+    Camera::Tick();
 }
 
 void OnApplicationStart()
@@ -33,5 +35,6 @@ void ResetToDefaults()
     Difficulty::ResetToDefaults();
     Minigames::ResetToDefaults();
     Movement::ResetToDefaults();
+    Camera::ResetToDefaults();
 }
 }
