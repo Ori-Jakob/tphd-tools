@@ -1,6 +1,7 @@
 #include "ui/panels.h"
 
 #include "core/config.h"
+#include "core/controller.h"
 #include "core/hotkeys.h"
 #include "core/settings.h"
 #include "core/version.h"
@@ -96,6 +97,37 @@ void DrawSettings()
         Config::MarkDirty();
     }
     ImGui::EndDisabled();
+
+    ImGui::SeparatorText("Game");
+
+    ImGui::TextUnformatted("Controller");
+    ImGui::SameLine();
+    int controller = (int)s.controller;
+    bool controllerChanged = false;
+    controllerChanged |= ImGui::RadioButton("Auto##controller", &controller,
+                                            Controller::PREFERENCE_AUTO);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Uses the Pro Controller when one is connected.");
+    ImGui::SameLine();
+    controllerChanged |= ImGui::RadioButton("GamePad##controller", &controller,
+                                            Controller::PREFERENCE_GAMEPAD);
+    ImGui::SameLine();
+    controllerChanged |= ImGui::RadioButton("Pro##controller", &controller,
+                                            Controller::PREFERENCE_PRO);
+    if (controllerChanged) {
+        s.controller = (uint32_t)controller;
+        Controller::Apply();
+        Config::MarkDirty();
+    }
+
+    if (ImGui::Checkbox("Stage reload shortcut", &s.reloadHotkey))
+        Config::MarkDirty();
+    ImGui::SameLine(0.0f, 0.0f);
+    Hotkey::DrawText(Hotkeys::Get(Hotkeys::HOTKEY_STAGE_RELOAD), " (", ")", true);
+    if (ImGui::Checkbox("Game reset shortcut", &s.resetHotkey))
+        Config::MarkDirty();
+    ImGui::SameLine(0.0f, 0.0f);
+    Hotkey::DrawText(Hotkeys::Get(Hotkeys::HOTKEY_GAME_RESET), " (", ")", true);
 
     ImGui::SeparatorText("Hotkeys");
 

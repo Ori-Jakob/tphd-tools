@@ -17,6 +17,9 @@ struct Settings {
     float    overlayOpacity;
     bool     boldLetters;
     bool     freezeOnMenu;
+    uint32_t controller;
+    bool     reloadHotkey;
+    bool     resetHotkey;
 
     bool     toastsEnabled;
     float    toastSeconds;

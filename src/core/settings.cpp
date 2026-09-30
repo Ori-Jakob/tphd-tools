@@ -26,6 +26,9 @@ void ResetToDefaults()
     s.overlayOpacity  = 1.0f;
     s.boldLetters     = true;
     s.freezeOnMenu    = false;
+    s.controller      = 0;
+    s.reloadHotkey    = true;
+    s.resetHotkey     = true;
 
     s.toastsEnabled   = true;
     s.toastSeconds    = 3.0f;

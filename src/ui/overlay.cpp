@@ -15,6 +15,7 @@
 #include "tools/modern_camera.h"
 #include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
+#include "tools/stage_control.h"
 #include "ui/init_toast.h"
 #include "ui/menu.h"
 #include "ui/menu_nav.h"
@@ -232,6 +233,7 @@ void Tick()
     Tools::RollChecker::Tick(gameTools);
     Tools::PracticeTimer::Tick(gameTools);
     Tools::Coordinates::Tick(gameTools);
+    Tools::StageControl::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;

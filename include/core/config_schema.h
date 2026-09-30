@@ -25,6 +25,9 @@ static const Field kSettingsSchema[] = {
     TPHD_SETTING(overlayOpacity,   FIELD_FLOAT, 0.0f,  1.0f),
     TPHD_SETTING(boldLetters,      FIELD_BOOL,  0.0f,  0.0f),
     TPHD_SETTING(freezeOnMenu,     FIELD_BOOL,  0.0f,  0.0f),
+    TPHD_SETTING(controller,       FIELD_U32,   0.0f,  2.0f),
+    TPHD_SETTING(reloadHotkey,     FIELD_BOOL,  0.0f,  0.0f),
+    TPHD_SETTING(resetHotkey,      FIELD_BOOL,  0.0f,  0.0f),
 
     TPHD_SETTING(toastsEnabled,    FIELD_BOOL,  0.0f,  0.0f),
     TPHD_SETTING(toastSeconds,     FIELD_FLOAT, 0.5f, 15.0f),
