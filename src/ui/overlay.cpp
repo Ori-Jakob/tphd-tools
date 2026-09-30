@@ -10,6 +10,7 @@
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
+#include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/init_toast.h"
 #include "ui/menu.h"
@@ -69,7 +70,8 @@ static bool blockWanted(uint32_t held, bool touchOnWidget, bool touching)
 {
     const bool block = overlayOwnsInput() || Osk::IsOpen() || Watermark::IsInteracting() ||
                        touchOnWidget || Hotkeys::OverlayComboHeld(held) ||
-                       (!overlayOwnsInput() && Cheats::WantsInputBlock(held));
+                       (!overlayOwnsInput() && (Cheats::WantsInputBlock(held) ||
+                                                Tools::PracticeTimer::WantsInputBlock(held)));
     if (!touching)
         s_touchSwallowed = false;
     else if (block)
@@ -116,6 +118,7 @@ void OnApplicationStart()
     Cheats::OnApplicationStart();
     Hud::GameInfo::OnApplicationStart();
     Tools::RollChecker::OnApplicationStart();
+    Tools::PracticeTimer::OnApplicationStart();
     Notifications::Clear();
 }
 
@@ -212,6 +215,7 @@ void Tick()
     const bool gameTools = !overlayOwnsInput() && !Rebind::IsActive();
     Cheats::Tick(gameTools);
     Tools::RollChecker::Tick(gameTools);
+    Tools::PracticeTimer::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;
@@ -263,6 +267,7 @@ bool PrepareFrame(float logicalWidth, float logicalHeight)
         Hud::GameInfo::DrawWindow(s_menuOpen);
         Hud::InputViewer::DrawWindow(s_menuOpen);
         Tools::RollChecker::DrawWindow(s_menuOpen);
+        Tools::PracticeTimer::DrawWindow(s_menuOpen);
         QuickAccess::DrawPageWindow(s_menuOpen);
     }
 

@@ -12,6 +12,7 @@
 #include "core/storage.h"
 #include "hud/hud_game_info.h"
 #include "hud/hud_input_viewer.h"
+#include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "ui/menu_nav.h"
 #include "ui/quick_access.h"
@@ -263,6 +264,7 @@ static const Section kSections[] = {
     { Hud::GameInfo::LoadConfig, Hud::GameInfo::SaveConfig },
     { Hud::InputViewer::LoadConfig, Hud::InputViewer::SaveConfig },
     { Tools::RollChecker::LoadConfig, Tools::RollChecker::SaveConfig },
+    { Tools::PracticeTimer::LoadConfig, Tools::PracticeTimer::SaveConfig },
     { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },

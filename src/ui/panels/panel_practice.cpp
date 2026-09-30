@@ -1,6 +1,7 @@
 #include "ui/panels.h"
 
 #include "tools/position_editor.h"
+#include "tools/practice_timer.h"
 #include "tools/roll_checker.h"
 #include "tools/warp.h"
 #include "ui/quick_access.h"
@@ -14,6 +15,7 @@ void RegisterControls()
     RegisterGameplayControls();
     RegisterHudControls();
     Tools::RollChecker::RegisterControls();
+    Tools::PracticeTimer::RegisterControls();
 }
 
 void DrawPractice()
@@ -22,6 +24,7 @@ void DrawPractice()
 
     ImGui::SeparatorText("Timing");
     Tools::RollChecker::DrawMenuItem();
+    Tools::PracticeTimer::DrawMenuItem();
 
     ImGui::SeparatorText("Navigation");
     Tools::Warp::DrawMenuItem();

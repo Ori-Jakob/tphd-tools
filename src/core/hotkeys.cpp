@@ -23,6 +23,10 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_ZR | Input::BTN_Y,                                  false, SCOPE_GLOBAL },
     { "Detonate bombs",   nullptr,    "detonateBombsCombo",
       Input::BTN_ZR | Input::BTN_L3,                                 false, SCOPE_GLOBAL },
+    { "Timer start/stop", "Practice", "timerToggleCombo",
+      Input::BTN_A | Input::BTN_LEFT,                                false, SCOPE_GLOBAL },
+    { "Timer reset",      nullptr,    "timerResetCombo",
+      Input::BTN_A | Input::BTN_RIGHT,                               false, SCOPE_GLOBAL },
 };
 
 static uint32_t s_bindings[HOTKEY_COUNT];
