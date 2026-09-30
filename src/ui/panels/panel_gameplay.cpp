@@ -8,6 +8,7 @@
 #include "cheats/cheats.h"
 #include "core/config.h"
 #include "core/hotkeys.h"
+#include "tools/inventory_editor.h"
 #include "ui/notifications.h"
 #include "ui/ui_control.h"
 #include "ui/ui_field.h"
@@ -449,6 +450,9 @@ static void drawEquipmentMenu()
 
 static void drawItemsMenu()
 {
+    ImGui::SeparatorText("Editor");
+    Tools::InventoryEditor::DrawMenuItem();
+
     ImGui::SeparatorText("Resources");
     drawPlayer(Cheats::Player::INFINITE_AMMO);
     drawPlayer(Cheats::Player::INFINITE_RUPEES);

@@ -1,6 +1,7 @@
 #include "ui/menu.h"
 
 #include "render/image.h"
+#include "tools/inventory_editor.h"
 #include "tools/position_editor.h"
 #include "tools/warp.h"
 #include "ui/menu_nav.h"
@@ -53,6 +54,7 @@ void Draw(ImGuiIO& io)
     Panels::DrawControlsWindow();
     Tools::Warp::DrawWindow();
     Tools::PositionEditor::DrawWindow();
+    Tools::InventoryEditor::DrawWindow();
     QuickAccess::DrawFullWindow();
     Panels::DrawResetConfirm();
 }
