@@ -1,5 +1,6 @@
 #include "ui/panels.h"
 
+#include "tools/position_editor.h"
 #include "tools/warp.h"
 #include "ui/quick_access.h"
 
@@ -18,6 +19,7 @@ void DrawPractice()
 
     ImGui::SeparatorText("Navigation");
     Tools::Warp::DrawMenuItem();
+    Tools::PositionEditor::DrawMenuItem();
 }
 }
 }
