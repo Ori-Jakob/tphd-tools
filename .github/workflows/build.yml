@@ -1,0 +1,127 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:latest
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        flavour: [release, experimental]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+
+      - name: Trust the checkout
+        run: git config --global --add safe.directory '*'
+
+      - name: Install host tools
+        run: |
+          missing=""
+          for tool in python3 zip bzip2; do
+            command -v "$tool" > /dev/null || missing="$missing $tool"
+          done
+          if [ -n "$missing" ]; then
+            apt-get update || echo "::warning::apt-get update had errors"
+            apt-get install -y --no-install-recommends $missing
+          fi
+
+      - name: Cache WUPS and WUMS
+        id: wups-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/devkitpro/wups
+            /opt/devkitpro/wums
+          key: wups-wums-${{ runner.os }}-v2
+
+      - name: Install WUPS and WUMS from source
+        if: steps.wups-cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          mkdir -p /tmp/deps && cd /tmp/deps
+          for repo in libfunctionpatcher libmappedmemory libkernel libnotifications WiiUPluginSystem; do
+            git clone "https://github.com/wiiu-env/$repo.git"
+            make -C "$repo" install
+          done
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ matrix.flavour }}" == experimental ]]; then
+            echo "flags=EXPERIMENTAL=1" >> "$GITHUB_OUTPUT"
+            echo "suffix=-experimental" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build rpl_loader.wps
+        run: make -C external/wii-u-rpl-loader -j"$(nproc)"
+
+      - name: Build tphd_tools.rpl
+        run: make -j"$(nproc)" VERSION="${{ steps.version.outputs.version }}" ${{ steps.version.outputs.flags }}
+
+      - name: Package
+        run: |
+          set -e
+          N="TPHD-Tools-${{ steps.version.outputs.version }}${{ steps.version.outputs.suffix }}"
+          S=dist/TPHD-Tools
+          rm -rf dist && mkdir -p \
+            "$S/Cemu/TPHD-Tools/code" \
+            "$S/Wii U/wiiu/environments/aroma/plugins" \
+            "$S/Wii U/wiiu/rpl-loader/universal"
+          cp Cemu/graphicspack/*                      "$S/Cemu/TPHD-Tools/"
+          cp tphd_tools.rpl                           "$S/Cemu/TPHD-Tools/code/"
+          cp external/wii-u-rpl-loader/rpl_loader.wps "$S/Wii U/wiiu/environments/aroma/plugins/"
+          cp tphd_tools.rpl                           "$S/Wii U/wiiu/rpl-loader/universal/"
+          (cd "$S" && zip -r -X "../$N.zip" .)
+          unzip -l "dist/$N.zip"
+          echo "zip=dist/$N.zip" >> "$GITHUB_ENV"
+          echo "name=$N" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.name }}
+          path: ${{ env.zip }}
+          if-no-files-found: error
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.zip }}
+          generate_release_notes: true

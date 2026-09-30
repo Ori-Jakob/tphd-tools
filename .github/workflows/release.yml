@@ -1,0 +1,66 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release from main, e.g. 1.2.0 (tagged v1.2.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - id: check
+        env:
+          INPUT: ${{ inputs.version }}
+        run: |
+          set -e
+          v="${INPUT#v}"
+          if ! [[ "$v" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]]; then
+            echo "::error::'$INPUT' is not a usable version"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" > /dev/null; then
+            echo "::error::tag v$v already exists"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  tools:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.sha }}
+
+  release:
+    needs: [prepare, tools]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          target_commitish: ${{ needs.prepare.outputs.sha }}
+          name: TPHD Tools v${{ needs.prepare.outputs.version }}
+          make_latest: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*.zip
