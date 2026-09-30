@@ -8,6 +8,7 @@
 #include "core/rebind.h"
 #include "core/settings.h"
 #include "hud/hud_game_info.h"
+#include "hud/hud_input_viewer.h"
 #include "render/renderer.h"
 #include "ui/init_toast.h"
 #include "ui/menu.h"
@@ -257,6 +258,7 @@ bool PrepareFrame(float logicalWidth, float logicalHeight)
 
     if (!InitToast::IsActive() || ownsInput) {
         Hud::GameInfo::DrawWindow(s_menuOpen);
+        Hud::InputViewer::DrawWindow(s_menuOpen);
         QuickAccess::DrawPageWindow(s_menuOpen);
     }
 
