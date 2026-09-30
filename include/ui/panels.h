@@ -4,9 +4,11 @@ namespace Ui {
 namespace Panels {
 void RegisterControls();
 void RegisterGameplayControls();
+void RegisterHudControls();
 
 void DrawPractice();
 void DrawGameplay();
+void DrawCameraHud();
 void DrawSettings();
 void DrawResetConfirm();
 

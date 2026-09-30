@@ -11,6 +11,7 @@ namespace Panels {
 void RegisterControls()
 {
     RegisterGameplayControls();
+    RegisterHudControls();
 }
 
 void DrawPractice()

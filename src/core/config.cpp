@@ -10,6 +10,7 @@
 #include "core/logger.h"
 #include "core/settings.h"
 #include "core/storage.h"
+#include "hud/hud_game_info.h"
 #include "ui/menu_nav.h"
 #include "ui/quick_access.h"
 #include "ui/window_state.h"
@@ -257,6 +258,7 @@ static const Section kSections[] = {
     { loadHotkeys,     saveHotkeys },
     { loadNavBindings, saveNavBindings },
     { loadQuickAccess, saveQuickAccess },
+    { Hud::GameInfo::LoadConfig, Hud::GameInfo::SaveConfig },
     { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
     { Cheats::Equipment::LoadConfig, Cheats::Equipment::SaveConfig },
     { Cheats::Difficulty::LoadConfig, Cheats::Difficulty::SaveConfig },

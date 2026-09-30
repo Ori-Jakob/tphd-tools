@@ -3,6 +3,7 @@
 #include "cheats/cheats.h"
 #include "core/hotkeys.h"
 #include "core/rebind.h"
+#include "hud/hud_game_info.h"
 #include "ui/menu_nav.h"
 #include "ui/quick_access.h"
 
@@ -36,5 +37,6 @@ void ResetToDefaults()
     Ui::Nav::ResetBindings();
     Cheats::ResetToDefaults();
     Ui::QuickAccess::ResetToDefaults();
+    Hud::GameInfo::ResetToDefaults();
 }
 }

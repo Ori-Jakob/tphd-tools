@@ -1,5 +1,6 @@
 #include "ui/menu.h"
 
+#include "hud/hud_game_info.h"
 #include "render/image.h"
 #include "tools/inventory_editor.h"
 #include "tools/position_editor.h"
@@ -38,6 +39,7 @@ static void drawToolbar(ImGuiIO& io)
         }
         if (ImGui::BeginMenu("Practice"))    { Panels::DrawPractice();    ImGui::EndMenu(); }
         if (ImGui::BeginMenu("Gameplay"))    { Panels::DrawGameplay();    ImGui::EndMenu(); }
+        if (ImGui::BeginMenu("Camera & HUD")) { Panels::DrawCameraHud(); ImGui::EndMenu(); }
         if (ImGui::BeginMenu("Settings"))    { Panels::DrawSettings();    ImGui::EndMenu(); }
 #ifdef TPHD_TOOLS_DEBUG
         if (ImGui::BeginMenu("Diagnostics")) { Panels::DrawDiagnostics(); ImGui::EndMenu(); }
@@ -51,6 +53,7 @@ static void drawToolbar(ImGuiIO& io)
 void Draw(ImGuiIO& io)
 {
     drawToolbar(io);
+    Hud::GameInfo::DrawSettingsWindow();
     Panels::DrawHotkeysWindow();
     Panels::DrawControlsWindow();
     Tools::Warp::DrawWindow();
