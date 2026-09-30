@@ -8,6 +8,7 @@ namespace Ui {
 namespace Panels {
 void RegisterControls()
 {
+    RegisterGameplayControls();
 }
 
 void DrawPractice()

@@ -33,6 +33,7 @@ static void drawToolbar(ImGuiIO& io)
             ImGui::Image(icon->id, ImVec2(side, side));
         }
         if (ImGui::BeginMenu("Practice"))    { Panels::DrawPractice();    ImGui::EndMenu(); }
+        if (ImGui::BeginMenu("Gameplay"))    { Panels::DrawGameplay();    ImGui::EndMenu(); }
         if (ImGui::BeginMenu("Settings"))    { Panels::DrawSettings();    ImGui::EndMenu(); }
 #ifdef TPHD_TOOLS_DEBUG
         if (ImGui::BeginMenu("Diagnostics")) { Panels::DrawDiagnostics(); ImGui::EndMenu(); }

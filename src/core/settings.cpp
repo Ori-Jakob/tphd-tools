@@ -1,5 +1,6 @@
 #include "core/settings.h"
 
+#include "cheats/cheats.h"
 #include "core/hotkeys.h"
 #include "core/rebind.h"
 #include "ui/menu_nav.h"
@@ -33,6 +34,7 @@ void ResetToDefaults()
     Rebind::Cancel();
     Hotkeys::ResetToDefaults();
     Ui::Nav::ResetBindings();
+    Cheats::ResetToDefaults();
     Ui::QuickAccess::ResetToDefaults();
 }
 }

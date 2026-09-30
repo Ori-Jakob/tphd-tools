@@ -7,6 +7,8 @@ namespace Hotkeys {
 enum Id {
     HOTKEY_MENU = 0,
     HOTKEY_QUICK_ACCESS,
+    HOTKEY_MOON_JUMP,
+    HOTKEY_QUICK_TRANSFORM,
     HOTKEY_COUNT
 };
 

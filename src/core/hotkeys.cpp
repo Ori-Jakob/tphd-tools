@@ -17,6 +17,10 @@ static const Entry kEntries[HOTKEY_COUNT] = {
       Input::BTN_ZR | Input::BTN_DOWN,                               false, SCOPE_GLOBAL },
     { "Quick Access",     nullptr,    "quickAccessCombo",
       Input::BTN_ZL | Input::BTN_ZR | Input::BTN_DOWN,               false, SCOPE_GLOBAL },
+    { "Moon Jump",        "Gameplay", "moonJumpCombo",
+      Input::BTN_ZR | Input::BTN_A,                                  true,  SCOPE_GLOBAL },
+    { "Quick Transform",  nullptr,    "quickTransformCombo",
+      Input::BTN_ZR | Input::BTN_Y,                                  false, SCOPE_GLOBAL },
 };
 
 static uint32_t s_bindings[HOTKEY_COUNT];

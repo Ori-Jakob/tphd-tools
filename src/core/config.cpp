@@ -1,5 +1,6 @@
 #include "core/config.h"
 
+#include "cheats/cheat_player.h"
 #include "core/config_schema.h"
 #include "core/hotkeys.h"
 #include "core/logger.h"
@@ -252,6 +253,7 @@ static const Section kSections[] = {
     { loadHotkeys,     saveHotkeys },
     { loadNavBindings, saveNavBindings },
     { loadQuickAccess, saveQuickAccess },
+    { Cheats::Player::LoadConfig, Cheats::Player::SaveConfig },
 };
 
 static void applyJson(const char* text)

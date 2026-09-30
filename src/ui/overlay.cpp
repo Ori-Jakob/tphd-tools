@@ -1,5 +1,6 @@
 #include "ui/overlay.h"
 
+#include "cheats/cheats.h"
 #include "core/config.h"
 #include "core/hotkeys.h"
 #include "core/input.h"
@@ -64,7 +65,8 @@ static bool s_touchSwallowed = false;
 static bool blockWanted(uint32_t held, bool touchOnWidget, bool touching)
 {
     const bool block = overlayOwnsInput() || Osk::IsOpen() || Watermark::IsInteracting() ||
-                       touchOnWidget || Hotkeys::OverlayComboHeld(held);
+                       touchOnWidget || Hotkeys::OverlayComboHeld(held) ||
+                       (!overlayOwnsInput() && Cheats::WantsInputBlock(held));
     if (!touching)
         s_touchSwallowed = false;
     else if (block)
@@ -200,6 +202,9 @@ void Tick()
     Hotkeys::Tick();
     Rebind::Tick();
     updateFreeze();
+
+    const bool gameTools = !overlayOwnsInput() && !Rebind::IsActive();
+    Cheats::Tick(gameTools);
 
     static int s_gameOnTv = -1;
     const int gameOnTv = isTvShowingGame() ? 1 : 0;

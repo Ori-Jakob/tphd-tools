@@ -338,9 +338,17 @@ bool HandleBack()
     return false;
 }
 
+static const char* const kDefaultItems[] = {
+    "gameplay.player.infinite_hearts",
+    "gameplay.player.quick_transform",
+    "gameplay.player.invincibility",
+};
+
 void ResetToDefaults()
 {
     ClearItems();
+    for (const char* id : kDefaultItems)
+        AddItem(id);
     s_open = false;
     s_pageFocused = false;
     s_mode = MODE_NORMAL;
