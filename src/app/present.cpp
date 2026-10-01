@@ -22,7 +22,6 @@ namespace App {
 namespace Present {
 static const float kLogicalWidth  = 1920.0f;
 static const float kLogicalHeight = 1080.0f;
-static const uint32_t kSrgbBit = 0x400u;
 
 static volatile bool s_active = false;
 static bool s_logStarted = false;
@@ -115,7 +114,6 @@ struct TargetCache {
     GX2ColorBuffer buf;
     const void*    image;
     uint32_t       width, height, format, tileMode, swizzle, aa;
-    bool           linear;
     bool           valid;
 };
 static TargetCache s_targetCache[kTargetCache];
@@ -129,8 +127,7 @@ static void forgetTargets()
 }
 
 static bool rebuildColorBuffer(const GX2ColorBuffer* source,
-                               GX2ColorBuffer* rebuilt,
-                               bool linearView)
+                               GX2ColorBuffer* rebuilt)
 {
     if (!source || !rebuilt || !source->surface.image ||
         source->surface.width == 0 || source->surface.height == 0)
@@ -138,7 +135,7 @@ static bool rebuildColorBuffer(const GX2ColorBuffer* source,
 
     for (int i = 0; i < kTargetCache; ++i) {
         const TargetCache& c = s_targetCache[i];
-        if (c.valid && c.linear == linearView &&
+        if (c.valid &&
             c.image == source->surface.image &&
             c.width == source->surface.width &&
             c.height == source->surface.height &&
@@ -158,10 +155,7 @@ static bool rebuildColorBuffer(const GX2ColorBuffer* source,
     rebuilt->surface.depth = source->surface.depth;
     rebuilt->surface.mipLevels = 1;
 
-    const uint32_t sourceFormat = (uint32_t)source->surface.format;
-    rebuilt->surface.format =
-        linearView ? (GX2SurfaceFormat)(sourceFormat & ~kSrgbBit)
-                   : source->surface.format;
+    rebuilt->surface.format = source->surface.format;
     rebuilt->surface.aa = source->surface.aa;
     rebuilt->surface.use = GX2_SURFACE_USE_TEXTURE_COLOR_BUFFER_TV;
     rebuilt->surface.tileMode = source->surface.tileMode;
@@ -184,7 +178,6 @@ static bool rebuildColorBuffer(const GX2ColorBuffer* source,
     c.tileMode = (uint32_t)source->surface.tileMode;
     c.swizzle = source->surface.swizzle;
     c.aa = (uint32_t)source->surface.aa;
-    c.linear = linearView;
     c.valid = true;
     return true;
 }
@@ -301,9 +294,7 @@ void OnCopyToScanBuffer(CopyFn copy, const GX2ColorBuffer* buffer, GX2ScanTarget
     }
 
     GX2ColorBuffer rebuilt;
-    GX2ColorBuffer drawTarget;
-    if (!rebuildColorBuffer(buffer, &rebuilt, false) ||
-        !rebuildColorBuffer(buffer, &drawTarget, true)) {
+    if (!rebuildColorBuffer(buffer, &rebuilt)) {
         copy(buffer, target);
         return;
     }
@@ -344,7 +335,7 @@ void OnCopyToScanBuffer(CopyFn copy, const GX2ColorBuffer* buffer, GX2ScanTarget
             if (s_framePrepared && wantDraw) {
                 {
                     TPHD_TIME(s_tDraw[slot]);
-                    Ui::Overlay::DrawPrepared(&drawTarget, content,
+                    Ui::Overlay::DrawPrepared(&rebuilt, content,
                                           target == GX2_SCAN_TARGET_TV);
                 }
                 s_drawnTarget[slot] = true;
@@ -378,7 +369,7 @@ void OnCopyToScanBuffer(CopyFn copy, const GX2ColorBuffer* buffer, GX2ScanTarget
         if (restoreContext) {
             {
                 TPHD_TIME(s_tDraw[slot]);
-                Ui::Overlay::DrawPrepared(&drawTarget, content,
+                Ui::Overlay::DrawPrepared(&rebuilt, content,
                                           target == GX2_SCAN_TARGET_TV);
             }
             s_drawnTarget[slot] = true;
