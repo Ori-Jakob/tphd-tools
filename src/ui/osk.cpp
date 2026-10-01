@@ -72,6 +72,7 @@ bool s_suppressUntilFocusLost = false;
 char s_text[kMaxText] = {0};
 char s_submitText[kMaxText] = {0};
 unsigned s_submitId = 0;
+ImGuiID s_targetId = 0;
 int  s_len = 0;
 int  s_cursor = 0;
 int  s_maxChars = 0;
@@ -369,6 +370,7 @@ void seedFromField()
     s_mode = MODE_TEXT;
 
     const ImGuiID id = ImGui::GetActiveID();
+    s_targetId = id;
 
     const int declared = lookupField((unsigned)id);
     if (declared >= 0) {
@@ -444,7 +446,7 @@ void seedFromField()
 void rememberRestoreTarget()
 {
     ImGuiContext* g = ImGui::GetCurrentContext();
-    s_restoreNavId = ImGui::GetActiveID();
+    s_restoreNavId = ImGui::GetActiveID() ? ImGui::GetActiveID() : s_targetId;
     s_restoreWindow[0] = '\0';
     s_restoreNavLayer = ImGuiNavLayer_Main;
     s_restoreNavRect = ImRect();
@@ -485,9 +487,13 @@ void restoreNavAfterEdit()
 void submitToField()
 {
     rememberRestoreTarget();
-    s_submitId = (unsigned)ImGui::GetActiveID();
+    const ImGuiID active = ImGui::GetActiveID();
+    const ImGuiID target = active ? active : s_targetId;
+    s_submitId = (unsigned)target;
     memcpy(s_submitText, s_text, (size_t)s_len + 1);
-    ImGuiInputTextState* st = ImGui::GetInputTextState(ImGui::GetActiveID());
+    Logger::Log("[osk] submit '%s' to 0x%08x%s", s_submitText, (unsigned)target,
+                active ? "" : " (field no longer active)");
+    ImGuiInputTextState* st = ImGui::GetInputTextState(target);
     if (st) {
         st->ClearText();
         for (int i = 0; i < s_len; ++i)
@@ -573,6 +579,7 @@ void OnApplicationStart()
     s_open = false;
     s_deactivatePending = false;
     s_submitId = 0;
+    s_targetId = 0;
     s_shift = SHIFT_OFF;
     s_row = 1;
     s_col = 0;

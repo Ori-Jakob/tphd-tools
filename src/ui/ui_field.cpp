@@ -42,6 +42,8 @@ static int      s_repeatCount = 0;
 static const int kDoubleTapFrames = 12;
 static ImGuiID s_lastTapItem = 0;
 static int     s_lastTapFrame = -1000;
+static ImGuiID s_textRequestItem = 0;
+static int     s_textRequestFrame = -1000;
 
 static ImGuiID s_navSliderItem = 0;
 static int     s_navSliderFrame = -1000;
@@ -68,6 +70,10 @@ static bool takeDoubleTap(ImGuiID id)
         return false;
     if (!(Input::Current().pressed & Input::BTN_A))
         return false;
+    if (Osk::IsOpen() || ImGui::TempInputIsActive(id)) {
+        cancelDoubleTap(id);
+        return false;
+    }
 
     const int frame = ImGui::GetFrameCount();
     const bool isDouble = s_lastTapItem == id &&
@@ -78,6 +84,21 @@ static bool takeDoubleTap(ImGuiID id)
     if (isDouble)
         s_lastTapItem = 0;
     return isDouble;
+}
+
+// ImGui sees the tap a frame late; opening the box on that frame keeps it from confirming.
+static bool takeTextRequest(ImGuiID id)
+{
+    const int frame = ImGui::GetFrameCount();
+    if (s_textRequestItem == id && frame != s_textRequestFrame) {
+        s_textRequestItem = 0;
+        return frame - s_textRequestFrame == 1;
+    }
+    if (takeDoubleTap(id)) {
+        s_textRequestItem = id;
+        s_textRequestFrame = frame;
+    }
+    return false;
 }
 
 static void requestTextInput(ImGuiID id)
@@ -206,6 +227,7 @@ bool SliderInt(const char* label, int* value, int minValue, int maxValue,
                const char* format)
 {
     const ImGuiID id = ImGui::GetID(label);
+    const bool toText = takeTextRequest(id);
     bool typedChanged = false;
     char typed[32];
     if (takeTyped(id, typed, (int)sizeof(typed))) {
@@ -216,7 +238,6 @@ bool SliderInt(const char* label, int* value, int minValue, int maxValue,
         *value = (int)next;
     }
 
-    const bool toText = takeDoubleTap(id);
     if (toText)
         requestTextInput(id);
     const bool editing = toText || ImGui::TempInputIsActive(id);
@@ -248,6 +269,7 @@ bool SliderFloat(const char* label, float* value, float minValue, float maxValue
                  const char* format, int flags)
 {
     const ImGuiID id = ImGui::GetID(label);
+    const bool toText = takeTextRequest(id);
     bool typedChanged = false;
     char typed[32];
     if (takeTyped(id, typed, (int)sizeof(typed))) {
@@ -257,8 +279,6 @@ bool SliderFloat(const char* label, float* value, float minValue, float maxValue
         typedChanged = next != *value;
         *value = next;
     }
-
-    const bool toText = takeDoubleTap(id);
 
     if (toText)
         requestTextInput(id);
