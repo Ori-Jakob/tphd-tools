@@ -101,6 +101,10 @@ static void infiniteAmmo()
     volatile dSv_player_item_record_c* record = dComIfGs_getItemRecord();
     volatile dSv_player_item_max_c* max = dComIfGs_getItemMax();
     record->mArrowNum = max->mItemMax[dSv_MAX_ARROW];
+
+    // Giant Bomb Bag: dItemNo_BOMB_BAG_LV2_e
+    const u8 bombCapacityMultiplier = dComIfGs_isItemFirstBit(0x4Fu) ? 2u : 1u;
+
     for (int bag = 0; bag < 3; ++bag) {
         const u8 item = dComIfGs_getItem()->mItems[dSv_BOMB_SLOT_FIRST + bag];
         int maxIndex = -1;
@@ -111,7 +115,7 @@ static void infiniteAmmo()
         else if (item == dItem_POKE_BOMB)
             maxIndex = dSv_MAX_POKE_BOMB;
         if (maxIndex >= 0)
-            record->mBombNum[bag] = max->mItemMax[maxIndex];
+            record->mBombNum[bag] = (u8)(max->mItemMax[maxIndex] * bombCapacityMultiplier);
     }
     record->mPachinkoNum = dSv_MAX_PACHINKO;
     volatile dSv_player_status_a_c* status = dComIfGs_getStatusA();
